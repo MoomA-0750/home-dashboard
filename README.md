@@ -164,6 +164,29 @@ IMAPは接続コストが高いので、結果はサーバー側で60秒キャ�
 > iMessageは今回見送った。tailnet上にMacはあるので原理的には可能だが、`~/Library/Messages/chat.db` を
 > 読むエージェントをMac側に常駐させ、フルディスクアクセスを与える必要があり、このダッシュボード単体では完結しない。
 
+## push前のチェック（public-safe）
+
+このリポジトリは現在privateだが、**いつpublicに切り替えても問題ない状態を保つ**方針にしている。
+そのため、認証情報そのものだけでなく、自宅ネットワークの実アドレスやtailnet名のような
+「漏れても致命的ではないが、わざわざ公開する必要のない識別子」もコミットしない。
+
+クローン直後に一度だけ、pre-pushフックを有効化する:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+以降、`git push` のたびに `scripts/check-public-safe.sh` が走り、以下が見つかると push が中止される。
+
+- 各種トークン・APIキー・秘密鍵の形式（JWT / `ghp_` / `tskey-` / `xox*-` / `sk-` / `AIza` / PEM）
+- tailnet名（`tail<hex>.ts.net`）とTailscaleのIP（`100.64.0.0/10`）
+- プライベートIP（`192.168.*` / `10.*` / `172.16-31.*`）
+
+ドキュメント用のダミー値など、意図的に許可したい文字列は `scripts/public-safe-allow.txt` に
+1行1リテラルで追記する。単発で通したい場合は `git push --no-verify`。
+
+手動で確認したいときは `./scripts/check-public-safe.sh [commit-ish]`（省略時は`HEAD`）。
+
 ## ウィジェットの追加方法
 
 各ウィジェットは `packages/widgets/<name>` に1つの独立したパッケージとして実装する。
