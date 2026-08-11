@@ -1,0 +1,19 @@
+{
+  "name": "home-dashboard",
+  "private": true,
+  "version": "0.1.0",
+  "description": "サーバーが配信するホームダッシュボードUI。壁掛け端末(LD290EJS等)向けのwebベースのスマートディスプレイ基盤。",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev:web": "pnpm --filter @home-dashboard/web dev",
+    "dev:server": "pnpm --filter @home-dashboard/server dev",
+    "build": "pnpm -r build",
+    "build:web": "pnpm --filter @home-dashboard/web build",
+    "build:server": "pnpm --filter @home-dashboard/server build",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint"
+  },
+  "packageManager": "pnpm@11.18.0"
+}

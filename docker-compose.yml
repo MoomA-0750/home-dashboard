@@ -1,0 +1,13 @@
+services:
+  home-dashboard:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8787:8787"
+    env_file:
+      - apps/server/.env
+    volumes:
+      - ./data:/app/data
+      - ./config:/app/config
+    restart: unless-stopped
