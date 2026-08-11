@@ -501,3 +501,416 @@ button.widget-card {
   font-size: 0.8rem;
   color: var(--text-secondary);
 }
+
+/* --- Claude Code使用量 --- */
+
+.widget-usage {
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 0.15rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.widget-usage__label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.widget-usage__value {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.widget-usage__sub {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.widget-usage__block {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.widget-usage__bar {
+  height: 0.35rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  overflow: hidden;
+}
+
+.widget-usage__bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent-ok);
+}
+
+.widget-usage-detail section {
+  margin-bottom: 1.25rem;
+}
+
+.widget-usage-detail h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.widget-usage-detail__breakdown,
+.widget-usage-detail__models,
+.widget-usage-detail__daily {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.widget-usage-detail__breakdown li,
+.widget-usage-detail__models li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 0.15rem 0;
+  font-size: 0.85rem;
+}
+
+.widget-usage-detail__breakdown-total {
+  border-top: 1px solid var(--glass-border);
+  margin-top: 0.25rem;
+  padding-top: 0.35rem !important;
+  font-weight: 600;
+}
+
+.widget-usage-detail__model {
+  color: var(--text-secondary);
+}
+
+.widget-usage-detail__daily li {
+  display: grid;
+  grid-template-columns: 3rem 1fr 3.5rem;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  padding: 0.1rem 0;
+}
+
+.widget-usage-detail__daily-bar {
+  height: 0.5rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.widget-usage-detail__daily-bar > span {
+  display: block;
+  height: 100%;
+  background: rgba(96, 165, 250, 0.85);
+}
+
+.widget-usage-detail__daily-value,
+.widget-usage-detail__date {
+  color: var(--text-secondary);
+}
+
+.widget-usage-detail__daily-value {
+  text-align: right;
+}
+
+.widget-usage-detail__note {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin: 0.5rem 0 0;
+}
+
+/* --- Tailscale --- */
+
+.widget-tailscale {
+  align-items: stretch;
+  gap: 0.2rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.widget-tailscale__header {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.widget-tailscale__title {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.widget-tailscale__count {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.widget-tailscale__total {
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--text-secondary);
+}
+
+.widget-tailscale__sub,
+.widget-tailscale__exit {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.widget-tailscale-detail__self {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  margin: 0 0 0.75rem;
+}
+
+.widget-tailscale-detail__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.widget-tailscale-detail__item {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+}
+
+.widget-tailscale-detail__ip,
+.widget-tailscale-detail__seen {
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.widget-tailscale-detail__meta {
+  display: flex;
+  gap: 0.3rem;
+  align-items: center;
+}
+
+.widget-tailscale-detail__badge {
+  font-size: 0.7rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  white-space: nowrap;
+}
+
+.widget-tailscale-detail__badge--dim {
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* --- gitリポジトリ --- */
+
+.widget-git {
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 0.35rem;
+  padding: 0.85rem 1rem;
+}
+
+.widget-git__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.widget-git__title {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.widget-git__summary {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.widget-git__list,
+.widget-git-detail__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.widget-git__item {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+}
+
+.widget-git__mark--dirty {
+  color: var(--accent-warn);
+}
+
+.widget-git__mark--clean {
+  color: var(--text-secondary);
+}
+
+.widget-git__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.widget-git__branch {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+}
+
+.widget-git__counts {
+  display: flex;
+  gap: 0.2rem;
+}
+
+.widget-git__badge {
+  font-size: 0.7rem;
+  padding: 0.05rem 0.35rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  font-variant-numeric: tabular-nums;
+}
+
+.widget-git__badge--dirty {
+  background: rgba(251, 191, 36, 0.25);
+}
+
+.widget-git__badge--dim {
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.widget-git__more {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+}
+
+.widget-git-detail__list {
+  gap: 0.65rem;
+}
+
+.widget-git-detail__head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.widget-git-detail__name {
+  font-weight: 600;
+}
+
+.widget-git-detail__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding-left: 1.2rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.widget-git-detail__date {
+  margin-left: 0.5rem;
+}
+
+.widget-git-detail__error {
+  padding-left: 1.2rem;
+  font-size: 0.8rem;
+  color: var(--accent-warn);
+}
+
+/* --- メール --- */
+
+.widget-mail {
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 0.35rem;
+  padding: 0.85rem 1rem;
+}
+
+.widget-mail__header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+
+.widget-mail__count {
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.widget-mail__label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.widget-mail__list,
+.widget-mail-detail__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.widget-mail__item {
+  display: grid;
+  grid-template-columns: 6rem 1fr;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+}
+
+.widget-mail__from,
+.widget-mail__subject {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.widget-mail__from {
+  color: var(--text-secondary);
+}
+
+.widget-mail__empty,
+.widget-mail__error {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.widget-mail__error {
+  color: var(--accent-warn);
+}
+
+.widget-mail-detail__list {
+  gap: 0.6rem;
+}
+
+.widget-mail-detail__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.widget-mail-detail__subject {
+  font-size: 0.9rem;
+}

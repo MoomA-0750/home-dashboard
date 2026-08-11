@@ -15,6 +15,11 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=8787
 
+# gitリポジトリ状況ウィジェットが `git status` / `git log` を実行するため
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends git ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY --from=build /app/package.json ./package.json

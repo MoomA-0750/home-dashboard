@@ -1,4 +1,6 @@
 import { existsSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 // .env の読み込みはこのモジュールの先頭で行う。
@@ -38,5 +40,30 @@ export const config = {
      * （状態表示と施錠のみ）。有効にするとLANに入れる誰でも解錠できてしまう点に注意。
      */
     allowUnlock: process.env.HOMEASSISTANT_ALLOW_UNLOCK === "true",
+  },
+
+  claudeUsage: {
+    /** Claude Codeのセッションログ置き場。Docker運用ではホスト側を read-only でマウントして渡す */
+    projectsDir: process.env.CLAUDE_PROJECTS_DIR ?? join(homedir(), ".claude", "projects"),
+  },
+
+  tailscale: {
+    /** tailscaled の LocalAPI ソケット。Docker運用ではこれをマウントする */
+    socketPath: process.env.TAILSCALE_SOCKET ?? "/var/run/tailscale/tailscaled.sock",
+  },
+
+  git: {
+    /** この直下のディレクトリを走査してgitリポジトリを探す */
+    reposDir: process.env.GIT_REPOS_DIR ?? join(homedir(), "Documents", "git-cloned"),
+  },
+
+  mail: {
+    host: process.env.MAIL_HOST ?? "",
+    port: Number(process.env.MAIL_PORT ?? 993),
+    secure: process.env.MAIL_SECURE !== "false",
+    user: process.env.MAIL_USER ?? "",
+    /** Gmailの場合はアカウントのパスワードではなく「アプリパスワード」 */
+    password: process.env.MAIL_PASSWORD ?? "",
+    mailbox: process.env.MAIL_MAILBOX ?? "INBOX",
   },
 };

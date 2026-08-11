@@ -7,7 +7,19 @@ services:
       - "8787:8787"
     env_file:
       - apps/server/.env
+    environment:
+      # ホストの資源をコンテナ内のパスとして渡す（下の volumes と対応）
+      - CLAUDE_PROJECTS_DIR=/host/claude-projects
+      - GIT_REPOS_DIR=/host/git-repos
+      - TAILSCALE_SOCKET=/host/tailscaled.sock
     volumes:
       - ./data:/app/data
       - ./config:/app/config
+      # Claude Codeの使用量集計。セッションログを読むだけなので read-only
+      - ${HOME}/.claude/projects:/host/claude-projects:ro
+      # gitリポジトリ状況。read-onlyで問題ないよう `--no-optional-locks` 付きでgitを呼んでいる
+      - ${HOME}/Documents/git-cloned:/host/git-repos:ro
+      # tailscaled の LocalAPI。unixソケットへの connect() には書き込み権限が要るので :ro は付けない
+      # （ソケット越しの操作可否は tailscaled 側が判断する。こちらは status の取得しか行わない）
+      - /var/run/tailscale/tailscaled.sock:/host/tailscaled.sock
     restart: unless-stopped

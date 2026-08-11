@@ -9,6 +9,10 @@ import { registerWeatherRoutes } from "./routes/weather.js";
 import { registerSpotifyRoutes } from "./routes/spotify.js";
 import { registerHomelabRoutes } from "./routes/homelab.js";
 import { registerHomeAssistantRoutes } from "./routes/homeassistant.js";
+import { registerClaudeUsageRoutes } from "./routes/claudeUsage.js";
+import { registerTailscaleRoutes } from "./routes/tailscale.js";
+import { registerGitRepoRoutes } from "./routes/gitRepos.js";
+import { registerMailRoutes } from "./routes/mail.js";
 import { registerWebSocket } from "./ws.js";
 
 const app = Fastify({ logger: true });
@@ -21,6 +25,10 @@ await registerWeatherRoutes(app);
 await registerSpotifyRoutes(app);
 await registerHomelabRoutes(app);
 await registerHomeAssistantRoutes(app);
+await registerClaudeUsageRoutes(app);
+await registerTailscaleRoutes(app);
+await registerGitRepoRoutes(app);
+await registerMailRoutes(app);
 
 if (existsSync(config.webDistDir)) {
   await app.register(fastifyStatic, {

@@ -5,6 +5,10 @@ import spotifyMedia from "@home-dashboard/widget-spotify-media";
 import homelabStatus from "@home-dashboard/widget-homelab-status";
 import haControls from "@home-dashboard/widget-ha-controls";
 import haClimate from "@home-dashboard/widget-ha-climate";
+import claudeUsage from "@home-dashboard/widget-claude-usage";
+import tailscaleStatus from "@home-dashboard/widget-tailscale-status";
+import gitRepos from "@home-dashboard/widget-git-repos";
+import mailInbox from "@home-dashboard/widget-mail-inbox";
 
 /**
  * 利用可能な全ウィジェットをここで登録する。
@@ -17,5 +21,9 @@ widgetRegistry.register(spotifyMedia);
 widgetRegistry.register(homelabStatus);
 widgetRegistry.register(haControls);
 widgetRegistry.register(haClimate);
+widgetRegistry.register(claudeUsage);
+widgetRegistry.register(tailscaleStatus);
+widgetRegistry.register(gitRepos);
+widgetRegistry.register(mailInbox);
 
 export { widgetRegistry };

@@ -19,6 +19,9 @@ importers:
       fastify:
         specifier: ^5.2.1
         version: 5.11.3
+      imapflow:
+        specifier: ^1.6.6
+        version: 1.6.6
     devDependencies:
       '@types/node':
         specifier: ^22.10.10
@@ -35,9 +38,15 @@ importers:
 
   apps/web:
     dependencies:
+      '@home-dashboard/widget-claude-usage':
+        specifier: workspace:*
+        version: link:../../packages/widgets/claude-usage
       '@home-dashboard/widget-clock':
         specifier: workspace:*
         version: link:../../packages/widgets/clock
+      '@home-dashboard/widget-git-repos':
+        specifier: workspace:*
+        version: link:../../packages/widgets/git-repos
       '@home-dashboard/widget-ha-climate':
         specifier: workspace:*
         version: link:../../packages/widgets/ha-climate
@@ -47,12 +56,18 @@ importers:
       '@home-dashboard/widget-homelab-status':
         specifier: workspace:*
         version: link:../../packages/widgets/homelab-status
+      '@home-dashboard/widget-mail-inbox':
+        specifier: workspace:*
+        version: link:../../packages/widgets/mail-inbox
       '@home-dashboard/widget-sdk':
         specifier: workspace:*
         version: link:../../packages/widget-sdk
       '@home-dashboard/widget-spotify-media':
         specifier: workspace:*
         version: link:../../packages/widgets/spotify-media
+      '@home-dashboard/widget-tailscale-status':
+        specifier: workspace:*
+        version: link:../../packages/widgets/tailscale-status
       '@home-dashboard/widget-weather':
         specifier: workspace:*
         version: link:../../packages/widgets/weather
@@ -98,7 +113,39 @@ importers:
         specifier: ^5.7.3
         version: 5.9.3
 
+  packages/widgets/claude-usage:
+    dependencies:
+      '@home-dashboard/widget-sdk':
+        specifier: workspace:*
+        version: link:../../widget-sdk
+      react:
+        specifier: ^18.3.0
+        version: 18.3.1
+    devDependencies:
+      '@types/react':
+        specifier: ^18.3.18
+        version: 18.3.31
+      typescript:
+        specifier: ^5.7.3
+        version: 5.9.3
+
   packages/widgets/clock:
+    dependencies:
+      '@home-dashboard/widget-sdk':
+        specifier: workspace:*
+        version: link:../../widget-sdk
+      react:
+        specifier: ^18.3.0
+        version: 18.3.1
+    devDependencies:
+      '@types/react':
+        specifier: ^18.3.18
+        version: 18.3.31
+      typescript:
+        specifier: ^5.7.3
+        version: 5.9.3
+
+  packages/widgets/git-repos:
     dependencies:
       '@home-dashboard/widget-sdk':
         specifier: workspace:*
@@ -162,7 +209,39 @@ importers:
         specifier: ^5.7.3
         version: 5.9.3
 
+  packages/widgets/mail-inbox:
+    dependencies:
+      '@home-dashboard/widget-sdk':
+        specifier: workspace:*
+        version: link:../../widget-sdk
+      react:
+        specifier: ^18.3.0
+        version: 18.3.1
+    devDependencies:
+      '@types/react':
+        specifier: ^18.3.18
+        version: 18.3.31
+      typescript:
+        specifier: ^5.7.3
+        version: 5.9.3
+
   packages/widgets/spotify-media:
+    dependencies:
+      '@home-dashboard/widget-sdk':
+        specifier: workspace:*
+        version: link:../../widget-sdk
+      react:
+        specifier: ^18.3.0
+        version: 18.3.1
+    devDependencies:
+      '@types/react':
+        specifier: ^18.3.18
+        version: 18.3.31
+      typescript:
+        specifier: ^5.7.3
+        version: 5.9.3
+
+  packages/widgets/tailscale-status:
     dependencies:
       '@home-dashboard/widget-sdk':
         specifier: workspace:*
@@ -837,6 +916,9 @@ packages:
     peerDependencies:
       vite: ^4.2.0 || ^5.0.0 || ^6.0.0 || ^7.0.0
 
+  '@zone-eu/mailsplit@5.4.15':
+    resolution: {integrity: sha512-c7ZpxauvF4AEkDJlKDYO7iMUtMuqJMBnDWNff1cyx+d7zaBVR3iFEmXhNHOVoMmVyVF3pTZLsLIJsEFKDldOAA==}
+
   abstract-logging@2.0.1:
     resolution: {integrity: sha512-2BjRTZxTPvheOvGbBslFSYOUkr+SjPtOnrLP33f+VIWLzezQpZcqVg7ja3L4dBXmzzgwT+a029jRx5PCi3JuiA==}
 
@@ -923,6 +1005,10 @@ packages:
 
   electron-to-chromium@1.5.403:
     resolution: {integrity: sha512-MQsYmdaLzvaCX5j+ZZBr5Fm6uCCnPQcRtlvmvRlWqrXy+BH2O4ffXIAScF+JQznQWB9brWp4lSD9Z4yNmaf2BA==}
+
+  encoding-japanese@2.2.0:
+    resolution: {integrity: sha512-EuJWwlHPZ1LbADuKTClvHtwbaFn4rOD+dRAbWysqEOXRc2Uui0hJInNJrsdH0c+OhJA4nrCBdSkW4DD5YxAo6A==}
+    engines: {node: '>=8.10.0'}
 
   end-of-stream@1.4.5:
     resolution: {integrity: sha512-ooEGc6HP26xXq/N+GCGOT0JKCLDGrq2bQUZrQ7gyrJiZANJ/8YDTxTpQBXGMn+WbIQXNVpyWymm7KYVICQnyOg==}
@@ -1013,8 +1099,19 @@ packages:
     resolution: {integrity: sha512-4FbRdAX+bSdmo4AUFuS0WNiPz8NgFt+r8ThgNWmlrjQjt1Q7ZR9+zTlce2859x4KSXrwIsaeTqDoKQmtP8pLmQ==}
     engines: {node: '>= 0.8'}
 
+  iconv-lite@0.7.3:
+    resolution: {integrity: sha512-IKXpvIzjnC9XTAUbVBcMfGS0EPaIXtW6v+zr+RRp+hqULEpo0owZax6wyRwPOJbWbzjYspQwusTsfVr0ifh4uQ==}
+    engines: {node: '>=0.10.0'}
+
+  imapflow@1.6.6:
+    resolution: {integrity: sha512-/aDm268JL43M8CI8pGarXrBfVNwk8p/cFuMunND5OFWVTt4hPVKgqbm9+KeajCiP217XKD0NPZ2W4j72Q/D9AQ==}
+
   inherits@2.0.4:
     resolution: {integrity: sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ==}
+
+  ip-address@10.5.0:
+    resolution: {integrity: sha512-R5SnVLJmgYYvf2F2ZgwSBnelz5G4q5AxIC277GDfUaNbrZKNANcBC7RHqYYePlszf4kBolVkJauG0ZjHHFh55g==}
+    engines: {node: '>= 12'}
 
   ipaddr.js@2.5.0:
     resolution: {integrity: sha512-aq+t5NAc+cS6rZQQVWC2x98CPqGtKKTMDd4Gaodv0wShnItdKg/51djkGJ1hqH+Oy0ivDftCbSLCQob8zso01w==}
@@ -1045,6 +1142,15 @@ packages:
     resolution: {integrity: sha512-XmOWe7eyHYH14cLdVPoyg+GOH3rYX++KpzrylJwSW98t3Nk+U8XOl8FWKOgwtzdb8lXGf6zYwDUzeHMWfxasyg==}
     engines: {node: '>=6'}
     hasBin: true
+
+  libbase64@1.3.0:
+    resolution: {integrity: sha512-GgOXd0Eo6phYgh0DJtjQ2tO8dc0IVINtZJeARPeiIJqge+HdsWSuaDTe8ztQ7j/cONByDZ3zeB325AHiv5O0dg==}
+
+  libmime@5.4.2:
+    resolution: {integrity: sha512-+IQnCOdPiufGBkOii+Ze8F7iniyBzOwvWDbn1DyExBpc9pT2B3IEMQi7GUc/PpqhNUh/sr1SG9UXDITQoR0VIA==}
+
+  libqp@2.1.1:
+    resolution: {integrity: sha512-0Wd+GPz1O134cP62YU2GTOPNA7Qgl09XwCqM5zpBv87ERCXdfDtyKXvV7c9U22yWJh44QZqBocFnXN11K96qow==}
 
   light-my-request@6.6.0:
     resolution: {integrity: sha512-CHYbu8RtboSIoVsHZ6Ye4cj4Aw/yg2oAFimlF7mNvfDV192LR7nDiKtSIfCuLT7KokPSTn/9kfVLm5OGN0A28A==}
@@ -1219,6 +1325,9 @@ packages:
     resolution: {integrity: sha512-b3rppTKm9T+PsVCBEOUR46GWI7fdOs00VKZ1+9c1EWDaDMvjQc6tUwuFyIprgGgTcWoVHSKrU8H31ZHA2e0RHA==}
     engines: {node: '>=10'}
 
+  safer-buffer@2.1.2:
+    resolution: {integrity: sha512-YZo3K82SD7Riyi0E1EQPojLz7kpepnSQI9IyPbHHg1XXXevb5dJI7tpyN2ADxGcQbHG7vcyRHk0cbwqcQriUtg==}
+
   scheduler@0.23.2:
     resolution: {integrity: sha512-UOShsPwz7NrMUqhR6t0hWjFduvOzbtv7toDH1/hIrfRNIDBnnBWd0CwJTGvTpngVlmwGCdP9/Zl/tVrDqcuYzQ==}
 
@@ -1251,6 +1360,14 @@ packages:
   signal-exit@4.1.0:
     resolution: {integrity: sha512-bzyZ1e88w9O1iNJbKnOlvYTrWPDl46O1bG0D3XInv+9tkPrxrN8jUUTiFlDkkmKWgn1M6CfIA13SuGqOa9Korw==}
     engines: {node: '>=14'}
+
+  smart-buffer@4.2.0:
+    resolution: {integrity: sha512-94hK0Hh8rPqQl2xXc3HsaBoOXKV20MToPkcXvwbISWLEs+64sBq5kFgn2kJDHb1Pry9yrP0dxrCI9RRci7RXKg==}
+    engines: {node: '>= 6.0.0', npm: '>= 3.0.0'}
+
+  socks@2.8.9:
+    resolution: {integrity: sha512-LJhUYUvItdQ0LkJTmPeaEObWXAqFyfmP85x0tch/ez9cahmhlBBLbIqDFnvBnUJGagb0JbIQrkBs1wJ+yRYpEw==}
+    engines: {node: '>= 10.0.0', npm: '>= 3.0.0'}
 
   sonic-boom@4.2.1:
     resolution: {integrity: sha512-w6AxtubXa2wTXAUsZMMWERrsIRAdrK0Sc+FUytWvYAhBJLyuI4llrMIC1DtlNSdI99EI86KZum2MMq3EAZlF9Q==}
@@ -1858,6 +1975,12 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  '@zone-eu/mailsplit@5.4.15':
+    dependencies:
+      libbase64: 1.3.0
+      libmime: 5.4.2
+      libqp: 2.1.1
+
   abstract-logging@2.0.1: {}
 
   ajv-formats@3.0.1(ajv@8.20.0):
@@ -1930,6 +2053,8 @@ snapshots:
       stream-shift: 1.0.3
 
   electron-to-chromium@1.5.403: {}
+
+  encoding-japanese@2.2.0: {}
 
   end-of-stream@1.4.5:
     dependencies:
@@ -2083,7 +2208,24 @@ snapshots:
       statuses: 2.0.2
       toidentifier: 1.0.1
 
+  iconv-lite@0.7.3:
+    dependencies:
+      safer-buffer: 2.1.2
+
+  imapflow@1.6.6:
+    dependencies:
+      '@zone-eu/mailsplit': 5.4.15
+      encoding-japanese: 2.2.0
+      iconv-lite: 0.7.3
+      libbase64: 1.3.0
+      libmime: 5.4.2
+      libqp: 2.1.1
+      pino: 10.3.1
+      socks: 2.8.9
+
   inherits@2.0.4: {}
+
+  ip-address@10.5.0: {}
 
   ipaddr.js@2.5.0: {}
 
@@ -2104,6 +2246,17 @@ snapshots:
   json-schema-traverse@1.0.0: {}
 
   json5@2.2.3: {}
+
+  libbase64@1.3.0: {}
+
+  libmime@5.4.2:
+    dependencies:
+      encoding-japanese: 2.2.0
+      iconv-lite: 0.7.3
+      libbase64: 1.3.0
+      libqp: 2.1.1
+
+  libqp@2.1.1: {}
 
   light-my-request@6.6.0:
     dependencies:
@@ -2293,6 +2446,8 @@ snapshots:
 
   safe-stable-stringify@2.5.0: {}
 
+  safer-buffer@2.1.2: {}
+
   scheduler@0.23.2:
     dependencies:
       loose-envify: 1.4.0
@@ -2314,6 +2469,13 @@ snapshots:
   shebang-regex@3.0.0: {}
 
   signal-exit@4.1.0: {}
+
+  smart-buffer@4.2.0: {}
+
+  socks@2.8.9:
+    dependencies:
+      ip-address: 10.5.0
+      smart-buffer: 4.2.0
 
   sonic-boom@4.2.1:
     dependencies:

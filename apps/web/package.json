@@ -17,6 +17,10 @@
     "@home-dashboard/widget-homelab-status": "workspace:*",
     "@home-dashboard/widget-ha-controls": "workspace:*",
     "@home-dashboard/widget-ha-climate": "workspace:*",
+    "@home-dashboard/widget-claude-usage": "workspace:*",
+    "@home-dashboard/widget-tailscale-status": "workspace:*",
+    "@home-dashboard/widget-git-repos": "workspace:*",
+    "@home-dashboard/widget-mail-inbox": "workspace:*",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
     "react-grid-layout": "^1.5.0"

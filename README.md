@@ -23,6 +23,10 @@ packages/
     homelab-status/    ホームラボのホスト死活監視
     ha-controls/       Home Assistantの家電操作（照明・スイッチ・鍵・エアコン）
     ha-climate/        Home Assistantの室温・湿度
+    claude-usage/      Claude Codeのトークン使用量（ccusage相当）
+    tailscale-status/  tailnet内のノード状況
+    git-repos/         ローカルgitリポジトリの状況
+    mail-inbox/        メール（IMAP）の未読
 config/     homelab-hosts.json などランタイム設定（Gitには含まれない値を置く）
 data/       レイアウト等の永続化データ（Gitには含まれない）
 docker/     Dockerfile
@@ -112,6 +116,54 @@ HTTPS有効化が必要）。
 
 トークンはサーバー内に留まり、フロントエンドには一切渡らない（ブラウザは自サーバーのAPIだけを叩く）。
 
+## ホスト側の資源を見るウィジェット（Claude Code使用量 / Tailscale / gitリポジトリ）
+
+この3つはホスト上のファイルやソケットを読む。Docker運用時は `docker-compose.yml` が
+以下をマウントし、対応する環境変数でコンテナ内のパスを渡す（設定作業は不要）。
+
+| ウィジェット | ホスト側 | コンテナ内 | 環境変数 |
+|---|---|---|---|
+| Claude Code使用量 | `~/.claude/projects` (ro) | `/host/claude-projects` | `CLAUDE_PROJECTS_DIR` |
+| gitリポジトリ | `~/Documents/git-cloned` (ro) | `/host/git-repos` | `GIT_REPOS_DIR` |
+| Tailscale | `/var/run/tailscale/tailscaled.sock` | `/host/tailscaled.sock` | `TAILSCALE_SOCKET` |
+
+別の場所を見たい場合は環境変数を変える。ホスト上で直接起動する開発時は、これらの既定値
+（上表の「ホスト側」）がそのまま使われるので設定は要らない。
+
+- **Claude Code使用量**: `~/.claude/projects/**/*.jsonl` の `message.usage` を集計する。jsonlは追記のみ
+  なのでファイルごとに読み込み位置を覚えて差分だけ読む（全体で200MB近くあるため）。
+  **料金は出さない** — モデル単価をこちら側に持つと実際の請求と乖離した数字を表示することになるので、
+  トークン数と、サブスクのレート制限に効く「5時間ブロック」の消費状況を見せる方針にしている
+- **Tailscale**: `tailscale` コマンドではなく tailscaled の LocalAPI（unixソケット上のHTTP）を直接叩くので、
+  コンテナにtailscaleバイナリを入れる必要はない。**読み取り専用**で、exit nodeの切り替えなど
+  経路を変更する操作は実装していない（LAN上に認証なしで公開されるダッシュボードから
+  ホスト自身の経路を書き換えられるのは危ないため）
+- **gitリポジトリ**: read-onlyマウントでも動くよう `--no-optional-locks` を、コンテナのrootと
+  ホスト側のファイル所有者が違っても動くよう `-c safe.directory=*` を付けて `git` を呼んでいる。
+  表示のみで、commitやpushなどの操作は行わない
+
+## メール（IMAP）連携のセットアップ
+
+`apps/server/.env` に設定する。未設定なら「メール未接続」と表示されるだけで、他には影響しない。
+
+```
+MAIL_HOST=imap.gmail.com
+MAIL_PORT=993
+MAIL_USER=you@gmail.com
+MAIL_PASSWORD=<アプリパスワード>
+MAIL_MAILBOX=INBOX
+```
+
+Gmailの場合は2段階認証を有効にした上で [アプリパスワード](https://myaccount.google.com/apppasswords)
+を発行する（通常のアカウントのパスワードではIMAPログインできない）。
+
+未読件数と直近の差出人・件名を**表示するだけ**で、既読化・削除・返信は実装していない
+（LAN上の誰でも触れる画面から、誤操作でメールを失う操作ができないようにするため）。
+IMAPは接続コストが高いので、結果はサーバー側で60秒キャッシュして全クライアントで共有する。
+
+> iMessageは今回見送った。tailnet上にMacはあるので原理的には可能だが、`~/Library/Messages/chat.db` を
+> 読むエージェントをMac側に常駐させ、フルディスクアクセスを与える必要があり、このダッシュボード単体では完結しない。
+
 ## ウィジェットの追加方法
 
 各ウィジェットは `packages/widgets/<name>` に1つの独立したパッケージとして実装する。
@@ -151,13 +203,15 @@ HTTPS有効化が必要）。
 
 ## ロードマップ
 
-実装済み: 基盤（ウィジェットプラグイン機構・キャンバス・Docker配布）＋ウィジェット6種
-（時計・天気・Spotify・ホームラボ死活監視・HA家電操作・HA室温湿度）。
+実装済み: 基盤（ウィジェットプラグイン機構・キャンバス・Docker配布）＋ウィジェット10種
+（時計・天気・Spotify・ホームラボ死活監視・HA家電操作・HA室温湿度・Claude Code使用量・
+Tailscale・gitリポジトリ・メール）。当初構想していた連携ウィジェットはメールを除きすべて実データで動作確認済み
+（メールのみ認証情報が未設定のため未接続表示のまま）。
 
 未着手:
 
-- **1920x540の横長パネル向けレイアウト最適化**（現状はウィジェットが縦に並び、LD290EJSの画面に収まらない）
+- **1920x540の横長パネル向けレイアウト最適化**（現状はウィジェットが1列に縦積みされ、LD290EJSの画面に収まらない）
 - 時間帯・再生状況等に応じたウィジェットの自動出現/レイアウト変更
 - ウェイクワード検知＋Claude Codeセッション起動によるスマートディスプレイ的な対話
-- ccusage / tailscale / gitリポジトリ状況 / iMessage・メール等の追加ウィジェット
+- iMessage連携（Mac側に常駐エージェントが要るため保留）
 - キャンバス上でのウィジェット設定編集UI（現状は`defaultConfig`とサーバー側の設定ファイルのみ）

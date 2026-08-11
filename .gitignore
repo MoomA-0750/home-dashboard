@@ -6,6 +6,7 @@ build/
 .env.*
 !.env.example
 data/*.json
+data/*.bak-*
 !data/.gitkeep
 config/homelab-hosts.json
 config/homeassistant.json
