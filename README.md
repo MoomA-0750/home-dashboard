@@ -63,13 +63,24 @@ docker compose up -d --build
 
 ## Spotify連携のセットアップ
 
-1. [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) でアプリを作成
-2. Redirect URI に `apps/server/.env` の `SPOTIFY_REDIRECT_URI` と同じ値を登録
-3. `SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET` を設定してサーバーを起動
-4. ブラウザで `http://<server>:8787/auth/spotify/login` を開いて認可
+Spotifyは2023年の仕様変更でRedirect URIに `https://` か、リテラルの `127.0.0.1`（`localhost` は不可）
+以外を許可しなくなった。サーバーをgco等のリモートホストで動かす場合、初回の認可操作のときだけ
+SSHポートフォワードでローカルの `127.0.0.1` 経由にするのが手軽（refresh tokenさえ取れれば以降は不要）。
+
+1. [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) でアプリを作成し、
+   Redirect URIに `http://127.0.0.1:8787/auth/spotify/callback` を登録
+   （`apps/server/.env` の `SPOTIFY_REDIRECT_URI` と同じ値にする）
+2. `SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET` を設定してサーバーを起動
+3. 手元のマシンから `ssh -L 8787:localhost:8787 gco` 等でポートフォワードしてトンネルを開く
+4. 手元のブラウザで `http://127.0.0.1:8787/auth/spotify/login` を開いて認可
 5. コールバック画面に表示されたrefresh tokenを `SPOTIFY_REFRESH_TOKEN` に設定し、サーバーを再起動
 
 未設定の間、Spotifyウィジェットは「Spotify未接続」と表示される。
+
+常時HTTPS経由でアクセスしたい場合はTailscaleのHTTPS機能（`tailscale cert` + `tailscale serve`）で
+`https://general-console.<tailnet>.ts.net` のようなURLを払い出し、それをRedirect URIにする方法もある
+（ダッシュボード自体を他デバイスから常用アクセスする際にも流用できるが、別途Tailscale管理画面での
+HTTPS有効化が必要）。
 
 ## ウィジェットの追加方法
 
