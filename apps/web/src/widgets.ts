@@ -3,6 +3,8 @@ import clock from "@home-dashboard/widget-clock";
 import weather from "@home-dashboard/widget-weather";
 import spotifyMedia from "@home-dashboard/widget-spotify-media";
 import homelabStatus from "@home-dashboard/widget-homelab-status";
+import haControls from "@home-dashboard/widget-ha-controls";
+import haClimate from "@home-dashboard/widget-ha-climate";
 
 /**
  * 利用可能な全ウィジェットをここで登録する。
@@ -13,5 +15,7 @@ widgetRegistry.register(clock);
 widgetRegistry.register(weather);
 widgetRegistry.register(spotifyMedia);
 widgetRegistry.register(homelabStatus);
+widgetRegistry.register(haControls);
+widgetRegistry.register(haClimate);
 
 export { widgetRegistry };

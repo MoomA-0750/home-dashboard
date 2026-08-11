@@ -38,6 +38,12 @@ importers:
       '@home-dashboard/widget-clock':
         specifier: workspace:*
         version: link:../../packages/widgets/clock
+      '@home-dashboard/widget-ha-climate':
+        specifier: workspace:*
+        version: link:../../packages/widgets/ha-climate
+      '@home-dashboard/widget-ha-controls':
+        specifier: workspace:*
+        version: link:../../packages/widgets/ha-controls
       '@home-dashboard/widget-homelab-status':
         specifier: workspace:*
         version: link:../../packages/widgets/homelab-status
@@ -93,6 +99,38 @@ importers:
         version: 5.9.3
 
   packages/widgets/clock:
+    dependencies:
+      '@home-dashboard/widget-sdk':
+        specifier: workspace:*
+        version: link:../../widget-sdk
+      react:
+        specifier: ^18.3.0
+        version: 18.3.1
+    devDependencies:
+      '@types/react':
+        specifier: ^18.3.18
+        version: 18.3.31
+      typescript:
+        specifier: ^5.7.3
+        version: 5.9.3
+
+  packages/widgets/ha-climate:
+    dependencies:
+      '@home-dashboard/widget-sdk':
+        specifier: workspace:*
+        version: link:../../widget-sdk
+      react:
+        specifier: ^18.3.0
+        version: 18.3.1
+    devDependencies:
+      '@types/react':
+        specifier: ^18.3.18
+        version: 18.3.31
+      typescript:
+        specifier: ^5.7.3
+        version: 5.9.3
+
+  packages/widgets/ha-controls:
     dependencies:
       '@home-dashboard/widget-sdk':
         specifier: workspace:*

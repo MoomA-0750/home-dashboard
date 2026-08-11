@@ -218,6 +218,138 @@ button.widget-card {
   background: var(--accent-ok);
 }
 
+/* --- Home Assistant 家電操作 --- */
+
+.ha-controls {
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 0.5rem;
+  padding: 0.75rem;
+}
+
+.ha-controls__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr));
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.ha-controls__grid--detail {
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+}
+
+.ha-entity {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  transition: background 0.15s ease;
+}
+
+.ha-entity--on {
+  background: rgba(250, 204, 21, 0.22);
+  border-color: rgba(250, 204, 21, 0.5);
+}
+
+.ha-entity--readonly {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.ha-entity__icon {
+  font-size: 1.1rem;
+}
+
+.ha-entity__name {
+  font-size: 0.8rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.ha-entity__state {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+}
+
+.ha-controls__more {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  cursor: pointer;
+  padding: 0;
+}
+
+.ha-controls__error {
+  font-size: 0.75rem;
+  color: var(--accent-warn);
+}
+
+.ha-controls__note {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin: 0 0 0.75rem;
+}
+
+/* --- Home Assistant 室温・湿度 --- */
+
+.ha-climate {
+  flex-direction: row;
+  align-items: center;
+  gap: 1rem;
+}
+
+.ha-climate__reading {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.ha-climate__icon {
+  font-size: 1.2rem;
+}
+
+.ha-climate__value {
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+.ha-climate-detail__list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.ha-climate-detail__item {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.ha-climate-detail__state {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.ha-climate-detail__value {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
 .widget-detail-overlay {
   position: fixed;
   inset: 0;

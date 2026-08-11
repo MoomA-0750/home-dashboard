@@ -8,4 +8,5 @@ build/
 data/*.json
 !data/.gitkeep
 config/homelab-hosts.json
+config/homeassistant.json
 .DS_Store

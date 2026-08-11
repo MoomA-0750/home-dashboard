@@ -1,0 +1,11 @@
+{
+  "_comment": "表示するエンティティを明示・順序指定したい場合に config/homeassistant.json として置く。省略時はドメイン(light/switch/lock/climate)とdevice_class(temperature/humidity)から自動検出する",
+  "controls": [
+    "light.example_ceiling",
+    "switch.example_outlet"
+  ],
+  "climate": [
+    "sensor.example_temperature",
+    "sensor.example_humidity"
+  ]
+}

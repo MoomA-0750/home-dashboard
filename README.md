@@ -21,6 +21,8 @@ packages/
     weather/           天気（Open-Meteo、APIキー不要）
     spotify-media/     Spotify再生中トラック表示・操作
     homelab-status/    ホームラボのホスト死活監視
+    ha-controls/       Home Assistantの家電操作（照明・スイッチ・鍵・エアコン）
+    ha-climate/        Home Assistantの室温・湿度
 config/     homelab-hosts.json などランタイム設定（Gitには含まれない値を置く）
 data/       レイアウト等の永続化データ（Gitには含まれない）
 docker/     Dockerfile
@@ -82,6 +84,34 @@ SSHポートフォワードでローカルの `127.0.0.1` 経由にするのが�
 （ダッシュボード自体を他デバイスから常用アクセスする際にも流用できるが、別途Tailscale管理画面での
 HTTPS有効化が必要）。
 
+## Home Assistant連携のセットアップ
+
+1. HAの「プロフィール → セキュリティ → 長期アクセストークン」でトークンを発行
+2. `apps/server/.env` に設定
+
+   ```
+   HOMEASSISTANT_URL=http://<HAのIP>:8123
+   HOMEASSISTANT_TOKEN=<発行したトークン>
+   ```
+
+3. サーバーを再起動すると、`light` / `switch` / `lock` / `climate` のエンティティと、
+   `device_class` が `temperature` / `humidity` のセンサーが**自動検出**されてウィジェットに並ぶ
+
+表示するエンティティや順序を明示したい場合は、`config/homeassistant.example.json` を
+`config/homeassistant.json` にコピーして編集する（省略時は自動検出）。
+
+### セキュリティ上の設計
+
+このダッシュボードは**LAN上に認証なしで公開される**前提なので、HA連携には2つの制限を入れている。
+
+- **サービス呼び出しはホワイトリスト制**: サーバーはHAのトークンを持つため無制限に中継すると
+  事実上HAの全機能を認証なしで公開することになる。`light`/`switch`/`lock`/`climate` の
+  必要なサービスだけを許可している（`apps/server/src/routes/homeassistant.ts` の `ALLOWED_SERVICES`）
+- **解錠は既定で無効**: 玄関の物理錠を想定し、`lock.unlock` は既定で拒否する（状態表示と施錠のみ）。
+  有効にするには `HOMEASSISTANT_ALLOW_UNLOCK=true` を設定する。**LANに入れる誰でも解錠できるようになる**点に注意
+
+トークンはサーバー内に留まり、フロントエンドには一切渡らない（ブラウザは自サーバーのAPIだけを叩く）。
+
 ## ウィジェットの追加方法
 
 各ウィジェットは `packages/widgets/<name>` に1つの独立したパッケージとして実装する。
@@ -121,10 +151,13 @@ HTTPS有効化が必要）。
 
 ## ロードマップ
 
-現在の実装は基盤（ウィジェットプラグイン機構・キャンバス・Docker配布）＋基本ウィジェット4種まで。
-Inboxのメモにあった以下は未着手:
+実装済み: 基盤（ウィジェットプラグイン機構・キャンバス・Docker配布）＋ウィジェット6種
+（時計・天気・Spotify・ホームラボ死活監視・HA家電操作・HA室温湿度）。
 
+未着手:
+
+- **1920x540の横長パネル向けレイアウト最適化**（現状はウィジェットが縦に並び、LD290EJSの画面に収まらない）
 - 時間帯・再生状況等に応じたウィジェットの自動出現/レイアウト変更
-- Home Assistant連携（家電操作・室温湿度）
 - ウェイクワード検知＋Claude Codeセッション起動によるスマートディスプレイ的な対話
 - ccusage / tailscale / gitリポジトリ状況 / iMessage・メール等の追加ウィジェット
+- キャンバス上でのウィジェット設定編集UI（現状は`defaultConfig`とサーバー側の設定ファイルのみ）
