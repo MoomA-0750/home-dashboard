@@ -1,20 +1,27 @@
 #!/usr/bin/env bash
 # push 前に「public にしたら困る内容」が混じっていないか検査する。
 # 有効化: git config core.hooksPath .githooks  （クローン直後に一度だけ実行する）
-set -euo pipefail
+set -uo pipefail
 
 repo_root="$(git rev-parse --show-toplevel)"
+zero=0000000000000000000000000000000000000000
 
 # stdin で <local ref> <local oid> <remote ref> <remote oid> が渡ってくる。
-# 削除(local oid が全ゼロ)以外の、実際に push される側のコミットを検査する。
+# 「今回リモートに新しく送られるオブジェクト」だけを検査したいので、
+# 送るコミットから “既にリモートにあるもの” を除外した範囲を rev-list に渡す。
 checked=0
-while read -r _local_ref local_oid _remote_ref _remote_oid; do
-  [ "$local_oid" = "0000000000000000000000000000000000000000" ] && continue
-  "$repo_root/scripts/check-public-safe.sh" "$local_oid" || exit 1
+while read -r _local_ref local_oid _remote_ref remote_oid; do
+  [ "$local_oid" = "$zero" ] && continue   # ブランチ削除は検査不要
+
+  args=("$local_oid" --not --remotes=origin)
+  # 既存ブランチの更新なら、リモートの現在位置も明示的に除外する
+  [ "${remote_oid:-$zero}" != "$zero" ] && args+=(--not "$remote_oid")
+
+  "$repo_root/scripts/check-public-safe.sh" --objects "${args[@]}" || exit 1
   checked=1
 done
 
-# stdin が空のケース（手動実行など）は HEAD を見る
+# stdin が空のケース（手動実行など）は HEAD のツリーを見る
 [ "$checked" = 0 ] && "$repo_root/scripts/check-public-safe.sh" HEAD
 
 exit 0

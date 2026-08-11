@@ -182,10 +182,21 @@ git config core.hooksPath .githooks
 - tailnet名（`*.ts.net`）とTailscaleのIP（`100.64.0.0/10`）
 - プライベートIP（`192.168.*` / `10.*` / `172.16-31.*`）
 
+検査対象は**「今回リモートに新しく送られるオブジェクト」**であって、最新のツリーではない。
+`git rev-list --objects <送るcommit> --not --remotes=origin` で求めたblobを全部見る。
+最新の中身だけを見る作りにすると、**中身は綺麗だが履歴に残っているブランチを見逃す**
+（新規ブランチのpushでは履歴ごと送られるため、これは実際に起きる）。
+
 ドキュメント用のダミー値など、意図的に許可したい文字列は `scripts/public-safe-allow.txt` に
 1行1リテラルで追記する。単発で通したい場合は `git push --no-verify`。
 
-手動で確認したいときは `./scripts/check-public-safe.sh [commit-ish]`（省略時は`HEAD`）。
+手動で確認したいときは:
+
+```bash
+./scripts/check-public-safe.sh                       # HEAD のツリー
+./scripts/check-public-safe.sh <commit-ish>          # 指定コミットのツリー
+./scripts/check-public-safe.sh --objects main --not --remotes=origin   # 送られる内容
+```
 
 ## ウィジェットの追加方法
 
