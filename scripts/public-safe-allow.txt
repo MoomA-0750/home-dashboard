@@ -8,3 +8,6 @@
 
 # レンジそのものを説明するためのCIDR表記（README等）
 100.64.0.0/10
+
+# tailnet名の説明で使うプレースホルダ
+tailnet-name.ts.net

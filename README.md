@@ -179,7 +179,7 @@ git config core.hooksPath .githooks
 以降、`git push` のたびに `scripts/check-public-safe.sh` が走り、以下が見つかると push が中止される。
 
 - 各種トークン・APIキー・秘密鍵の形式（JWT / `ghp_` / `tskey-` / `xox*-` / `sk-` / `AIza` / PEM）
-- tailnet名（`tail<hex>.ts.net`）とTailscaleのIP（`100.64.0.0/10`）
+- tailnet名（`*.ts.net`）とTailscaleのIP（`100.64.0.0/10`）
 - プライベートIP（`192.168.*` / `10.*` / `172.16-31.*`）
 
 ドキュメント用のダミー値など、意図的に許可したい文字列は `scripts/public-safe-allow.txt` に
