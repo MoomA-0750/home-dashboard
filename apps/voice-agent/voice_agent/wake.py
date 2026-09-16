@@ -73,8 +73,13 @@ class SpeechRecognizer:
         n = len(self._wake_phrase)
         texts = [w.word for w in utterance.words]
         for i in range(len(texts) - n + 1):
-            if texts[i : i + n] == self._wake_phrase:
-                return i + n - 1
+            if texts[i : i + n] != self._wake_phrase:
+                continue
+            # 直前がおとり単語（「あのね」「ですね」など）なら、その語尾の「ね」を「ねえ」と取り直しただけとみなす。
+            # 「あのね、クロードモネの〜」が、前に流す無音の長さ次第で「あのね ねえ クロード モネ」になった
+            if i > 0 and texts[i - 1] != "[unk]":
+                continue
+            return i + n - 1
         return None
 
     def audio(self, start_s: float, end_s: float) -> bytes:

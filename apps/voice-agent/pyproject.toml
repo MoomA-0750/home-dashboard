@@ -11,6 +11,9 @@ dependencies = [
   "numpy>=1.26",
 ]
 
+[project.optional-dependencies]
+test = ["pytest>=8"]
+
 [project.scripts]
 home-dashboard-voice-agent = "voice_agent.__main__:main"
 
@@ -20,3 +23,9 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 include = ["voice_agent*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+  "audio: VOICEVOX Engine で作った発話と Vosk・whisper を使う結合テスト（それらが無い環境では自動でスキップ）",
+]
