@@ -56,6 +56,7 @@ class Config:
     claude_bin: str
     claude_model: str
     claude_tools: str
+    dashboard_mcp: bool
     claude_cwd: Path
     claude_timeout_s: float
     session_idle_s: float
@@ -98,9 +99,11 @@ def load_config() -> Config:
         claude_model=_env("VOICE_CLAUDE_MODEL", "sonnet"),
         # 部屋にいる誰の声でも動くので、既定ではローカルを変更できるツールを渡さない（README参照）
         claude_tools=_env("VOICE_CLAUDE_TOOLS", "WebSearch,WebFetch"),
+        # ダッシュボードのサーバーの /mcp（天気・家電・音楽のツール）をClaudeに渡すか
+        dashboard_mcp=_env("VOICE_DASHBOARD_MCP", "true") != "false",
         claude_cwd=_path(_env("VOICE_CLAUDE_CWD", str(Path.home() / ".local/share/home-dashboard-voice/workspace"))),
         claude_timeout_s=float(_env("VOICE_CLAUDE_TIMEOUT_S", "180")),
-        # 最後のやり取りからこの秒数以内なら同じ会話の続きとして --resume する
+        # 最後のやり取りからこの秒数以内なら同じ会話の続きとして扱う
         session_idle_s=float(_env("VOICE_SESSION_IDLE_S", "300")),
         voicevox_url=_env("VOICEVOX_URL", "http://127.0.0.1:50021").rstrip("/"),
         voicevox_speaker=int(_env("VOICEVOX_SPEAKER", "3")),

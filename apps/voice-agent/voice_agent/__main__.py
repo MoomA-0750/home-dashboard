@@ -4,6 +4,7 @@ import contextlib
 import enum
 import logging
 import shutil
+import time
 import uuid
 
 from vosk import Model
@@ -93,6 +94,7 @@ class Assistant:
         except Exception as err:  # 起動順の都合で後から立ち上がることもあるので、ここでは止めない
             log.warning("VOICEVOX Engine に接続できません（%s）: %s", c.voicevox_url, err)
 
+        await self.claude.start()
         log.info("「%s」で待機します", "".join(c.wake_phrase))
         await asyncio.gather(self.relay.run(), self._listen_loop())
 
@@ -198,19 +200,31 @@ class Assistant:
             await self.update(state="thinking", transcript=text, response="")
 
             async def on_first_audio() -> None:
+                log.info("読み上げ開始（質問から%.1f秒）", time.monotonic() - asked_at)
                 await self.update(state="speaking")
 
             speech = SpeechQueue(self.tts, self.player, on_first_audio)
             splitter = SentenceSplitter()
             assert text is not None
-            async for delta in self.claude.ask(text):
-                self.response += delta
-                await self.relay.publish()
-                for sentence in splitter.feed(delta):
-                    speech.say(sentence)
+            asked_at = time.monotonic()
+            first_delta_s: float | None = None
+            # 中止されたときに Claude 側の後始末（読みかけの応答を捨てる）が確実に走るよう、明示的に閉じる
+            async with contextlib.aclosing(self.claude.ask(text)) as stream:
+                async for delta in stream:
+                    if first_delta_s is None and delta.strip():
+                        first_delta_s = time.monotonic() - asked_at
+                    self.response += delta
+                    await self.relay.publish()
+                    for sentence in splitter.feed(delta):
+                        speech.say(sentence)
             for sentence in splitter.flush():
                 speech.say(sentence)
-            log.info("返答: %r", self.response.strip())
+            log.info(
+                "返答（最初の文字まで%.1f秒、全体%.1f秒）: %r",
+                first_delta_s or 0,
+                time.monotonic() - asked_at,
+                self.response.strip(),
+            )
             await speech.finish()
             await self.update(state="idle", response=self.response.strip())
         except asyncio.CancelledError:

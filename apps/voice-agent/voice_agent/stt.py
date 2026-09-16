@@ -5,9 +5,13 @@ from faster_whisper import WhisperModel
 from .audio import pcm_to_float
 from .config import CACHE_DIR
 
-# whisperが「ねえクロード」を書き起こすときの揺れ（実測: ねぇ、クロード / レークロード / ネイクロード）。
+# whisperが「ねえクロード」を書き起こすときの揺れ
+# （実測: ねぇ、クロード / レークロード / ネイクロード / ネクロード! / Necrode）。
 # 命令の頭に付いたウェイクワードを落とすために使う
-_WAKE_PREFIX = re.compile(r"^\s*(?:(?:ね|ネ|れ|レ)[えぇーイい]?|hey|へい)?[、,.。!！\s]*(?:クロード|claude)[、,.。!！?？\s]*", re.I)
+_WAKE_PREFIX = re.compile(
+    r"^\s*(?:(?:ね|ネ|れ|レ)[えぇーイい]?|ne|hey|へい)?[、,.。!！\s]*(?:クロード|claude|crode|clode)[、,.。!！?？\s]*",
+    re.I,
+)
 
 # 無音や雑音に対してwhisperが出しがちな定型文。これだけが返ってきたら聞き取れなかった扱いにする
 _HALLUCINATIONS = ("ご視聴ありがとうございました", "チャンネル登録", "おやすみなさい", "字幕")
