@@ -31,8 +31,8 @@ export default defineWidget<ClockConfig>({
   id: "clock",
   name: "時計",
   description: "現在時刻と日付を表示します",
-  defaultSize: { w: 3, h: 2 },
-  minSize: { w: 2, h: 2 },
+  defaultSize: { w: 3, h: 1 },
+  minSize: { w: 2, h: 1 },
   defaultConfig: { locale: "ja-JP" },
   Component: ClockView,
 });

@@ -134,7 +134,7 @@ export default defineWidget<TailscaleConfig>({
   id: "tailscale-status",
   name: "Tailscale",
   description: "tailnet内のノードのオンライン状況・接続経路を表示します（読み取り専用）",
-  defaultSize: { w: 2, h: 2 },
+  defaultSize: { w: 2, h: 1 },
   minSize: { w: 2, h: 1 },
   defaultConfig: { pollIntervalMs: 30 * 1000 },
   Component: TailscaleView,

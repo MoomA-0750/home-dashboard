@@ -206,7 +206,7 @@ export default defineWidget<HaControlsConfig>({
   id: "ha-controls",
   name: "家電操作",
   description: "Home Assistantの照明・スイッチ・鍵・エアコンを操作します",
-  defaultSize: { w: 4, h: 2 },
+  defaultSize: { w: 4, h: 1 },
   minSize: { w: 2, h: 1 },
   defaultConfig: { pollIntervalMs: 10 * 1000, compactLimit: 4 },
   Component: HaControlsView,

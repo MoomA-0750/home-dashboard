@@ -1,14 +1,40 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import type { WidgetInstance } from "@home-dashboard/widget-sdk";
 import { widgetRegistry } from "./widgets";
 import { fetchLayout, saveLayout } from "./api/layout";
 import { useRuntimeContext } from "./lib/useRuntimeContext";
-import { Canvas } from "./components/Canvas";
-import { Sidebar } from "./components/Sidebar";
-import { AddWidgetPanel } from "./components/AddWidgetPanel";
+import { MainInfo } from "./components/MainInfo";
+import { WidgetRail } from "./components/WidgetRail";
+import {
+  Sidebar,
+  SidebarHandle,
+  SIDEBAR_LABEL_THRESHOLD,
+  SIDEBAR_MAX_WIDTH,
+  SIDEBAR_MIN_WIDTH,
+  type ScreenId,
+} from "./components/Sidebar";
+import { SettingsPanel } from "./components/SettingsPanel";
+
+/**
+ * 時刻・天気はメイン画面左側に固定表示（MainInfo）される画面の構成要素なので、
+ * ウィジェットレールには出さない。レールに二重に出るのを防ぐためここで除外する。
+ */
+const CHROME_WIDGET_IDS = ["clock", "weather"];
+
+const SIDEBAR_WIDTH_STORAGE_KEY = "home-dashboard:sidebar-width";
 
 function newInstanceId(): string {
   return crypto.randomUUID();
+}
+
+function clampSidebarWidth(width: number): number {
+  return Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_WIDTH, Math.round(width)));
+}
+
+function readStoredSidebarWidth(): number {
+  const stored = Number(localStorage.getItem(SIDEBAR_WIDTH_STORAGE_KEY));
+  return Number.isFinite(stored) && stored > 0 ? clampSidebarWidth(stored) : SIDEBAR_MIN_WIDTH;
 }
 
 export function App() {
@@ -16,6 +42,7 @@ export function App() {
   const [instances, setInstances] = useState<WidgetInstance[] | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(readStoredSidebarWidth);
   const loadedRef = useRef(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout>>();
 
@@ -55,9 +82,15 @@ export function App() {
     return () => socket.removeEventListener("message", onMessage);
   }, [ctx.socket, ctx.apiBaseUrl]);
 
-  if (instances === null) {
-    return <div className="app-loading">読み込み中…</div>;
-  }
+  const handleSidebarResize = useCallback((width: number) => {
+    const next = clampSidebarWidth(width);
+    setSidebarWidth(next);
+    localStorage.setItem(SIDEBAR_WIDTH_STORAGE_KEY, String(next));
+  }, []);
+
+  const handleSelectScreen = (screen: ScreenId) => {
+    if (screen === "settings") setSettingsOpen((v) => !v);
+  };
 
   const handleAdd = (widgetId: string) => {
     const def = widgetRegistry.get(widgetId);
@@ -78,27 +111,46 @@ export function App() {
     setInstances((prev) => (prev ?? []).filter((i) => i.instanceId !== instanceId));
   };
 
+  const shellStyle = { "--sidebar-width": `${sidebarWidth}px` } as CSSProperties;
+  const shellClassName = `app-shell${sidebarWidth > SIDEBAR_LABEL_THRESHOLD ? " app-shell--sidebar-expanded" : ""}`;
+
+  if (instances === null) {
+    return <div className="app-loading">読み込み中…</div>;
+  }
+
+  const railInstances = instances.filter((i) => !CHROME_WIDGET_IDS.includes(i.widgetId));
+
   return (
-    <div className="app-shell">
-      <Sidebar
-        editMode={editMode}
-        onToggleEditMode={() => setEditMode((v) => !v)}
-        settingsOpen={settingsOpen}
-        onToggleSettings={() => setSettingsOpen((v) => !v)}
-      />
-      <main className="app-main">
-        <Canvas
-          instances={instances}
+    <div className={shellClassName} style={shellStyle}>
+      <Sidebar activeScreen="home" settingsOpen={settingsOpen} onSelect={handleSelectScreen} />
+      <SidebarHandle width={sidebarWidth} onResize={handleSidebarResize} />
+      <main className="main-screen">
+        <MainInfo ctx={ctx} />
+        <WidgetRail
+          instances={railInstances}
           registry={widgetRegistry}
           ctx={ctx}
           editMode={editMode}
-          onLayoutChange={setInstances}
+          onLayoutChange={(next) => setInstances(mergeRailLayout(instances, next))}
           onRemove={handleRemove}
         />
       </main>
       {settingsOpen && (
-        <AddWidgetPanel registry={widgetRegistry} onAdd={handleAdd} onClose={() => setSettingsOpen(false)} />
+        <SettingsPanel
+          registry={widgetRegistry}
+          hiddenWidgetIds={CHROME_WIDGET_IDS}
+          editMode={editMode}
+          onToggleEditMode={() => setEditMode((v) => !v)}
+          onAdd={handleAdd}
+          onClose={() => setSettingsOpen(false)}
+        />
       )}
     </div>
   );
+}
+
+/** レールに出していないウィジェット（時刻・天気）の配置情報は触らずに残す */
+function mergeRailLayout(all: WidgetInstance[], rail: WidgetInstance[]): WidgetInstance[] {
+  const byId = new Map(rail.map((instance) => [instance.instanceId, instance]));
+  return all.map((instance) => byId.get(instance.instanceId) ?? instance);
 }

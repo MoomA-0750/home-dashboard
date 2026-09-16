@@ -11,3 +11,7 @@ data/*.bak-*
 config/homelab-hosts.json
 config/homeassistant.json
 .DS_Store
+
+# 背景画像は第三者の著作物を置く想定なのでリポジトリには含めない。
+# apps/web/public/background.jpg に好きな画像を置くと背景になる（無ければグラデーションにフォールバック）。
+apps/web/public/background.jpg

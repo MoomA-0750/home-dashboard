@@ -12,7 +12,7 @@ pnpm workspaceによるモノレポ。
 
 ```
 apps/
-  web/      React + Vite製のキャンバス（フロントエンド）
+  web/      React + Vite製のフロントエンド（トップ画面・ウィジェットレール）
   server/   Fastify製のAPIサーバー（レイアウト永続化・外部サービス連携・静的配信）
 packages/
   widget-sdk/       ウィジェットを実装するための型定義・共通フック
@@ -31,6 +31,32 @@ config/     homelab-hosts.json などランタイム設定（Gitには含まれ�
 data/       レイアウト等の永続化データ（Gitには含まれない）
 docker/     Dockerfile
 ```
+
+`apps/web/public/` にはフロントエンドが参照する静的アセットを置いている。
+
+- `fonts/` — Murecho（OFL）。壁掛けパネルがオフラインでも設計どおりの見た目になるよう同梱している
+- `icons/` — Fluent UI System Icons（MIT）。CSSマスクとして読み込むので色は親から継承される
+- `background.jpg` — **Gitには含まれない。** 好きな画像をこのパスに置くと背景になり、
+  置かなければ `--dash-background-fallback` のグラデーションが使われる
+
+## 画面デザイン
+
+トップ画面は Figma のデザインに沿って実装している。
+
+- Figma: <https://www.figma.com/design/zvNSZcCg8lGyWT4bAwup76/Home-Dashboard?node-id=46-2>
+- 寸法の設計図（素のHTML/CSSによる検証用プロトタイプ）: `~/Documents/dash-css`
+
+画面は「余白・時計・余白・ウィジェットレール・余白」の5カラムで、3つの余白が均等に伸縮する。
+時刻・天気・日付は画面そのものの構成要素として左側に固定表示され、ウィジェットレールには出さない
+（`apps/web/src/components/MainInfo.tsx`）。
+
+ウィジェットは幅650px・高さ200px・角丸45px・内側余白30pxを基本サイズとし、30px間隔で縦に積む。
+react-grid-layout を1カラム（`rowHeight=200` / `margin=[0,30]`）で使っているので、
+編集モードではドラッグでの並べ替えと高さのリサイズができる。
+
+サイドバーはアイコン5項目で、間のハンドルをドラッグすると80〜240pxの範囲で広がり、
+広げるとアイコンの横にラベルが出る（幅は localStorage に保存される）。
+Home以外の画面は未実装のため、いまは Settings（ウィジェット追加・編集モード切り替え）だけが開く。
 
 ## セットアップ（開発）
 
@@ -218,7 +244,8 @@ git config core.hooksPath .githooks
    export default defineWidget<MyConfig>({
      id: "my-widget",
      name: "マイウィジェット",
-     defaultSize: { w: 3, h: 2 },
+     // レールでは 1行 = 200px（`w` は使わない）
+     defaultSize: { w: 3, h: 1 },
      defaultConfig: {},
      Component: MyWidgetView,
      // 詳細ビューが必要な場合は DetailComponent も渡す
@@ -233,18 +260,20 @@ git config core.hooksPath .githooks
 3. `apps/web/package.json` の `dependencies` に新パッケージを追加し、
    `apps/web/src/widgets.ts` で `widgetRegistry.register(...)` する
 
-これでキャンバスの「ウィジェットを追加」パネルに表示され、配置できるようになる。
+これでサイドバーの Settings パネルの「ウィジェットを追加」に表示され、レールに追加できるようになる。
 
 ## ロードマップ
 
-実装済み: 基盤（ウィジェットプラグイン機構・キャンバス・Docker配布）＋ウィジェット10種
+実装済み: 基盤（ウィジェットプラグイン機構・トップ画面・Docker配布）＋ウィジェット10種
 （時計・天気・Spotify・ホームラボ死活監視・HA家電操作・HA室温湿度・Claude Code使用量・
 Tailscale・gitリポジトリ・メール）。当初構想していた連携ウィジェットはメールを除きすべて実データで動作確認済み
 （メールのみ認証情報が未設定のため未接続表示のまま）。
 
 未着手:
 
-- **1920x540の横長パネル向けレイアウト最適化**（現状はウィジェットが1列に縦積みされ、LD290EJSの画面に収まらない）
+- Home以外の画面（Media / Home Control / Toolbox）
+- 設計図がまだ無いウィジェット（ホームラボ・Tailscale・git・メール等）のカードデザイン
+  （現状は650x200のカードに旧レイアウトの中身がそのまま入っているだけ）
 - 時間帯・再生状況等に応じたウィジェットの自動出現/レイアウト変更
 - ウェイクワード検知＋Claude Codeセッション起動によるスマートディスプレイ的な対話
 - iMessage連携（Mac側に常駐エージェントが要るため保留）

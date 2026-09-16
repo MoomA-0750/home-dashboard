@@ -33,6 +33,8 @@ async function getAccessToken(): Promise<string | null> {
 
 interface SpotifyPlaybackState {
   is_playing: boolean;
+  shuffle_state: boolean;
+  repeat_state: "off" | "track" | "context";
   item: {
     name: string;
     artists: { name: string }[];
@@ -41,22 +43,33 @@ interface SpotifyPlaybackState {
 }
 
 export async function registerSpotifyRoutes(app: FastifyInstance): Promise<void> {
+  const idleState = (configured: boolean) => ({
+    configured,
+    isPlaying: false,
+    shuffle: false,
+    repeat: "off" as const,
+    track: null,
+  });
+
   app.get("/api/spotify/now-playing", async () => {
     const token = await getAccessToken();
-    if (!token) return { configured: false, isPlaying: false, track: null };
+    if (!token) return idleState(false);
 
-    const res = await fetch("https://api.spotify.com/v1/me/player/currently-playing", {
+    // currently-playing ではなく player を使う。シャッフル/リピートの状態はこちらにしか入っていない。
+    const res = await fetch("https://api.spotify.com/v1/me/player", {
       headers: { Authorization: `Bearer ${token}` },
     });
-    if (res.status === 204) return { configured: true, isPlaying: false, track: null };
+    if (res.status === 204) return idleState(true);
     if (!res.ok) throw new Error(`spotify now-playing error: ${res.status}`);
 
     const data = (await res.json()) as SpotifyPlaybackState;
-    if (!data.item) return { configured: true, isPlaying: false, track: null };
+    if (!data.item) return idleState(true);
 
     return {
       configured: true,
       isPlaying: data.is_playing,
+      shuffle: data.shuffle_state,
+      repeat: data.repeat_state,
       track: {
         name: data.item.name,
         artist: data.item.artists.map((a) => a.name).join(", "),
@@ -65,30 +78,43 @@ export async function registerSpotifyRoutes(app: FastifyInstance): Promise<void>
     };
   });
 
-  app.post<{ Body: { action: "play" | "pause" | "next" | "previous" } }>(
-    "/api/spotify/control",
-    async (request, reply) => {
-      const token = await getAccessToken();
-      if (!token) return reply.code(409).send({ error: "spotify not configured" });
+  interface ControlBody {
+    action: "play" | "pause" | "next" | "previous" | "shuffle" | "repeat";
+    /** shuffle なら true/false、repeat なら "off" | "track" | "context" */
+    state?: boolean | "off" | "track" | "context";
+  }
 
-      const { action } = request.body;
-      const endpoints: Record<typeof action, { method: string; path: string }> = {
-        play: { method: "PUT", path: "me/player/play" },
-        pause: { method: "PUT", path: "me/player/pause" },
-        next: { method: "POST", path: "me/player/next" },
-        previous: { method: "POST", path: "me/player/previous" },
-      };
-      const { method, path } = endpoints[action];
-      const res = await fetch(`https://api.spotify.com/v1/${path}`, {
-        method,
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok && res.status !== 204) {
-        return reply.code(502).send({ error: `spotify control error: ${res.status}` });
-      }
-      return { ok: true };
-    },
-  );
+  app.post<{ Body: ControlBody }>("/api/spotify/control", async (request, reply) => {
+    const token = await getAccessToken();
+    if (!token) return reply.code(409).send({ error: "spotify not configured" });
+
+    const { action, state } = request.body;
+    const endpoints: Record<ControlBody["action"], { method: string; path: string }> = {
+      play: { method: "PUT", path: "me/player/play" },
+      pause: { method: "PUT", path: "me/player/pause" },
+      next: { method: "POST", path: "me/player/next" },
+      previous: { method: "POST", path: "me/player/previous" },
+      shuffle: { method: "PUT", path: "me/player/shuffle" },
+      repeat: { method: "PUT", path: "me/player/repeat" },
+    };
+    const endpoint = endpoints[action];
+    if (!endpoint) return reply.code(400).send({ error: `unknown action: ${action}` });
+
+    const url = new URL(`https://api.spotify.com/v1/${endpoint.path}`);
+    if (action === "shuffle" || action === "repeat") {
+      if (state === undefined) return reply.code(400).send({ error: `${action} requires state` });
+      url.searchParams.set("state", String(state));
+    }
+
+    const res = await fetch(url, {
+      method: endpoint.method,
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok && res.status !== 204) {
+      return reply.code(502).send({ error: `spotify control error: ${res.status}` });
+    }
+    return { ok: true };
+  });
 
   // 一度だけ実行する認可コードフロー。SPOTIFY_REFRESH_TOKEN 未設定時の初期セットアップ用。
   app.get("/auth/spotify/login", async (_request, reply) => {

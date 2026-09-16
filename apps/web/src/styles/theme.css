@@ -1,12 +1,45 @@
+/* ============================================================================
+   Home Dashboard — トップ画面のデザイン定義
+
+   Figma: https://www.figma.com/design/zvNSZcCg8lGyWT4bAwup76/Home-Dashboard?node-id=46-2
+   デザイン検証用のプロトタイプ: ~/Documents/dash-css
+
+   余白・角丸・フォントサイズ・トランジションなどの数値は上記の設計図の指定をそのまま
+   採用している。数値を変えるときは設計図側と揃えること。
+   ========================================================================== */
+
 :root {
-  --bg-gradient: linear-gradient(120deg, #0a1730 0%, #12356b 45%, #1f6fb2 100%);
-  --glass-bg: rgba(255, 255, 255, 0.08);
-  --glass-border: rgba(255, 255, 255, 0.16);
-  --text-primary: #f5f8ff;
-  --text-secondary: rgba(245, 248, 255, 0.7);
+  /* 背景画像。将来 WebUI や config から差し替えられるようにする想定で変数に切り出してある。
+     画像を配置していない（= 404）場合はレイヤーごと描画されないので、下地の
+     --dash-background-fallback のグラデーションがそのまま見える。 */
+  --dash-background-image: url("/background.jpg");
+  --dash-background-fallback: linear-gradient(120deg, #0a1730 0%, #12356b 45%, #1f6fb2 100%);
+
+  /* サイドバーはドラッグでリサイズするため JS から上書きされる（80〜240px） */
+  --sidebar-width: 80px;
+
+  --line: rgba(255, 255, 255, 0.14);
+  --text: #f7fbff;
+  --muted: #a9bdd2;
+  --text-primary: var(--text);
+  --text-secondary: var(--muted);
   --accent-ok: #4ade80;
   --accent-warn: #fbbf24;
-  --sidebar-w: clamp(3rem, 4vw, 4.5rem);
+
+  /* ウィジェットの基本寸法。650x200px・内側余白30px・角丸45px。
+     アートワーク等の内側要素は「外側の角丸 − 内側余白」を角丸にすると縁が平行になる。 */
+  --card-height: 200px;
+  --card-gap: 30px;
+  --card-radius: 45px;
+  --card-padding: 30px;
+  --inner-radius: calc(var(--card-radius) - var(--card-padding));
+
+  --glass-bg: rgba(255, 255, 255, 0.08);
+  --glass-border: rgba(225, 244, 255, 0.16);
+
+  /* 設計図の寸法はすべて px なのでこの値の影響を受けない。
+     ここで効くのはウィジェット内部の rem 指定だけで、壁掛けパネルでの可読性のために
+     画面幅に応じて少し大きくしている。 */
   font-size: clamp(14px, 1.1vw, 20px);
 }
 
@@ -22,16 +55,61 @@ body,
 }
 
 body {
-  background: var(--bg-gradient);
-  color: var(--text-primary);
-  font-family: "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
+  min-width: 320px;
+  color: var(--text);
+  background: #071226;
+  font-family: Murecho, "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
   overflow: hidden;
 }
 
+button {
+  color: inherit;
+  font: inherit;
+}
+
+/* フォント由来の上下余白を取り除き、設計図どおりのベースライン整列にする */
+:where(h1, h2, h3, h4, h5, h6, p, span, strong, b, button) {
+  text-box-edge: cap alphabetic;
+  text-box-trim: trim-both;
+}
+
+/* --- Fluent UI System Icons（public/icons/*.svg をマスクとして使う） --- */
+
+.fluent-icon {
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  background-color: currentColor;
+  -webkit-mask: var(--fluent-icon) center / contain no-repeat;
+  mask: var(--fluent-icon) center / contain no-repeat;
+}
+
+/* --- シェル（サイドバー / リサイズハンドル / メイン画面の3カラム） --- */
+
 .app-shell {
-  display: flex;
-  height: 100vh;
-  width: 100vw;
+  display: grid;
+  grid-template-columns: var(--sidebar-width) 5px minmax(0, 1fr);
+  height: 100svh;
+  overflow: hidden;
+  background-color: #071226;
+  background-image:
+    linear-gradient(to right, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.4) 50%, rgba(0, 0, 0, 0) 70%),
+    var(--dash-background-image),
+    var(--dash-background-fallback);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: auto, cover, cover;
+}
+
+.app-shell::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 74% 42%, rgba(74, 199, 255, 0.13), transparent 34%),
+    linear-gradient(180deg, rgba(7, 15, 34, 0.18), rgba(1, 7, 18, 0.55));
 }
 
 .app-loading {
@@ -43,41 +121,242 @@ body {
 }
 
 .sidebar {
-  width: var(--sidebar-w);
-  flex-shrink: 0;
+  z-index: 1;
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  gap: 12px;
+  padding: 12px;
+  overflow: hidden;
+}
+
+.nav-button {
+  display: flex;
   align-items: center;
-  gap: 1.5rem;
-  padding-top: 1.5rem;
-  background: rgba(0, 0, 0, 0.15);
-}
-
-.sidebar__icon {
-  font-size: 1.4rem;
-  opacity: 0.5;
-  cursor: default;
-  background: none;
-  border: none;
-  color: inherit;
-}
-
-.sidebar__button {
+  flex: 0 0 56px;
+  width: 100%;
+  gap: 15px;
+  padding: 0 16px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 17px;
+  background: transparent;
   cursor: pointer;
+  text-align: left;
+  white-space: nowrap;
+  transition: 0.2s ease;
 }
 
-.sidebar__icon--active {
+.nav-button__label {
+  opacity: 0;
+  transform: translateX(-7px);
+  transition: 0.2s ease;
+}
+
+.nav-button:not(:disabled):hover,
+.nav-button--active {
+  color: #06203b;
+  background: rgba(224, 247, 255, 0.94);
+  box-shadow: 0 7px 22px rgba(2, 12, 32, 0.3);
+}
+
+.nav-button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* サイドバーを広げたときだけラベルを出す（80px のときはアイコンのみ） */
+.app-shell--sidebar-expanded .nav-button__label {
+  opacity: 1;
+  transform: none;
+}
+
+.sidebar-handle {
+  z-index: 2;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  touch-action: none;
+  cursor: col-resize;
+  outline: 0;
+}
+
+.sidebar-handle__grip {
+  width: 5px;
+  height: 70px;
+  border-radius: 9px;
+  background: rgba(218, 244, 255, 0.62);
+  transition:
+    background 0.2s,
+    box-shadow 0.2s;
+}
+
+.sidebar-handle:hover .sidebar-handle__grip,
+.sidebar-handle:focus-visible .sidebar-handle__grip {
+  background: #dff5ff;
+  box-shadow: 0 0 0 4px rgba(136, 218, 248, 0.22);
+}
+
+body.is-resizing {
+  cursor: col-resize;
+  user-select: none;
+}
+
+/* メイン画面は「余白・時計・余白・ウィジェット・余白」の5カラム。
+   3つの余白は minmax(24px, 1fr) で均等に伸縮する。 */
+.main-screen {
+  z-index: 1;
+  display: grid;
+  grid-template-columns:
+    minmax(24px, 1fr) auto minmax(24px, 1fr) clamp(420px, 37vw, 710px)
+    minmax(24px, 1fr);
+  height: 100svh;
+  overflow: hidden;
+}
+
+/* --- 時計・天気・日付 --- */
+
+.main-info {
+  --clock-size: clamp(90px, 10.42vw, 200px);
+  --meta-size: clamp(40px, 4.69vw, 90px);
+  display: grid;
+  grid-column: 2;
+  grid-template-columns: calc(var(--clock-size) * 2.27) calc(var(--meta-size) * 4.77);
+  column-gap: 0;
+  align-items: center;
+  min-width: 0;
+  padding: 0;
+}
+
+.time-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, calc(var(--clock-size) * 1.135)));
+  column-gap: 0;
+  align-items: center;
+  align-self: center;
+  height: auto;
+  font-size: var(--clock-size);
+  line-height: 1;
+  filter: drop-shadow(0 9px 22px rgba(1, 8, 22, 0.2));
+}
+
+.time-part {
+  display: flex;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.time-part b {
+  display: inline-block;
+  width: min-content;
+  font: inherit;
+}
+
+.time-part--hour {
+  justify-content: flex-end;
+  color: #fff;
+  font-weight: 600;
+}
+
+.time-part--minute {
+  justify-content: flex-start;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 200;
+}
+
+.meta-grid {
+  display: grid;
+  grid-template-rows: repeat(2, auto);
+  row-gap: 10px;
+  align-content: start;
+  align-items: start;
+  align-self: center;
+  height: auto;
+  font-weight: 200;
+}
+
+.meta-weather {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  /* 天気の取得前でも行の高さを確保し、日付が上にずれないようにする */
+  min-height: 1em;
+  padding: 0;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: var(--meta-size);
+  font-weight: 200;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* 天気アイコンは隣の文字のキャップハイトに揃える（文字より大きくしない） */
+.meta-weather .fluent-icon {
+  display: block;
+  flex: 0 0 1cap;
+  width: 1cap;
+  height: 1cap;
+  max-width: 1em;
+  max-height: 1em;
+  overflow: visible;
+}
+
+.meta-weather strong {
+  font-weight: 200;
+}
+
+.meta-date {
+  align-self: center;
+  margin: 0;
+  padding: 0;
+  color: #fff;
+  font-size: var(--meta-size);
+  font-weight: 200;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* --- ウィジェットレール --- */
+
+.widget-rail {
+  grid-column: 4;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(204, 237, 255, 0.65) transparent;
+}
+
+/* 上余白で先頭ウィジェットが画面中央に来るようにし、
+   下余白で box-shadow がスクロール端でクリップされないようにする。 */
+.widget-stack {
+  min-height: calc(100svh + 456px);
+  padding: calc(50svh - 100px) 30px 84px;
+}
+
+.widget-rail__empty {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+/* react-grid-layout は1カラム縦積みで使う。
+   rowHeight=200 / margin=[0,30] で、設計図どおり「高さ200px・間隔30px」になる。 */
+.canvas-grid {
+  position: relative;
+}
+
+.react-grid-item.react-grid-placeholder {
+  border-radius: var(--card-radius);
+  background: rgba(224, 247, 255, 0.18);
   opacity: 1;
 }
 
-.app-main {
-  flex: 1;
-  overflow-y: auto;
-  padding: 1.5rem;
-}
-
-.canvas-grid {
-  position: relative;
+.react-grid-item > .react-resizable-handle {
+  right: 14px;
+  bottom: 14px;
+  opacity: 0.6;
 }
 
 .widget-host {
@@ -87,40 +366,75 @@ body {
 
 .widget-host__remove {
   position: absolute;
-  top: -0.5rem;
-  right: -0.5rem;
+  top: 10px;
+  right: 10px;
   z-index: 2;
-  width: 1.5rem;
-  height: 1.5rem;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
   border-radius: 50%;
-  border: none;
-  background: #ef4444;
-  color: #fff;
+  background: rgba(230, 246, 255, 0.92);
+  color: #09223c;
   cursor: pointer;
 }
 
+.widget-host__remove .fluent-icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* --- ウィジェットカードの外装 --- */
+
 .widget-card {
-  width: 100%;
-  height: 100%;
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
   gap: 0.25rem;
-  padding: 1rem 1.25rem;
-  border-radius: 1rem;
-  background: var(--glass-bg);
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  padding: var(--card-padding);
   border: 1px solid var(--glass-border);
-  backdrop-filter: blur(16px);
+  border-radius: var(--card-radius);
+  background: linear-gradient(0deg, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.25));
+  box-shadow: 0 14px 32px -16px rgba(0, 6, 20, 0.28);
+  backdrop-filter: blur(5px);
   color: var(--text-primary);
   text-align: left;
   cursor: default;
   font: inherit;
 }
 
+.widget-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(120deg, rgba(255, 255, 255, 0.1), transparent 33%);
+}
+
 button.widget-card {
   cursor: pointer;
 }
+
+.widget-card h1,
+.widget-card h2 {
+  margin: 0;
+  font-size: clamp(21px, 2vw, 31px);
+}
+
+.muted {
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* --- 時計ウィジェット（レールに置いた場合のコンパクト表示） --- */
 
 .widget-clock__time {
   font-size: 2.5rem;
@@ -130,12 +444,15 @@ button.widget-card {
 
 .widget-clock__mm {
   color: var(--text-secondary);
+  font-weight: 200;
 }
 
 .widget-clock__date {
   color: var(--text-secondary);
   font-size: 1rem;
 }
+
+/* --- 天気ウィジェット --- */
 
 .widget-weather {
   flex-direction: row;
@@ -160,46 +477,111 @@ button.widget-card {
   color: var(--accent-warn);
 }
 
+/* --- Spotifyメディア（設計図の Media カード） --- */
+
 .widget-spotify {
   flex-direction: row;
   align-items: center;
-  gap: 0.75rem;
+  justify-content: space-between;
+  gap: 20px;
 }
 
-.widget-spotify__art {
-  width: 3rem;
-  height: 3rem;
-  border-radius: 0.5rem;
-  object-fit: cover;
+.widget-spotify__meta {
+  min-width: 0;
 }
 
 .widget-spotify__title {
+  margin: 0;
+  overflow: hidden;
+  font-size: clamp(21px, 2vw, 31px);
   font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .widget-spotify__artist {
-  color: var(--text-secondary);
-  font-size: 0.9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .widget-spotify__controls {
   display: flex;
-  gap: 0.5rem;
-  margin-top: 0.25rem;
+  align-items: center;
+  gap: 9px;
+  margin-top: 22px;
 }
 
 .widget-spotify__controls button {
-  background: none;
-  border: none;
-  color: var(--text-primary);
-  font-size: 1.1rem;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #e4f3ff;
+  opacity: 0.88;
   cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.widget-spotify__controls button:hover {
+  opacity: 1;
+}
+
+.widget-spotify__controls .fluent-icon {
+  width: 20px;
+  height: 20px;
+}
+
+/* シャッフル・リピートはオン/オフのトグルなので、オンのときだけ色を強める */
+.widget-spotify__controls .widget-spotify__toggle {
+  opacity: 0.45;
+}
+
+.widget-spotify__controls .widget-spotify__toggle--on {
+  color: #8bdcff;
+  opacity: 1;
+}
+
+.widget-spotify__controls .widget-spotify__play {
+  width: 40px;
+  height: 40px;
+  background: #e6f6ff;
+  color: #09223c;
+  opacity: 1;
+}
+
+.widget-spotify__controls .widget-spotify__play .fluent-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.widget-spotify__art {
+  flex: 0 0 140px;
+  width: 140px;
+  height: 140px;
+  border-radius: var(--inner-radius);
+  object-fit: cover;
+}
+
+.widget-spotify__art--placeholder {
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #f4c6a9 0%, #dd825a 31%, #293d77 32%, #172f64 64%, #f2a0ba 65%);
+  color: rgba(255, 255, 255, 0.84);
+  font-size: 72px;
+  font-weight: 700;
 }
 
 .widget-spotify__hint {
   font-size: 0.75rem;
   color: var(--text-secondary);
 }
+
+/* --- ホームラボ死活監視 --- */
 
 .widget-homelab {
   flex-direction: row;
@@ -224,7 +606,6 @@ button.widget-card {
   align-items: stretch;
   justify-content: flex-start;
   gap: 0.5rem;
-  padding: 0.75rem;
 }
 
 .ha-controls__grid {
@@ -244,7 +625,7 @@ button.widget-card {
   align-items: flex-start;
   gap: 0.1rem;
   padding: 0.5rem 0.6rem;
-  border-radius: 0.75rem;
+  border-radius: var(--inner-radius);
   border: 1px solid var(--glass-border);
   background: rgba(255, 255, 255, 0.06);
   color: var(--text-primary);
@@ -350,6 +731,8 @@ button.widget-card {
   font-variant-numeric: tabular-nums;
 }
 
+/* --- 詳細ビュー --- */
+
 .widget-detail-overlay {
   position: fixed;
   inset: 0;
@@ -366,20 +749,22 @@ button.widget-card {
   max-width: 90vw;
   max-height: 80vh;
   overflow-y: auto;
-  padding: 1.5rem;
-  border-radius: 1rem;
+  padding: var(--card-padding);
+  border-radius: var(--card-radius);
   background: rgba(10, 23, 48, 0.95);
   border: 1px solid var(--glass-border);
 }
 
 .widget-detail-panel__close {
   position: absolute;
-  top: 0.75rem;
-  right: 0.75rem;
+  top: 1rem;
+  right: 1rem;
+  display: grid;
+  place-items: center;
+  padding: 0;
   background: none;
   border: none;
   color: var(--text-primary);
-  font-size: 1.25rem;
   cursor: pointer;
 }
 
@@ -409,8 +794,8 @@ button.widget-card {
 .widget-weather-detail__bar {
   width: 0.75rem;
   min-height: 2px;
-  border-radius: 0.25rem;
-  background: #60a5fa;
+  border-radius: 0.25rem 0.25rem 0 0;
+  background: linear-gradient(#88daf8, rgba(105, 190, 237, 0.34));
 }
 
 .widget-weather-detail__bar-label {
@@ -444,36 +829,73 @@ button.widget-card {
   color: var(--text-secondary);
 }
 
-.add-widget-panel {
+/* --- 設定パネル（ウィジェットの追加・編集モード） --- */
+
+.settings-panel {
   position: fixed;
   top: 0;
   right: 0;
   bottom: 0;
+  z-index: 20;
   width: 20rem;
   max-width: 85vw;
+  overflow-y: auto;
+  padding: var(--card-padding);
   background: rgba(10, 23, 48, 0.97);
   border-left: 1px solid var(--glass-border);
-  padding: 1.5rem;
-  overflow-y: auto;
-  z-index: 20;
+  backdrop-filter: blur(5px);
 }
 
-.add-widget-panel__header {
+.settings-panel__header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1rem;
 }
 
-.add-widget-panel__header button {
+.settings-panel__header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.settings-panel__close {
+  display: grid;
+  place-items: center;
+  padding: 0;
   background: none;
   border: none;
   color: var(--text-primary);
-  font-size: 1.25rem;
   cursor: pointer;
 }
 
-.add-widget-panel__list {
+.settings-panel__edit-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  margin-bottom: 1.25rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--inner-radius);
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: left;
+}
+
+.settings-panel__edit-toggle--on {
+  background: rgba(224, 247, 255, 0.94);
+  border-color: transparent;
+  color: #06203b;
+}
+
+.settings-panel__section-title {
+  margin: 0 0 0.5rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.settings-panel__list {
   list-style: none;
   padding: 0;
   margin: 0;
@@ -482,14 +904,14 @@ button.widget-card {
   gap: 0.5rem;
 }
 
-.add-widget-panel__item {
+.settings-panel__item {
   width: 100%;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 0.25rem;
   padding: 0.75rem 1rem;
-  border-radius: 0.75rem;
+  border-radius: var(--inner-radius);
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
   color: var(--text-primary);
@@ -497,7 +919,7 @@ button.widget-card {
   text-align: left;
 }
 
-.add-widget-panel__desc {
+.settings-panel__desc {
   font-size: 0.8rem;
   color: var(--text-secondary);
 }
@@ -716,7 +1138,6 @@ button.widget-card {
   align-items: stretch;
   justify-content: flex-start;
   gap: 0.35rem;
-  padding: 0.85rem 1rem;
 }
 
 .widget-git__header {
@@ -840,7 +1261,6 @@ button.widget-card {
   align-items: stretch;
   justify-content: flex-start;
   gap: 0.35rem;
-  padding: 0.85rem 1rem;
 }
 
 .widget-mail__header {
@@ -913,4 +1333,86 @@ button.widget-card {
 
 .widget-mail-detail__subject {
   font-size: 0.9rem;
+}
+
+/* --- タブレット幅: 時計を上、ウィジェットを下の2段組みにする --- */
+
+@media (max-width: 900px) {
+  .main-screen {
+    grid-template-columns: 1fr;
+    grid-template-rows: 42svh minmax(0, 58svh);
+  }
+
+  .main-info {
+    --clock-size: clamp(80px, 20vw, 140px);
+    --meta-size: clamp(34px, 8.8vw, 62px);
+    grid-column: 1;
+    align-self: center;
+    justify-self: center;
+  }
+
+  .widget-rail {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .widget-stack {
+    min-height: calc(58svh + 456px);
+    padding: calc(29svh - 100px) 30px 40px;
+  }
+}
+
+/* --- スマートフォン幅: サイドバーを下部のタブバーに寄せる --- */
+
+@media (max-width: 620px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+    padding-bottom: 68px;
+  }
+
+  .sidebar {
+    position: fixed;
+    z-index: 3;
+    inset: auto 12px 12px;
+    height: 56px;
+    min-height: 56px;
+    flex-direction: row;
+    justify-content: space-around;
+    padding: 4px;
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    background: rgba(7, 18, 38, 0.72);
+    backdrop-filter: blur(8px);
+  }
+
+  .nav-button {
+    flex-basis: 48px;
+    width: 48px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .nav-button__label,
+  .sidebar-handle {
+    display: none;
+  }
+
+  .main-info {
+    --clock-size: clamp(68px, 19vw, 105px);
+    --meta-size: clamp(29px, 8.2vw, 46px);
+  }
+
+  .widget-stack {
+    padding-inline: 30px;
+  }
+
+  .widget-spotify__art {
+    flex-basis: 92px;
+    width: 92px;
+    height: 92px;
+  }
+
+  .widget-spotify__art--placeholder {
+    font-size: 62px;
+  }
 }

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import type { WidgetInstance, WidgetRegistry, WidgetRuntimeContext, WidgetSize } from "@home-dashboard/widget-sdk";
+import { Icon } from "./Icon";
 
 interface WidgetHostProps {
   instance: WidgetInstance;
@@ -30,7 +31,7 @@ export function WidgetHost({ instance, registry, ctx, editMode, onRemove }: Widg
           onClick={() => onRemove(instance.instanceId)}
           aria-label="ウィジェットを削除"
         >
-          ×
+          <Icon name="dismiss" />
         </button>
       )}
       <Component
@@ -51,8 +52,13 @@ export function WidgetHost({ instance, registry, ctx, editMode, onRemove }: Widg
         createPortal(
           <div className="widget-detail-overlay" onClick={() => setDetailOpen(false)}>
             <div className="widget-detail-panel" onClick={(e) => e.stopPropagation()}>
-              <button type="button" className="widget-detail-panel__close" onClick={() => setDetailOpen(false)}>
-                ×
+              <button
+                type="button"
+                className="widget-detail-panel__close"
+                onClick={() => setDetailOpen(false)}
+                aria-label="閉じる"
+              >
+                <Icon name="dismiss" />
               </button>
               <DetailComponent
                 instanceId={instance.instanceId}

@@ -68,6 +68,8 @@ export async function registerWeatherRoutes(app: FastifyInstance): Promise<void>
         temperatureC: data.current.temperature_2m,
         condition,
         icon,
+        // WMO weather code。フロント側で天気に応じたアイコンを選ぶのに使う
+        code: data.current.weather_code,
         isDay: data.current.is_day === 1,
       },
       hourly,

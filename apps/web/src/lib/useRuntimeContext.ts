@@ -14,9 +14,16 @@ export function useRuntimeContext(): WidgetRuntimeContext {
   const socketRef = useRef<WebSocket | null>(null);
   const [, forceRender] = useState(0);
 
+  // 大きく表示する時計が最大30秒遅れて見えないよう、毎分0秒ちょうどに更新する
   useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 30_000);
-    return () => clearInterval(id);
+    let timer: ReturnType<typeof setTimeout>;
+    const scheduleNextMinute = () => {
+      const now = new Date();
+      setNow(now);
+      timer = setTimeout(scheduleNextMinute, 60_000 - (now.getSeconds() * 1000 + now.getMilliseconds()));
+    };
+    scheduleNextMinute();
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {

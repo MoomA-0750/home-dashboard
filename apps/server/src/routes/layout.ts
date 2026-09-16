@@ -17,6 +17,7 @@ interface WidgetInstance {
 interface DashboardLayout {
   instances: WidgetInstance[];
   updatedAt: string;
+  version?: number;
 }
 
 const layoutPath = join(config.dataDir, "layout.json");

@@ -69,4 +69,6 @@ export interface WidgetInstance<TConfig = Record<string, unknown>> {
 export interface DashboardLayout {
   instances: WidgetInstance[];
   updatedAt: string;
+  /** レイアウトデータのスキーマ版。未設定は v1（旧キャンバス形式）扱い */
+  version?: number;
 }
