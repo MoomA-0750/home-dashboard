@@ -23,3 +23,12 @@ services:
       # （ソケット越しの操作可否は tailscaled 側が判断する。こちらは status の取得しか行わない）
       - /var/run/tailscale/tailscaled.sock:/host/tailscaled.sock
     restart: unless-stopped
+
+  # 音声アシスタントの読み上げ。apps/voice-agent（ホスト上で動かす）から使うので、ホストのループバックにだけ公開する
+  voicevox:
+    image: voicevox/voicevox_engine:cpu-latest
+    ports:
+      - "127.0.0.1:50021:50021"
+    # 既定のスレッド数では合成が実時間に追いつかなかったので、全コアを使わせる（コア数に合わせて変える）
+    command: ["gosu", "user", "/opt/voicevox_engine/run", "--host", "0.0.0.0", "--cpu_num_threads", "4"]
+    restart: unless-stopped

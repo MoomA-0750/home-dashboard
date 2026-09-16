@@ -66,4 +66,12 @@ export const config = {
     password: process.env.MAIL_PASSWORD ?? "",
     mailbox: process.env.MAIL_MAILBOX ?? "INBOX",
   },
+
+  voice: {
+    /**
+     * 音声エージェント（apps/voice-agent）が /ws/voice-agent に接続するときの共有トークン。
+     * 未設定なら誰でもエージェントとして接続できる（画面に偽の返答を出せる程度の影響なので既定は空）
+     */
+    agentToken: process.env.VOICE_AGENT_TOKEN ?? "",
+  },
 };

@@ -14,6 +14,7 @@ pnpm workspaceによるモノレポ。
 apps/
   web/      React + Vite製のフロントエンド（トップ画面・ウィジェットレール）
   server/   Fastify製のAPIサーバー（レイアウト永続化・外部サービス連携・静的配信）
+  voice-agent/  Python製の音声アシスタント（ウェイクワード → Claude Code → 読み上げ）。ホスト上で常駐させる
 packages/
   widget-sdk/       ウィジェットを実装するための型定義・共通フック
   widgets/
@@ -224,6 +225,116 @@ git config core.hooksPath .githooks
 ./scripts/check-public-safe.sh --objects main --not --remotes=origin   # 送られる内容
 ```
 
+## 音声アシスタント（ウェイクワード → Claude Code）
+
+「ねえクロード」と話しかけると画面にパネルが出て、続けて話した内容を Claude Code に渡し、
+返答を VOICEVOX で読み上げる。スマートスピーカー的に使うための部分。
+
+```
+マイク ─→ apps/voice-agent（ホスト上で常駐）
+            Vosk: ウェイクワード検出 ─→ Silero VAD: 話し終わりの判定 ─→ faster-whisper: 書き起こし
+            ─→ claude -p（stream-json）─→ 文ごとに VOICEVOX Engine で合成 ─→ スピーカー
+                │ 状態のスナップショット（聞いている/考えている/話している/返答テキスト）
+                ▼
+          apps/server  /ws/voice-agent ─→ /ws で全画面に配信 ─→ VoiceOverlay
+                       /api/voice/ask・cancel ←─ 画面からのテキスト入力・中止
+```
+
+音声の入出力・認識・Claude Code の呼び出しはすべてエージェント側で行い、サーバーは状態の中継だけをする。
+エージェントをサーバーのコンテナに入れていないのは、マイク・スピーカーと、ログイン済みの `claude` コマンドが
+ホスト側にあるため。画面側は状態を表示するだけなので、LD290EJS のような非力な端末でも負荷は増えない。
+
+### セットアップ
+
+```bash
+# 1. 読み上げエンジン（docker-compose.yml に voicevox サービスとして定義済み）
+docker compose up -d voicevox
+
+# 2. Voskの日本語モデル（約50MB）
+mkdir -p ~/.cache/home-dashboard-voice && cd ~/.cache/home-dashboard-voice
+curl -LO https://alphacephei.com/vosk/models/vosk-model-small-ja-0.22.zip
+python3 -c "import zipfile; zipfile.ZipFile('vosk-model-small-ja-0.22.zip').extractall('.')"
+
+# 3. エージェント本体（whisperのモデルは初回起動時に自動でダウンロードされる）
+cd apps/voice-agent
+python3 -m venv .venv && .venv/bin/pip install -e .
+cp .env.example .env    # マイクのデバイス・話者などを設定
+.venv/bin/python -m voice_agent
+
+# 常駐させる場合（ユーザーサービス。ファイル先頭のコメント参照）
+cp home-dashboard-voice-agent.service ~/.config/systemd/user/
+systemctl --user enable --now home-dashboard-voice-agent
+```
+
+エージェントが接続すると、Settings パネルの「音声アシスタント」が「待機中」になり、
+そこからテキストで話しかけることもできる（マイクの無い端末や、声を出せない場面向け）。
+
+### 使い方
+
+- **「ねえクロード」→ チャイム → 命令**: ウェイクワードだけ言うとチャイムが鳴り、6秒以内に話し始めた命令を聞く
+- **「ねえクロード、電気消して」**: 続けて言ってもよい（ウェイクワードの後ろをそのまま命令として扱う）
+- 最後のやり取りから5分以内なら同じ会話の続きになる（「明日は？」が通じる）
+- 読み上げ中はマイクの音を捨てている（自分の声でウェイクワードを誤検出しないため）。
+  中止は画面のパネルの ✕ から
+
+### Claude Code に渡す権限
+
+部屋にいる人やテレビの音なら誰の声でも動くので、Claude Code は権限を絞って起動している
+（`apps/voice-agent/voice_agent/claude.py`）。
+
+- `--restricted`: ユーザー/プロジェクトの設定ファイル（許可ルール・hooks）を読まず、コマンド実行系のツールを外す
+- `--strict-mcp-config`: MCPサーバー（Gmail・カレンダー等のコネクタを含む）を読み込まない
+- `--tools` / `--allowedTools`: 既定では **WebSearch と WebFetch だけ**を使わせる
+- 作業ディレクトリは専用の空ディレクトリ（`~/.local/share/home-dashboard-voice/workspace`）
+
+家電操作などを足すときは、Bash を開放するのではなく、操作を絞ったMCPサーバーを用意して
+`--mcp-config` で渡す方針にする（HA連携でサービスをホワイトリストにしているのと同じ考え方）。
+
+### ウェイクワードの誤検出対策
+
+Voskを「ウェイクワード＋音の似た語（おとり）」だけの文法で常時回している。おとりが無いと
+「〜ですね、クローゼット」「あのね、クロードモネ」「ねえ、クローバー」を「ねえ クロード」と取り違えたが、
+`クローゼット クローバー クロール …` を文法に入れると、そちらに振り分けられて誤検出しなくなった
+（VOICEVOXで作った正例6件・負例7件で確認）。誤検出する語を見つけたら `VOICE_WAKE_DECOYS` に足す。
+
+Voskの信頼度（`conf`）は誤検出でも1.0になるので判定には使えなかった。発話途中の暫定結果も
+「クロード」→「クローバー」のように後から変わるので使わず、発話の区切りで確定した結果だけを見ている。
+
+### 速度について（このホストのCPU）
+
+gco の仮想CPUは **AVX/AVX2 を公開していない**（`/proc/cpuinfo` に `sse4_2` までしか出ない）。
+whisper と VOICEVOX はどちらも AVX の有無で大きく速度が変わるので、現状は次のように遅い。
+
+| 処理 | 実測 |
+|---|---|
+| whisper base（2.5秒の発話） | 約2.5秒 |
+| whisper small（同） | 約5秒 |
+| VOICEVOX（5.3秒の音声、4スレッド） | 約4.3秒（既定のスレッド数では6.9秒） |
+
+このため whisper は `base` を既定にし、読み上げは長い文を読点でも区切って先に合成に回している。
+ハイパーバイザ側で VM の CPU タイプを `host` にすれば（AVX2 が見えるようになれば）数倍速くなる見込みなので、
+そのときは `VOICE_WHISPER_MODEL=small` に上げると聞き間違いが減る（base は「記温」のような誤変換がある）。
+
+### マイク無しでの動作確認
+
+`voice_agent.fake_mic` は音声ファイルを実時間のペースでマイク代わりに流す。
+VOICEVOX でテスト用の発話を作って流せば、ウェイクワード検出から読み上げまでを一通り試せる。
+
+```bash
+# 8787でDocker版が動いている場合は、開発サーバーを別ポートで立ててそちらにつなぐ
+PORT=8788 pnpm dev:server
+API_PROXY_TARGET=http://localhost:8788 pnpm dev:web
+
+cd apps/voice-agent
+VOICE_SERVER_URL=http://127.0.0.1:8788 \
+VOICE_INPUT_CMD=".venv/bin/python -m voice_agent.fake_mic --gap 40 wake.wav command.wav" \
+VOICE_OUTPUT_CMD="ffmpeg -loglevel error -re -i - -f null -" \
+.venv/bin/python -m voice_agent
+```
+
+> VOICEVOX の音声を公開・配布する場合はキャラクターごとの利用規約に従ってクレジット表記が必要。
+> 家庭内で鳴らすだけなら表記の場は無いが、録画をSNSに載せる等の場合は注意。
+
 ## ウィジェットの追加方法
 
 各ウィジェットは `packages/widgets/<name>` に1つの独立したパッケージとして実装する。
@@ -268,6 +379,8 @@ git config core.hooksPath .githooks
 （時計・天気・Spotify・ホームラボ死活監視・HA家電操作・HA室温湿度・Claude Code使用量・
 Tailscale・gitリポジトリ・メール）。当初構想していた連携ウィジェットはメールを除きすべて実データで動作確認済み
 （メールのみ認証情報が未設定のため未接続表示のまま）。
+音声アシスタントは、ウェイクワード検出から Claude Code の返答の読み上げまでを、マイク無しで
+（疑似マイクとVOICEVOXで作った発話で）動作確認済み。実機のマイク・スピーカーでは未検証。
 
 未着手:
 
@@ -275,6 +388,7 @@ Tailscale・gitリポジトリ・メール）。当初構想していた連携�
 - 設計図がまだ無いウィジェット（ホームラボ・Tailscale・git・メール等）のカードデザイン
   （現状は650x200のカードに旧レイアウトの中身がそのまま入っているだけ）
 - 時間帯・再生状況等に応じたウィジェットの自動出現/レイアウト変更
-- ウェイクワード検知＋Claude Codeセッション起動によるスマートディスプレイ的な対話
+- 音声アシスタントの続き: VRMアバターによる応答（VOICEVOXの `audio_query` が返す音素タイミングで口パクさせる想定）、
+  家電操作など権限を絞ったMCPサーバーの追加、読み上げ中の割り込み（エコーキャンセル）
 - iMessage連携（Mac側に常駐エージェントが要るため保留）
 - キャンバス上でのウィジェット設定編集UI（現状は`defaultConfig`とサーバー側の設定ファイルのみ）

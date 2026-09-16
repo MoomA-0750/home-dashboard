@@ -1,0 +1,22 @@
+[project]
+name = "home-dashboard-voice-agent"
+version = "0.1.0"
+description = "ウェイクワードで Claude Code を呼び出すスマートスピーカー部分。マイク・スピーカーのあるホスト上で常駐させる。"
+requires-python = ">=3.11"
+dependencies = [
+  "vosk>=0.3.45",
+  "faster-whisper>=1.1",
+  "httpx>=0.27",
+  "websockets>=13",
+  "numpy>=1.26",
+]
+
+[project.scripts]
+home-dashboard-voice-agent = "voice_agent.__main__:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["voice_agent*"]

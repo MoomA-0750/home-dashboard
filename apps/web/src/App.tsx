@@ -15,6 +15,8 @@ import {
   type ScreenId,
 } from "./components/Sidebar";
 import { SettingsPanel } from "./components/SettingsPanel";
+import { VoiceOverlay } from "./components/VoiceOverlay";
+import { askVoiceAssistant, cancelVoiceAssistant, useVoiceAssistant } from "./lib/useVoiceAssistant";
 
 /**
  * 時刻・天気はメイン画面左側に固定表示（MainInfo）される画面の構成要素なので、
@@ -39,6 +41,7 @@ function readStoredSidebarWidth(): number {
 
 export function App() {
   const ctx = useRuntimeContext();
+  const voice = useVoiceAssistant(ctx);
   const [instances, setInstances] = useState<WidgetInstance[] | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -142,9 +145,12 @@ export function App() {
           editMode={editMode}
           onToggleEditMode={() => setEditMode((v) => !v)}
           onAdd={handleAdd}
+          voice={voice}
+          onAskVoice={(text) => askVoiceAssistant(ctx.apiBaseUrl, text)}
           onClose={() => setSettingsOpen(false)}
         />
       )}
+      <VoiceOverlay snapshot={voice} onCancel={() => cancelVoiceAssistant(ctx.apiBaseUrl)} />
     </div>
   );
 }

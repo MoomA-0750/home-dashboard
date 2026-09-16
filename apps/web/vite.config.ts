@@ -1,6 +1,9 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
+// 開発時にAPIをプロキシする先。8787でDocker版が動いているホストでは別ポートの開発サーバーに向ける
+const apiTarget = process.env.API_PROXY_TARGET ?? "http://localhost:8787";
+
 export default defineConfig({
   plugins: [react()],
   build: {
@@ -10,9 +13,9 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      "/api": "http://localhost:8787",
+      "/api": apiTarget,
       "/ws": {
-        target: "ws://localhost:8787",
+        target: apiTarget.replace(/^http/, "ws"),
         ws: true,
       },
     },

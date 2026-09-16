@@ -20,6 +20,8 @@ const ICON_FILES = {
   dismiss: "dismiss_24_regular",
   add: "add_24_regular",
   edit: "edit_24_regular",
+  mic: "mic_24_regular",
+  send: "send_24_regular",
   "weather-sunny": "weather_sunny_24_regular",
   "weather-moon": "weather_moon_24_regular",
   "weather-partly-cloudy-day": "weather_partly_cloudy_day_24_regular",

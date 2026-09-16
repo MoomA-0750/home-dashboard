@@ -1,0 +1,25 @@
+# ユーザーサービスとして常駐させる（PipeWire/PulseAudioのユーザーセッションのマイク・スピーカーを使うため）。
+#
+#   mkdir -p ~/.config/systemd/user
+#   cp home-dashboard-voice-agent.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now home-dashboard-voice-agent
+#   loginctl enable-linger $USER   # ログインしていなくても起動させる場合
+#
+# リポジトリの場所が違う場合は WorkingDirectory を書き換える。設定は apps/voice-agent/.env に書く。
+
+[Unit]
+Description=home-dashboard voice assistant (wake word -> Claude Code)
+After=network-online.target pipewire.service
+
+[Service]
+WorkingDirectory=%h/Documents/git-cloned/home-dashboard/apps/voice-agent
+ExecStart=%h/Documents/git-cloned/home-dashboard/apps/voice-agent/.venv/bin/python -m voice_agent
+# systemd から起動すると ~/.local/bin がPATHに入っていない
+Environment=VOICE_CLAUDE_BIN=%h/.local/bin/claude
+Environment=PYTHONUNBUFFERED=1
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target

@@ -28,6 +28,8 @@ SVG 内の色は使われず、親要素の `color` がそのままアイコン�
 | 編集モード | Edit 24 Regular |
 | 天気（WMO code 別） | Weather Sunny / Moon / Partly Cloudy Day / Partly Cloudy Night / Cloudy / Fog / Rain / Rain Showers Day / Snow / Snowflake / Thunderstorm 24 Regular |
 | 天気不明 | Question Circle 24 Regular |
+| 音声アシスタント | Mic 24 Regular |
+| テキストで話しかける（送信） | Send 24 Regular |
 
 Source: https://github.com/microsoft/fluentui-system-icons
 

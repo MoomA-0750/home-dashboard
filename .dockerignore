@@ -5,3 +5,5 @@ node_modules
 data/*.json
 config/homelab-hosts.json
 *.log
+# 音声エージェントはホスト上で動かす（マイク・スピーカーとclaudeコマンドを使うため）。イメージには入れない
+apps/voice-agent
