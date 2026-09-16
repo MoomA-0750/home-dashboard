@@ -12,6 +12,10 @@ interface SettingsPanelProps {
   onAdd: (widgetId: string) => void;
   voice: VoiceSnapshot | null;
   onAskVoice: (text: string) => Promise<void>;
+  /** サーバーにVRMアバターが置かれているか（置かれていなければ切り替えを出さない） */
+  avatarAvailable: boolean;
+  avatarEnabled: boolean;
+  onToggleAvatar: () => void;
   onClose: () => void;
 }
 
@@ -27,6 +31,9 @@ export function SettingsPanel({
   onAdd,
   voice,
   onAskVoice,
+  avatarAvailable,
+  avatarEnabled,
+  onToggleAvatar,
   onClose,
 }: SettingsPanelProps) {
   const addable = registry.getAll().filter((def) => !hiddenWidgetIds.includes(def.id));
@@ -50,7 +57,13 @@ export function SettingsPanel({
         <span>{editMode ? "編集モードを終了" : "編集モード（並べ替え・削除）"}</span>
       </button>
 
-      <VoiceSection voice={voice} onAsk={onAskVoice} />
+      <VoiceSection
+        voice={voice}
+        onAsk={onAskVoice}
+        avatarAvailable={avatarAvailable}
+        avatarEnabled={avatarEnabled}
+        onToggleAvatar={onToggleAvatar}
+      />
 
       <h3 className="settings-panel__section-title">ウィジェットを追加</h3>
       <ul className="settings-panel__list">
@@ -70,10 +83,13 @@ export function SettingsPanel({
 interface VoiceSectionProps {
   voice: VoiceSnapshot | null;
   onAsk: (text: string) => Promise<void>;
+  avatarAvailable: boolean;
+  avatarEnabled: boolean;
+  onToggleAvatar: () => void;
 }
 
 /** 音声アシスタントの接続状況と、声の代わりにテキストで話しかける入力欄（マイクの無い端末・動作確認用） */
-function VoiceSection({ voice, onAsk }: VoiceSectionProps) {
+function VoiceSection({ voice, onAsk, avatarAvailable, avatarEnabled, onToggleAvatar }: VoiceSectionProps) {
   const [text, setText] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
@@ -117,6 +133,12 @@ function VoiceSection({ voice, onAsk }: VoiceSectionProps) {
         </button>
       </form>
       {error && <p className="settings-panel__voice-error">{error}</p>}
+      {avatarAvailable && (
+        <label className="settings-panel__voice-option">
+          <input type="checkbox" checked={avatarEnabled} onChange={onToggleAvatar} />
+          <span>この端末でアバターを表示（重い端末では切る）</span>
+        </label>
+      )}
     </section>
   );
 }

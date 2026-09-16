@@ -2,7 +2,7 @@
 
 import pytest
 
-from voice_agent.speech import SentenceSplitter, clean_for_speech
+from voice_agent.speech import SentenceSplitter, clean_for_speech, mouth_cues
 from voice_agent.stt import clean_transcript
 
 REPLY = "今日の東京は雨模様で、雷を伴うところもあるみたいです。最高気温は24度、最低気温は21度で、10月並みの涼しさになります。傘は忘れずに"
@@ -76,3 +76,25 @@ def test_clean_for_speech(text, expected):
 )
 def test_clean_transcript(transcript, expected):
     assert clean_transcript(transcript) == expected
+
+
+def test_mouth_cues_follow_phoneme_lengths():
+    """VOICEVOX の audio_query の音素の長さから、口の形の時系列を作る（話速で縮める）"""
+    query = {
+        "speedScale": 2.0,
+        "prePhonemeLength": 0.1,
+        "postPhonemeLength": 0.1,
+        "accent_phrases": [
+            {
+                "moras": [
+                    {"consonant_length": None, "vowel": "a", "vowel_length": 0.2},  # あ
+                    {"consonant_length": 0.1, "vowel": "i", "vowel_length": 0.2},  # き
+                ],
+                "pause_mora": {"vowel": "pau", "vowel_length": 0.4},
+            },
+            {"moras": [{"consonant_length": 0.05, "vowel": "N", "vowel_length": 0.1}], "pause_mora": None},
+        ],
+    }
+    cues, duration = mouth_cues(query)
+    assert cues == [(0.0, "pau"), (0.05, "a"), (0.2, "i"), (0.3, "pau"), (0.525, "N"), (0.575, "pau")]
+    assert duration == 0.625

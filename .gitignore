@@ -10,6 +10,8 @@ data/*.bak-*
 !data/.gitkeep
 config/homelab-hosts.json
 config/homeassistant.json
+# 応答パネルのVRMアバター。第三者のモデルを置く想定（再配布禁止のものも多い）なのでリポジトリに含めない
+config/*.vrm
 .DS_Store
 
 # 背景画像は第三者の著作物を置く想定なのでリポジトリには含めない。

@@ -21,6 +21,8 @@ import {
   askVoiceAssistant,
   cancelVoiceAssistant,
   listenVoiceAssistant,
+  useAvatarEnabled,
+  useAvatarUrl,
   useVoiceAssistant,
 } from "./lib/useVoiceAssistant";
 
@@ -48,6 +50,20 @@ function readStoredSidebarWidth(): number {
 export function App() {
   const ctx = useRuntimeContext();
   const voice = useVoiceAssistant(ctx);
+  const [avatarEnabled, setAvatarEnabled] = useAvatarEnabled();
+  const serverAvatarUrl = useAvatarUrl(ctx.apiBaseUrl);
+  const avatarUrl = avatarEnabled ? serverAvatarUrl : null;
+
+  // アバターは数十MBあるので、最初に話しかけられる前に読み込んでおく（起動直後の描画の邪魔をしないよう少し待つ）
+  useEffect(() => {
+    if (!avatarUrl) return;
+    const timer = setTimeout(() => {
+      import("./components/VoiceAvatar")
+        .then((module) => module.loadAvatar(avatarUrl))
+        .catch((err) => console.error("failed to preload avatar", err));
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [avatarUrl]);
   const [instances, setInstances] = useState<WidgetInstance[] | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -153,11 +169,19 @@ export function App() {
           onAdd={handleAdd}
           voice={voice}
           onAskVoice={(text) => askVoiceAssistant(ctx.apiBaseUrl, text)}
+          avatarAvailable={serverAvatarUrl !== null}
+          avatarEnabled={avatarEnabled}
+          onToggleAvatar={() => setAvatarEnabled(!avatarEnabled)}
           onClose={() => setSettingsOpen(false)}
         />
       )}
       <VoiceLauncher snapshot={voice} onListen={() => listenVoiceAssistant(ctx.apiBaseUrl)} />
-      <VoiceOverlay snapshot={voice} onCancel={() => cancelVoiceAssistant(ctx.apiBaseUrl)} />
+      <VoiceOverlay
+        snapshot={voice}
+        avatarUrl={avatarUrl}
+        socket={ctx.socket}
+        onCancel={() => cancelVoiceAssistant(ctx.apiBaseUrl)}
+      />
     </div>
   );
 }

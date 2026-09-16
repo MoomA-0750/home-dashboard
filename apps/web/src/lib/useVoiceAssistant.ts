@@ -55,6 +55,49 @@ export function useVoiceAssistant(ctx: WidgetRuntimeContext): VoiceSnapshot | nu
   return snapshot;
 }
 
+const AVATAR_ENABLED_STORAGE_KEY = "home-dashboard:voice-avatar";
+
+/**
+ * この端末でVRMアバターを出すか。非力な端末（LD290EJS 等）では描画が重いので、端末ごとに切れるようにする。
+ * 端末ごとの好みなのでサーバーには保存しない
+ */
+export function useAvatarEnabled(): [boolean, (enabled: boolean) => void] {
+  const [enabled, setEnabled] = useState(() => {
+    try {
+      return localStorage.getItem(AVATAR_ENABLED_STORAGE_KEY) !== "off";
+    } catch {
+      return true;
+    }
+  });
+  const update = (next: boolean) => {
+    setEnabled(next);
+    try {
+      localStorage.setItem(AVATAR_ENABLED_STORAGE_KEY, next ? "on" : "off");
+    } catch {
+      // 保存できなくてもこの表示中は反映される
+    }
+  };
+  return [enabled, update];
+}
+
+/** 応答パネルに出すVRMアバターのURL。サーバーに置かれていなければ null */
+export function useAvatarUrl(apiBaseUrl: string): string | null {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    const candidate = `${apiBaseUrl}/api/voice/avatar`;
+    let cancelled = false;
+    fetch(candidate, { method: "HEAD" })
+      .then((res) => {
+        if (!cancelled && res.ok) setUrl(candidate);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [apiBaseUrl]);
+  return url;
+}
+
 export async function askVoiceAssistant(apiBaseUrl: string, text: string): Promise<void> {
   const res = await fetch(`${apiBaseUrl}/api/voice/ask`, {
     method: "POST",

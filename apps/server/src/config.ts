@@ -12,10 +12,12 @@ if (existsSync(envPath)) {
   process.loadEnvFile(envPath);
 }
 
+const configDir = process.env.CONFIG_DIR ?? new URL("../../../config", import.meta.url).pathname;
+
 export const config = {
   port: Number(process.env.PORT ?? 8787),
   dataDir: process.env.DATA_DIR ?? new URL("../../../data", import.meta.url).pathname,
-  configDir: process.env.CONFIG_DIR ?? new URL("../../../config", import.meta.url).pathname,
+  configDir,
   webDistDir: process.env.WEB_DIST_DIR ?? new URL("../../web/dist", import.meta.url).pathname,
 
   weather: {
@@ -73,5 +75,11 @@ export const config = {
      * 未設定なら誰でも使える（/mcp でできることは既存の /api/* と同じ範囲なので既定は空）
      */
     agentToken: process.env.VOICE_AGENT_TOKEN ?? "",
+    /**
+     * 応答パネルに出すVRMアバター。無ければアバターは出さず、状態を表す円だけになる。
+     * 第三者のモデルを置く想定なのでリポジトリには含めない（config/*.vrm は .gitignore 済み）。
+     * config/ は Docker 運用でもホスト側をマウントしているので、イメージを作り直さずに差し替えられる
+     */
+    avatarPath: process.env.VOICE_AVATAR_PATH ?? join(configDir, "avatar.vrm"),
   },
 };

@@ -13,7 +13,7 @@ from .audio import CHIME_DURATION_S, MISS_CHIME, WAKE_CHIME, MicrophoneError, Pl
 from .claude import ClaudeConversation, ClaudeError
 from .config import Config, load_config
 from .relay import Relay
-from .speech import SentenceSplitter, SpeechQueue, VoiceVox
+from .speech import SentenceSplitter, Speech, SpeechQueue, VoiceVox
 from .stt import Transcriber
 from .vad import VoiceActivity
 from .wake import SpeechRecognizer, Utterance, Word
@@ -234,11 +234,21 @@ class Assistant:
 
             await self.update(state="thinking", transcript=text, response="")
 
-            async def on_first_audio() -> None:
-                log.info("読み上げ開始（質問から%.1f秒）", time.monotonic() - asked_at)
-                await self.update(state="speaking")
+            async def on_play(sentence: Speech, first: bool) -> None:
+                if first:
+                    log.info("読み上げ開始（質問から%.1f秒）", time.monotonic() - asked_at)
+                    await self.update(state="speaking")
+                # 画面のアバターは、これを受け取った時刻を再生開始とみなして口を動かす
+                await self.relay.send(
+                    {
+                        "type": "lipsync",
+                        "turnId": self.turn_id,
+                        "cues": sentence.mouth_cues,
+                        "durationS": sentence.duration_s,
+                    }
+                )
 
-            speech = SpeechQueue(self.tts, self.player, on_first_audio)
+            speech = SpeechQueue(self.tts, self.player, on_play)
             splitter = SentenceSplitter()
             assert text is not None
             asked_at = time.monotonic()

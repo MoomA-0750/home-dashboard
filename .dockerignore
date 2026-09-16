@@ -7,3 +7,5 @@ config/homelab-hosts.json
 *.log
 # 音声エージェントはホスト上で動かす（マイク・スピーカーとclaudeコマンドを使うため）。イメージには入れない
 apps/voice-agent
+# VRMアバターはイメージに焼き込まず、実行時にマウントした config/ から読む（再配布禁止のモデルを含めないため）
+config/*.vrm

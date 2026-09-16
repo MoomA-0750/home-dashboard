@@ -1,6 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { ACTIVE_VOICE_STATES, type VoiceSnapshot, type VoiceState } from "../lib/useVoiceAssistant";
 import { Icon } from "./Icon";
+
+// three.js を含むので、アバターを出すときだけ読み込む
+const VoiceAvatar = lazy(() => import("./VoiceAvatar"));
 
 /** 返答し終えてから、返答を画面に残しておく時間 */
 const RESPONSE_LINGER_MS = 15_000;
@@ -17,15 +20,27 @@ const STATUS_LABELS: Record<VoiceState, string> = {
 
 interface VoiceOverlayProps {
   snapshot: VoiceSnapshot | null;
+  /** VRMアバターのURL。無ければ状態を表す円だけを出す */
+  avatarUrl: string | null;
+  socket: WebSocket | null;
   onCancel: () => void;
+}
+
+function VoiceOrb({ state, badge = false }: { state: VoiceState; badge?: boolean }) {
+  return (
+    <div className={`voice-orb${badge ? " voice-orb--badge" : ""}`} data-state={state} aria-hidden="true">
+      <Icon name="mic" />
+    </div>
+  );
 }
 
 /**
  * ウェイクワードを聞いてから返答し終えるまで、画面の手前に出すパネル。
  * 読み上げが終わったあともしばらく返答を残し、タップするか時間が経つと消える。
  */
-export function VoiceOverlay({ snapshot, onCancel }: VoiceOverlayProps) {
+export function VoiceOverlay({ snapshot, avatarUrl, socket, onCancel }: VoiceOverlayProps) {
   const [visible, setVisible] = useState(false);
+  const [avatarFailed, setAvatarFailed] = useState(false);
   const wasActiveRef = useRef(false);
   const responseRef = useRef<HTMLParagraphElement>(null);
 
@@ -72,9 +87,24 @@ export function VoiceOverlay({ snapshot, onCancel }: VoiceOverlayProps) {
         aria-label="音声アシスタント"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="voice-orb" data-state={state} aria-hidden="true">
-          <Icon name="mic" />
-        </div>
+        {avatarUrl && !avatarFailed ? (
+          <div className="voice-figure">
+            <Suspense fallback={null}>
+              <VoiceAvatar
+                modelUrl={avatarUrl}
+                state={state}
+                socket={socket}
+                onError={(err) => {
+                  console.error("failed to load avatar", err);
+                  setAvatarFailed(true);
+                }}
+              />
+            </Suspense>
+            <VoiceOrb state={state} badge />
+          </div>
+        ) : (
+          <VoiceOrb state={state} />
+        )}
         <div className="voice-panel__body">
           <p className="voice-panel__status">{status}</p>
           {prompt && <p className="voice-panel__transcript">{prompt}</p>}

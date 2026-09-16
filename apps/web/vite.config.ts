@@ -9,6 +9,9 @@ export default defineConfig({
   build: {
     target: "es2018",
     outDir: "dist",
+    // 音声アシスタントのVRMアバター（three.js を含む。約770KB）は React.lazy で別チャンクにしてあり、
+    // アバターを出すときにだけ読み込むので、この大きさは許容する
+    chunkSizeWarningLimit: 800,
   },
   server: {
     port: 5173,

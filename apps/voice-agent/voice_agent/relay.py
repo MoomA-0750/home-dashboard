@@ -53,10 +53,14 @@ class Relay:
             await asyncio.sleep(RETRY_S)
 
     async def publish(self) -> None:
+        await self.send({"type": "state", **self._snapshot()})
+
+    async def send(self, message: dict) -> None:
+        """つながっていなければ捨てる（状態はスナップショットで再接続時に送り直すので、取りこぼしても困らない）"""
         ws = self._ws
         if ws is None:
             return
         try:
-            await ws.send(json.dumps({"type": "state", **self._snapshot()}, ensure_ascii=False))
+            await ws.send(json.dumps(message, ensure_ascii=False))
         except websockets.WebSocketException:
             pass

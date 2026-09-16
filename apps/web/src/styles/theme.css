@@ -988,6 +988,23 @@ button.widget-card {
   cursor: default;
 }
 
+.settings-panel__voice-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.settings-panel__voice-option input {
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  accent-color: #4ac7ff;
+}
+
 .settings-panel__voice-error {
   margin: 0.5rem 0 0;
   font-size: 0.8rem;
@@ -1201,6 +1218,53 @@ button.widget-card {
   opacity: 0.85;
 }
 
+/* VRMアバターがあるときは円の代わりに出し、パネルの下端から生えているように見せる。状態は小さな円で重ねて示す */
+.voice-figure {
+  position: relative;
+  flex: 0 0 auto;
+  align-self: stretch;
+  width: 250px;
+  min-height: 300px;
+  /* 下はパネルの縁まで伸ばして、下端から生えているように見せる */
+  margin: 0 0 -40px -10px;
+}
+
+.voice-avatar {
+  position: absolute;
+  inset: 0;
+}
+
+.voice-avatar canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.voice-orb--badge {
+  position: absolute;
+  right: 6px;
+  bottom: 52px;
+  width: 52px;
+  height: 52px;
+  box-shadow: 0 0 24px -4px var(--voice-accent);
+}
+
+.voice-orb--badge .fluent-icon {
+  width: 22px;
+  height: 22px;
+}
+
+.voice-orb--badge[data-state="transcribing"]::before,
+.voice-orb--badge[data-state="thinking"]::before {
+  inset: -6px;
+  -webkit-mask: radial-gradient(circle, transparent 28px, #000 29px);
+  mask: radial-gradient(circle, transparent 28px, #000 29px);
+}
+
+.voice-orb--badge[data-state="speaking"] {
+  animation: none;
+}
+
 @keyframes voice-fade-in {
   from {
     opacity: 0;
@@ -1248,6 +1312,12 @@ button.widget-card {
 }
 
 @media (max-width: 900px) {
+  .voice-figure {
+    width: 150px;
+    min-height: 190px;
+    margin: -30px 0 0 -10px;
+  }
+
   .voice-panel {
     flex-direction: column;
     align-items: flex-start;

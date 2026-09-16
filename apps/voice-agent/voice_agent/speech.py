@@ -2,6 +2,7 @@ import asyncio
 import logging
 import re
 from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
 
 import httpx
 
@@ -52,20 +53,50 @@ def clean_for_speech(text: str) -> str:
     return text.strip()
 
 
+@dataclass
+class Speech:
+    wav: bytes
+    # 口の形の時系列（[再生開始からの秒, 母音]）。アバターの口パクに使う。母音は a/i/u/e/o、口を閉じるのは N/cl/pau
+    mouth_cues: list[tuple[float, str]]
+    duration_s: float
+
+
+def mouth_cues(query: dict) -> tuple[list[tuple[float, str]], float]:
+    """
+    VOICEVOX の audio_query（音素ごとの長さ）から、口の形の時系列と全体の長さを求める。
+    合成した音声の長さとの差は実測で20ms程度で、口パクには十分な精度。
+    """
+    speed = query.get("speedScale") or 1.0
+    t = query["prePhonemeLength"]
+    cues: list[tuple[float, str]] = [(0.0, "pau")]
+    for phrase in query["accent_phrases"]:
+        for mora in phrase["moras"]:
+            t += mora.get("consonant_length") or 0
+            cues.append((round(t / speed, 3), mora["vowel"]))
+            t += mora["vowel_length"]
+        if pause := phrase.get("pause_mora"):
+            cues.append((round(t / speed, 3), "pau"))
+            t += pause["vowel_length"]
+    cues.append((round(t / speed, 3), "pau"))
+    t += query["postPhonemeLength"]
+    return cues, round(t / speed, 3)
+
+
 class VoiceVox:
     def __init__(self, base_url: str, speaker: int, speed: float) -> None:
         self._client = httpx.AsyncClient(base_url=base_url, timeout=60)
         self._speaker = speaker
         self._speed = speed
 
-    async def synthesize(self, text: str) -> bytes:
+    async def synthesize(self, text: str) -> Speech:
         res = await self._client.post("/audio_query", params={"text": text, "speaker": self._speaker})
         res.raise_for_status()
         query = res.json()
         query["speedScale"] = self._speed
         res = await self._client.post("/synthesis", params={"speaker": self._speaker}, json=query)
         res.raise_for_status()
-        return res.content
+        cues, duration = mouth_cues(query)
+        return Speech(res.content, cues, duration)
 
     async def check(self) -> str:
         res = await self._client.get("/version")
@@ -82,10 +113,11 @@ class SpeechQueue:
     （返答の書き出しから声が出るまでの待ち時間と、文と文の間の途切れを短くするため）。
     """
 
-    def __init__(self, tts: VoiceVox, player: Player, on_first_audio: Callable[[], Awaitable[None]]) -> None:
+    def __init__(self, tts: VoiceVox, player: Player, on_play: Callable[[Speech, bool], Awaitable[None]]) -> None:
+        """on_play(speech, first) は各文の再生を始める直前に呼ばれる"""
         self._tts = tts
         self._player = player
-        self._on_first_audio = on_first_audio
+        self._on_play = on_play
         self._texts: asyncio.Queue = asyncio.Queue()
         self._audio: asyncio.Queue = asyncio.Queue(maxsize=2)
         self._tasks = [asyncio.create_task(self._synthesize_loop()), asyncio.create_task(self._play_loop())]
@@ -113,8 +145,7 @@ class SpeechQueue:
 
     async def _play_loop(self) -> None:
         first = True
-        while (wav := await self._audio.get()) is not _END:
-            if first:
-                first = False
-                await self._on_first_audio()
-            await self._player.play(wav)
+        while (speech := await self._audio.get()) is not _END:
+            await self._on_play(speech, first)
+            first = False
+            await self._player.play(speech.wav)
