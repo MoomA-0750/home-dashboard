@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { FastifyInstance } from "fastify";
 import { config } from "../config.js";
+import { ServiceError } from "../serviceError.js";
 
 interface HaState {
   entity_id: string;
@@ -85,58 +86,73 @@ function selectEntities(states: HaState[], explicit: string[] | undefined, fallb
   return states.filter(fallback).map(toEntity);
 }
 
+export async function getControls() {
+  if (!isConfigured()) return { configured: false, entities: [], allowUnlock: false };
+  const [states, haConfig] = await Promise.all([fetchStates(), readHaConfig()]);
+  const entities = selectEntities(states, haConfig.controls, (s) =>
+    CONTROL_DOMAINS.includes(s.entity_id.split(".")[0]),
+  );
+  return { configured: true, entities, allowUnlock: config.homeAssistant.allowUnlock };
+}
+
+export async function getClimate() {
+  if (!isConfigured()) return { configured: false, sensors: [], thermostats: [] };
+  const [states, haConfig] = await Promise.all([fetchStates(), readHaConfig()]);
+
+  const sensors = selectEntities(
+    states,
+    haConfig.climate,
+    (s) =>
+      s.entity_id.startsWith("sensor.") &&
+      ["temperature", "humidity"].includes(s.attributes.device_class as string),
+  );
+  const thermostats = states.filter((s) => s.entity_id.startsWith("climate.")).map((s) => ({
+    ...toEntity(s),
+    currentTemperature: (s.attributes.current_temperature as number) ?? null,
+    targetTemperature: (s.attributes.temperature as number) ?? null,
+  }));
+
+  return { configured: true, sensors, thermostats };
+}
+
+/** ホワイトリスト（ALLOWED_SERVICES）と解錠の可否を確かめてから、HAのサービスを呼ぶ */
+export async function callHomeAssistantService(
+  entityId: string,
+  service: string,
+  data?: Record<string, unknown>,
+): Promise<void> {
+  if (!isConfigured()) throw new ServiceError(409, "home assistant not configured");
+
+  const domain = entityId?.split(".")[0];
+  if (!domain || !ALLOWED_SERVICES[domain]?.includes(service)) {
+    throw new ServiceError(403, `service not allowed: ${domain}.${service}`);
+  }
+  // 解錠は既定で拒否する（LAN上に認証なしで公開されるため。config.tsのallowUnlock参照）
+  if (domain === "lock" && service === "unlock" && !config.homeAssistant.allowUnlock) {
+    throw new ServiceError(403, "unlock is disabled (set HOMEASSISTANT_ALLOW_UNLOCK=true to enable)");
+  }
+
+  const res = await haFetch(`/api/services/${domain}/${service}`, {
+    method: "POST",
+    body: JSON.stringify({ entity_id: entityId, ...data }),
+  });
+  if (!res.ok) throw new ServiceError(502, `home assistant service error: ${res.status}`);
+}
+
 export async function registerHomeAssistantRoutes(app: FastifyInstance): Promise<void> {
-  app.get("/api/homeassistant/controls", async () => {
-    if (!isConfigured()) return { configured: false, entities: [], allowUnlock: false };
-    const [states, haConfig] = await Promise.all([fetchStates(), readHaConfig()]);
-    const entities = selectEntities(states, haConfig.controls, (s) =>
-      CONTROL_DOMAINS.includes(s.entity_id.split(".")[0]),
-    );
-    return { configured: true, entities, allowUnlock: config.homeAssistant.allowUnlock };
-  });
+  app.get("/api/homeassistant/controls", async () => getControls());
 
-  app.get("/api/homeassistant/climate", async () => {
-    if (!isConfigured()) return { configured: false, sensors: [], thermostats: [] };
-    const [states, haConfig] = await Promise.all([fetchStates(), readHaConfig()]);
-
-    const sensors = selectEntities(
-      states,
-      haConfig.climate,
-      (s) =>
-        s.entity_id.startsWith("sensor.") &&
-        ["temperature", "humidity"].includes(s.attributes.device_class as string),
-    );
-    const thermostats = states.filter((s) => s.entity_id.startsWith("climate.")).map((s) => ({
-      ...toEntity(s),
-      currentTemperature: (s.attributes.current_temperature as number) ?? null,
-      targetTemperature: (s.attributes.temperature as number) ?? null,
-    }));
-
-    return { configured: true, sensors, thermostats };
-  });
+  app.get("/api/homeassistant/climate", async () => getClimate());
 
   app.post<{ Body: { entityId: string; service: string; data?: Record<string, unknown> } }>(
     "/api/homeassistant/call",
     async (request, reply) => {
-      if (!isConfigured()) return reply.code(409).send({ error: "home assistant not configured" });
-
       const { entityId, service, data } = request.body;
-      const domain = entityId?.split(".")[0];
-
-      if (!domain || !ALLOWED_SERVICES[domain]?.includes(service)) {
-        return reply.code(403).send({ error: `service not allowed: ${domain}.${service}` });
-      }
-      // 解錠は既定で拒否する（LAN上に認証なしで公開されるため。config.tsのallowUnlock参照）
-      if (domain === "lock" && service === "unlock" && !config.homeAssistant.allowUnlock) {
-        return reply.code(403).send({ error: "unlock is disabled (set HOMEASSISTANT_ALLOW_UNLOCK=true to enable)" });
-      }
-
-      const res = await haFetch(`/api/services/${domain}/${service}`, {
-        method: "POST",
-        body: JSON.stringify({ entity_id: entityId, ...data }),
-      });
-      if (!res.ok) {
-        return reply.code(502).send({ error: `home assistant service error: ${res.status}` });
+      try {
+        await callHomeAssistantService(entityId, service, data);
+      } catch (err) {
+        if (err instanceof ServiceError) return reply.code(err.statusCode).send({ error: err.message });
+        throw err;
       }
       return { ok: true };
     },

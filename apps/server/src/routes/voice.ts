@@ -1,7 +1,6 @@
-import { timingSafeEqual } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import type { WebSocket } from "ws";
-import { config } from "../config.js";
+import { agentTokenMatches } from "../agentToken.js";
 import { broadcast } from "../ws.js";
 
 /**
@@ -42,15 +41,6 @@ function publish(next: VoiceSnapshot): void {
   broadcast({ type: "voice", snapshot });
 }
 
-function tokenMatches(given: string | undefined): boolean {
-  const expected = config.voice.agentToken;
-  if (!expected) return true;
-  if (!given) return false;
-  const a = Buffer.from(given);
-  const b = Buffer.from(expected);
-  return a.length === b.length && timingSafeEqual(a, b);
-}
-
 function sendToAgent(message: unknown): boolean {
   if (!agent || agent.readyState !== agent.OPEN) return false;
   agent.send(JSON.stringify(message));
@@ -59,7 +49,7 @@ function sendToAgent(message: unknown): boolean {
 
 export async function registerVoiceRoutes(app: FastifyInstance): Promise<void> {
   app.get<{ Querystring: { token?: string } }>("/ws/voice-agent", { websocket: true }, (socket, request) => {
-    if (!tokenMatches(request.query.token)) {
+    if (!agentTokenMatches(request.query.token)) {
       socket.close(4401, "invalid token");
       return;
     }

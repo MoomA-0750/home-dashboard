@@ -14,6 +14,7 @@ import { registerTailscaleRoutes } from "./routes/tailscale.js";
 import { registerGitRepoRoutes } from "./routes/gitRepos.js";
 import { registerMailRoutes } from "./routes/mail.js";
 import { registerVoiceRoutes } from "./routes/voice.js";
+import { registerMcpRoutes } from "./routes/mcp.js";
 import { registerWebSocket } from "./ws.js";
 
 const app = Fastify({ logger: true });
@@ -31,6 +32,7 @@ await registerTailscaleRoutes(app);
 await registerGitRepoRoutes(app);
 await registerMailRoutes(app);
 await registerVoiceRoutes(app);
+await registerMcpRoutes(app);
 
 if (existsSync(config.webDistDir)) {
   await app.register(fastifyStatic, {

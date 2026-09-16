@@ -69,8 +69,8 @@ export const config = {
 
   voice: {
     /**
-     * 音声エージェント（apps/voice-agent）が /ws/voice-agent に接続するときの共有トークン。
-     * 未設定なら誰でもエージェントとして接続できる（画面に偽の返答を出せる程度の影響なので既定は空）
+     * 音声エージェント（apps/voice-agent）向けの /ws/voice-agent と /mcp の共有トークン。
+     * 未設定なら誰でも使える（/mcp でできることは既存の /api/* と同じ範囲なので既定は空）
      */
     agentToken: process.env.VOICE_AGENT_TOKEN ?? "",
   },
