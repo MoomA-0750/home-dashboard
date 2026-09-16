@@ -36,8 +36,13 @@ export function useRuntimeContext(): WidgetRuntimeContext {
       socket = new WebSocket(buildWsUrl());
       socketRef.current = socket;
       socket.addEventListener("open", () => forceRender((n) => n + 1));
-      socket.addEventListener("close", () => {
+      const current = socket;
+      current.addEventListener("close", () => {
+        // 開発時のStrictModeではeffectが2回走る。捨てた側の接続のcloseが後から届いても、
+        // 張り直した接続の参照を消さないようにする
+        if (socketRef.current !== current) return;
         socketRef.current = null;
+        forceRender((n) => n + 1);
         retryTimer = setTimeout(connect, 5000);
       });
     };
