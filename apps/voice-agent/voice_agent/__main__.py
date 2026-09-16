@@ -20,6 +20,9 @@ from .wake import SpeechRecognizer, Utterance, Word
 
 log = logging.getLogger("voice_agent")
 
+# 返答の直後に続けて聞き始めるとき、読み上げの残響を声と取り違えないよう判定しない時間
+FOLLOW_UP_GRACE_S = 0.4
+
 
 class Mode(enum.Enum):
     # ウェイクワード待ち
@@ -48,6 +51,8 @@ class Assistant:
         self.transcript = ""
         self.response = ""
         self.error: str | None = None
+        # ウェイクワード無しで続けて話せる時間帯か（返答の直後）
+        self.follow_up = False
 
         self.mode = Mode.IDLE
         self.turn_task: asyncio.Task | None = None
@@ -55,6 +60,10 @@ class Assistant:
         self.transcriber: Transcriber
         self.vad = VoiceActivity()
         self._reset_requested = False
+        # 次の音声チャンクを処理する前に聞き取りを始める（画面のマイクボタン・返答後の続けて話す）
+        self._listen_request: dict | None = None
+        self._listen_timeout = 0.0
+        self._voice_turn = False
         self._chime_until = 0.0
         # ウェイクワードを言い始めた/言い終えた時刻、命令の声が聞こえ始めたか、最後に声が聞こえた時刻（いずれも認識器の時刻）
         self._wake_start = 0.0
@@ -69,12 +78,16 @@ class Assistant:
             "transcript": self.transcript,
             "response": self.response,
             "error": self.error,
+            "followUp": self.follow_up,
             "wakePhrase": "".join(self.config.wake_phrase),
         }
 
     async def update(self, **fields) -> None:
         for key, value in fields.items():
-            setattr(self, {"turnId": "turn_id"}.get(key, key), value)
+            # 綴り間違いで画面に届かない属性を作らないよう、既存の属性だけを受け付ける
+            if not hasattr(self, key):
+                raise AttributeError(key)
+            setattr(self, key, value)
         await self.relay.publish()
 
     async def run(self) -> None:
@@ -108,6 +121,11 @@ class Assistant:
                         self.recognizer.reset()
                         # 認識器の時刻は作り直すと0から数え直しになるので、前の時刻で決めた区間も捨てる
                         self._chime_until = 0.0
+                    # 認識器のリセットと同じループの中で始めることで、聞き取りの開始時刻が認識器の時刻とずれないようにする
+                    if (request := self._listen_request) is not None and self.mode is not Mode.BUSY:
+                        self._listen_request = None
+                        now = self.recognizer.now
+                        await self._begin_listening(now, now, [], **request)
                     if self.mode is Mode.BUSY:
                         continue
                     utterance, voice = await loop.run_in_executor(None, self._process_chunk, chunk)
@@ -139,14 +157,26 @@ class Assistant:
         # 「ねえクロード、電気消して」と続けて言われた場合は、ウェイクワードの後ろがもう命令になっている
         await self._begin_listening(wake_start, words[wake_index].end, words[wake_index + 1 :])
 
-    async def _begin_listening(self, wake_start: float, start: float, words: list[Word]) -> None:
+    async def _begin_listening(
+        self, wake_start: float, start: float, words: list[Word], *, follow_up: bool = False
+    ) -> None:
+        c = self.config
         self.mode = Mode.LISTENING
         self._wake_start = wake_start
         self._listen_start = start
         self._heard_voice = bool(words)
         self._last_voice = words[-1].end if words else start
-        await self.update(state="listening", turnId=uuid.uuid4().hex[:8], transcript="", response="", error=None)
-        if not words and self.config.chime:
+        self._listen_timeout = c.follow_up_s if follow_up else c.listen_timeout_s
+        if follow_up:
+            # 読み上げが終わった直後はスピーカーの残響が残っているので、少しの間は声と判定しない。
+            # 直前の返答は読み終わるまで画面に残しておきたいので消さない
+            self._chime_until = self.recognizer.now + FOLLOW_UP_GRACE_S
+            await self.update(state="listening", follow_up=True, error=None)
+            return
+        await self.update(
+            state="listening", turn_id=uuid.uuid4().hex[:8], transcript="", response="", error=None, follow_up=False
+        )
+        if not words and c.chime:
             self._chime_until = self.recognizer.now + CHIME_DURATION_S + 0.2
             asyncio.create_task(self.player.play(WAKE_CHIME))
 
@@ -164,7 +194,7 @@ class Assistant:
         #   （実測: 命令だけでは「電気を消して」→「レンキを消して」、ウェイクワードごとなら正しく取れた）
         # 間に挟まる無音はwhisper側のVADフィルタが落とす
         if not self._heard_voice:
-            if now - self._listen_start >= c.listen_timeout_s:
+            if now - self._listen_start >= self._listen_timeout:
                 await self._give_up_listening()
         elif now - self._last_voice >= c.end_silence_s:
             self._start_turn(audio=self.recognizer.audio(self._wake_start, self._last_voice))
@@ -175,27 +205,32 @@ class Assistant:
         log.info("命令が聞こえなかったので待機に戻ります")
         self.mode = Mode.IDLE
         self._reset_requested = True
-        await self.update(state="idle")
+        await self.update(state="idle", follow_up=False)
 
     def _start_turn(self, *, audio: bytes | None = None, text: str | None = None) -> None:
         self.mode = Mode.BUSY
-        self.turn_task = asyncio.create_task(self._run_turn(audio, text))
+        self.turn_task = asyncio.create_task(self._run_turn(audio, text, follow_up=self.follow_up))
 
-    async def _run_turn(self, audio: bytes | None, text: str | None) -> None:
+    async def _run_turn(self, audio: bytes | None, text: str | None, *, follow_up: bool) -> None:
         loop = asyncio.get_running_loop()
         speech: SpeechQueue | None = None
+        listen_again = False
         try:
             if audio is not None:
-                await self.update(state="transcribing")
+                await self.update(state="transcribing", follow_up=False)
                 text = await loop.run_in_executor(None, self.transcriber.transcribe, audio)
                 log.info("書き起こし: %r", text)
+                if not text and follow_up:
+                    # 返答の後に拾った物音（相づちやテレビの音）で「聞き取れませんでした」を出すとうるさいので、黙って戻る
+                    await self.update(state="idle")
+                    return
                 if not text:
                     await self.update(state="error", error="聞き取れませんでした")
                     if self.config.chime:
                         await self.player.play(MISS_CHIME)
                     return
             else:
-                await self.update(turnId=uuid.uuid4().hex[:8], error=None)
+                await self.update(turn_id=uuid.uuid4().hex[:8], error=None, follow_up=False)
 
             await self.update(state="thinking", transcript=text, response="")
 
@@ -226,7 +261,13 @@ class Assistant:
                 self.response.strip(),
             )
             await speech.finish()
-            await self.update(state="idle", response=self.response.strip())
+            self.response = self.response.strip()
+            # 声で話しかけられたときだけ、ウェイクワード無しで続けて話せるようにする
+            # （画面から文字で聞いた人が、続けて声で話すことはまず無い）
+            if audio is not None and self.config.follow_up_s > 0:
+                listen_again = True
+            else:
+                await self.update(state="idle")
         except asyncio.CancelledError:
             await self.update(state="idle")
             raise
@@ -241,6 +282,8 @@ class Assistant:
                 speech.cancel()
             self.mode = Mode.IDLE
             self._reset_requested = True
+            if listen_again:
+                self._listen_request = {"follow_up": True}
 
     async def handle_command(self, message: dict) -> None:
         """画面側からの操作（サーバー経由）"""
@@ -250,9 +293,14 @@ class Assistant:
             self._start_turn(text=message["text"].strip())
         elif kind == "cancel":
             await self._cancel_turn()
-            await self.update(state="idle")
+            await self.update(state="idle", follow_up=False)
+        elif kind == "listen":
+            # 画面のマイクボタン。ウェイクワード無しで聞き始める（読み上げ中なら止めて聞く）
+            await self._cancel_turn()
+            self._listen_request = {}
 
     async def _cancel_turn(self) -> None:
+        self._listen_request = None
         task = self.turn_task
         if task and not task.done():
             task.cancel()

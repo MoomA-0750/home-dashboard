@@ -13,6 +13,8 @@ export interface VoiceSnapshot {
   transcript: string;
   response: string;
   error: string | null;
+  /** 返答の直後で、ウェイクワード無しで続けて話せる間 */
+  followUp: boolean;
   wakePhrase: string | null;
 }
 
@@ -60,6 +62,10 @@ export async function askVoiceAssistant(apiBaseUrl: string, text: string): Promi
     body: JSON.stringify({ text }),
   });
   if (!res.ok) throw new Error(res.status === 503 ? "音声エージェントが起動していません" : `voice API error: ${res.status}`);
+}
+
+export async function listenVoiceAssistant(apiBaseUrl: string): Promise<void> {
+  await fetch(`${apiBaseUrl}/api/voice/listen`, { method: "POST" });
 }
 
 export async function cancelVoiceAssistant(apiBaseUrl: string): Promise<void> {

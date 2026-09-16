@@ -61,6 +61,7 @@ export function VoiceOverlay({ snapshot, onCancel }: VoiceOverlayProps) {
 
   const prompt =
     state === "listening" && !snapshot.transcript ? "どうぞ、話しかけてください" : snapshot.transcript;
+  const status = state === "listening" && snapshot.followUp ? "続けてどうぞ" : STATUS_LABELS[state];
 
   return (
     <div className="voice-overlay" data-state={state} onClick={() => !active && setVisible(false)}>
@@ -75,7 +76,7 @@ export function VoiceOverlay({ snapshot, onCancel }: VoiceOverlayProps) {
           <Icon name="mic" />
         </div>
         <div className="voice-panel__body">
-          <p className="voice-panel__status">{STATUS_LABELS[state]}</p>
+          <p className="voice-panel__status">{status}</p>
           {prompt && <p className="voice-panel__transcript">{prompt}</p>}
           {state === "error" && snapshot.error && <p className="voice-panel__error">{snapshot.error}</p>}
           {snapshot.response && (

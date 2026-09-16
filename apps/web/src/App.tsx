@@ -15,8 +15,14 @@ import {
   type ScreenId,
 } from "./components/Sidebar";
 import { SettingsPanel } from "./components/SettingsPanel";
+import { VoiceLauncher } from "./components/VoiceLauncher";
 import { VoiceOverlay } from "./components/VoiceOverlay";
-import { askVoiceAssistant, cancelVoiceAssistant, useVoiceAssistant } from "./lib/useVoiceAssistant";
+import {
+  askVoiceAssistant,
+  cancelVoiceAssistant,
+  listenVoiceAssistant,
+  useVoiceAssistant,
+} from "./lib/useVoiceAssistant";
 
 /**
  * 時刻・天気はメイン画面左側に固定表示（MainInfo）される画面の構成要素なので、
@@ -150,6 +156,7 @@ export function App() {
           onClose={() => setSettingsOpen(false)}
         />
       )}
+      <VoiceLauncher snapshot={voice} onListen={() => listenVoiceAssistant(ctx.apiBaseUrl)} />
       <VoiceOverlay snapshot={voice} onCancel={() => cancelVoiceAssistant(ctx.apiBaseUrl)} />
     </div>
   );

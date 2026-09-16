@@ -20,6 +20,8 @@ interface VoiceSnapshot {
   transcript: string;
   response: string;
   error: string | null;
+  /** 返答の直後で、ウェイクワード無しで続けて話せる間 */
+  followUp: boolean;
   wakePhrase: string | null;
 }
 
@@ -30,6 +32,7 @@ const idleSnapshot = (): VoiceSnapshot => ({
   transcript: "",
   response: "",
   error: null,
+  followUp: false,
   wakePhrase: null,
 });
 
@@ -69,6 +72,7 @@ export async function registerVoiceRoutes(app: FastifyInstance): Promise<void> {
           transcript: message.transcript ?? "",
           response: message.response ?? "",
           error: message.error ?? null,
+          followUp: Boolean(message.followUp),
           wakePhrase: message.wakePhrase ?? null,
         });
       } catch {
@@ -92,6 +96,12 @@ export async function registerVoiceRoutes(app: FastifyInstance): Promise<void> {
     if (!text) return reply.code(400).send({ error: "text is required" });
     if (text.length > 2000) return reply.code(400).send({ error: "text is too long" });
     if (!sendToAgent({ type: "ask", text })) return reply.code(503).send({ error: "voice agent is not connected" });
+    return { ok: true };
+  });
+
+  // 画面のマイクボタン。ウェイクワード無しで聞き始めさせる
+  app.post("/api/voice/listen", async (_request, reply) => {
+    if (!sendToAgent({ type: "listen" })) return reply.code(503).send({ error: "voice agent is not connected" });
     return { ok: true };
   });
 

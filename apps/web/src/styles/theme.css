@@ -994,6 +994,57 @@ button.widget-card {
   color: var(--accent-warn);
 }
 
+/* --- 音声アシスタントの待機表示（画面左下。タップするとウェイクワード無しで話しかけられる） --- */
+
+.voice-launcher {
+  position: fixed;
+  z-index: 5;
+  left: calc(var(--sidebar-width) + 45px);
+  bottom: 30px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 48px;
+  padding: 0 20px 0 14px;
+  border: 1px solid var(--glass-border);
+  border-radius: 24px;
+  background: rgba(7, 18, 38, 0.35);
+  backdrop-filter: blur(5px);
+  color: var(--text-secondary);
+  font-size: 15px;
+  cursor: pointer;
+  opacity: 0.75;
+  transition:
+    opacity 160ms ease,
+    background-color 160ms ease,
+    color 160ms ease;
+}
+
+.voice-launcher:hover,
+.voice-launcher:focus-visible {
+  opacity: 1;
+  background-color: var(--glass-bg);
+  color: var(--text-primary);
+}
+
+.voice-launcher .fluent-icon {
+  width: 22px;
+  height: 22px;
+}
+
+@media (max-width: 900px) {
+  .voice-launcher {
+    top: 16px;
+    right: 16px;
+    bottom: auto;
+    left: auto;
+  }
+
+  .voice-launcher__hint {
+    display: none;
+  }
+}
+
 /* --- 音声アシスタント（ウェイクワードを聞いてから返答し終えるまで手前に出すパネル） --- */
 
 .voice-overlay {

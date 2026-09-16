@@ -47,6 +47,7 @@ class Config:
     wake_phrase: list[str]
     wake_decoys: list[str]
     listen_timeout_s: float
+    follow_up_s: float
     end_silence_s: float
     max_utterance_s: float
 
@@ -90,6 +91,8 @@ def load_config() -> Config:
             )
         ),
         listen_timeout_s=float(_env("VOICE_LISTEN_TIMEOUT_S", "6")),
+        # 返答を読み上げた後、ウェイクワード無しで続けて話しかけられる秒数（0で無効）
+        follow_up_s=float(_env("VOICE_FOLLOW_UP_S", "5")),
         end_silence_s=float(_env("VOICE_END_SILENCE_S", "1.0")),
         max_utterance_s=float(_env("VOICE_MAX_UTTERANCE_S", "20")),
         # このホストのCPUにAVXが無いとsmallは1発話に5秒ほどかかる。精度より応答速度を優先してbaseを既定にしている
