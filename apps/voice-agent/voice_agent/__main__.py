@@ -59,7 +59,7 @@ class Assistant:
         self.http = httpx.AsyncClient(base_url=config.server_url, timeout=10)
         self.claude = ClaudeConversation(config, self.personas, self._fetch_history)
         self.tts = VoiceVox(config.voicevox_url)
-        self.relay = Relay(config.server_url, config.agent_token, self.snapshot, self.handle_command)
+        self.relay = Relay(config.server_url, config.agent_token, self.snapshot, self.handle_command, self.personas_info)
 
         self.state = "idle"
         self.turn_id: str | None = None
@@ -138,6 +138,24 @@ class Assistant:
         log.info("%s で待機します", "・".join(f"「{w}」" for w in wake_phrases))
         await asyncio.gather(self.relay.run(), self._listen_loop(), self._watch_personas())
 
+    def personas_info(self) -> dict:
+        """
+        画面の「動きを確認」で使う、キャラクターごとの表情（共通の表情と、身振りの推測を済ませたもの）。
+        接続したときと、キャラクターを読み直したときに送る
+        """
+        return {
+            "type": "personas-info",
+            "personas": {
+                persona.id: {
+                    "expressions": {
+                        e.name: {"avatar": e.avatar, "motion": e.motion, "speaker": e.speaker}
+                        for e in persona.expressions.values()
+                    }
+                }
+                for persona in self.personas.personas
+            },
+        }
+
     async def _check_personas(self) -> None:
         speakers = await self.tts.speaker_ids()
         self.persona_warnings = check_personas(self.personas, self._vocabulary, speakers)
@@ -172,6 +190,7 @@ class Assistant:
         await self._check_personas()
         log.info("キャラクターを読み直しました: %s", "・".join(p.name for p in personas.personas))
         await self.relay.publish()
+        await self.relay.send(self.personas_info())
 
     async def _listen_loop(self) -> None:
         loop = asyncio.get_running_loop()
@@ -355,7 +374,11 @@ class Assistant:
                         "turnId": self.turn_id,
                         "cues": sentence.mouth_cues,
                         "durationS": sentence.duration_s,
-                        "expression": {"name": expression.name, "avatar": expression.avatar} if expression else None,
+                        "expression": (
+                            {"name": expression.name, "avatar": expression.avatar, "motion": expression.motion}
+                            if expression
+                            else None
+                        ),
                     }
                 )
 

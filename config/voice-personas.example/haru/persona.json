@@ -21,7 +21,8 @@
       "keywords": [
         "ドヤ",
         "得意"
-      ]
+      ],
+      "motion": "proud"
     },
     "ひそひそ": {
       "avatar": {
@@ -34,7 +35,8 @@
       "keywords": [
         "小声",
         "内緒"
-      ]
+      ],
+      "motion": "whisper"
     }
   }
 }

@@ -26,6 +26,14 @@ export interface ExpressionSpec {
   avatar?: Record<string, number>;
   voice?: { speaker?: number; speed?: number };
   keywords?: string[];
+  /** 体の身振りの名前（apps/web/src/avatar/motions.ts） */
+  motion?: string;
+}
+
+/** 耳・尻尾の骨の名前。省略時は画面側が名前から探す */
+export interface RigSpec {
+  ears?: { left?: string[]; right?: string[] };
+  tail?: string[];
 }
 
 export interface PersonaFile {
@@ -37,6 +45,7 @@ export interface PersonaFile {
   decoys?: string[];
   voice?: { speaker?: number; speed?: number };
   expressions?: Record<string, ExpressionSpec>;
+  rig?: RigSpec;
 }
 
 export interface CommonFile {

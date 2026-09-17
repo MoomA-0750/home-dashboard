@@ -1,12 +1,22 @@
 import { useRef, useState, type ChangeEvent } from "react";
-import { PersonaImportConflict, type PersonaImportResult, type VoicePersonas } from "../lib/useVoiceAssistant";
+import { MOTION_NAMES } from "../avatar/motions";
+import { PersonaImportConflict, type PersonaImportResult, type VoicePersona, type VoicePersonas } from "../lib/useVoiceAssistant";
 import { Icon } from "./Icon";
+import { PersonaPreview } from "./PersonaPreview";
+
+/** 表情に指定された身振りの名前が、画面の身振りの一覧にあるか */
+function motionWarnings(persona: VoicePersona): string[] {
+  return Object.entries(persona.expressions)
+    .filter(([, spec]) => spec.motion && !MOTION_NAMES.includes(spec.motion))
+    .map(([name, spec]) => `表情「${name}」の身振り ${spec.motion} がありません（使えるもの: ${MOTION_NAMES.join("・")}）`);
+}
 
 interface PersonaManagerProps {
   personas: VoicePersonas;
   onImport: (file: File, replace: boolean) => Promise<PersonaImportResult>;
   onDelete: (personaId: string) => Promise<void>;
   exportUrl: (personaId: string) => string;
+  avatarUrlFor: (personaId: string) => string | null;
 }
 
 type Notice =
@@ -18,11 +28,12 @@ type Notice =
  * キャラクターの追加（ZIPのインポート）・書き出し・削除。
  * パッケージは persona.json・prompt.md・avatar.vrm を入れたZIP（書き出したものをそのまま取り込める）。
  */
-export function PersonaManager({ personas, onImport, onDelete, exportUrl }: PersonaManagerProps) {
+export function PersonaManager({ personas, onImport, onDelete, exportUrl, avatarUrlFor }: PersonaManagerProps) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
+  const [previewing, setPreviewing] = useState<VoicePersona | null>(null);
 
   const runImport = async (file: File, replace: boolean) => {
     setBusy(true);
@@ -76,13 +87,18 @@ export function PersonaManager({ personas, onImport, onDelete, exportUrl }: Pers
               {persona.hasAvatar && <span>アバター</span>}
               {persona.hasPrompt ? <span>キャラクター設定</span> : <span>素のアシスタント</span>}
             </div>
-            {persona.warnings.map((warning) => (
+            {[...persona.warnings, ...motionWarnings(persona)].map((warning) => (
               <p key={warning} className="persona-manager__warning">
                 {warning}
               </p>
             ))}
             {!persona.builtIn && (
               <div className="persona-manager__actions">
+                {persona.hasAvatar && (
+                  <button type="button" onClick={() => setPreviewing(persona)}>
+                    動きを確認
+                  </button>
+                )}
                 <a href={exportUrl(persona.id)} download={`${persona.id}.zip`}>
                   書き出し
                 </a>
@@ -136,6 +152,9 @@ export function PersonaManager({ personas, onImport, onDelete, exportUrl }: Pers
         </div>
       )}
       {notice?.kind === "error" && <p className="settings-panel__voice-error">{notice.message}</p>}
+      {previewing && avatarUrlFor(previewing.id) && (
+        <PersonaPreview persona={previewing} modelUrl={avatarUrlFor(previewing.id)!} onClose={() => setPreviewing(null)} />
+      )}
     </div>
   );
 }

@@ -98,15 +98,32 @@ export function parsePersonaFile(raw: string): PersonaFile {
       }
       avatar[expression] = weight;
     }
+    if (s.motion !== undefined && (typeof s.motion !== "string" || !/^[a-z][a-zA-Z0-9_-]{0,31}$/.test(s.motion))) {
+      fail(`表情「${name}」の motion は身振りの名前（英字。例: happy）にしてください`);
+    }
     expressions[name] = {
       avatar,
       voice: voice(s.voice, `表情「${name}」の voice`),
       keywords: strings(s.keywords, `表情「${name}」の keywords`, { max: 30, maxLength: 16 }),
+      motion: s.motion as string | undefined,
+    };
+  }
+  let rig: PersonaFile["rig"];
+  if (data.rig !== undefined) {
+    const r = (data.rig ?? {}) as Loose;
+    const ears = (r.ears ?? {}) as Loose;
+    rig = {
+      ears:
+        r.ears === undefined
+          ? undefined
+          : { left: strings(ears.left, "rig.ears.left", { max: 10, maxLength: 64 }), right: strings(ears.right, "rig.ears.right", { max: 10, maxLength: 64 }) },
+      tail: r.tail === undefined ? undefined : strings(r.tail, "rig.tail", { max: 10, maxLength: 64 }),
     };
   }
   return {
     id: data.id,
     name: data.name.trim(),
+    rig,
     wakeWords: strings(data.wakeWords, "wakeWords", { min: 1, max: 10 }),
     wakeLabel: typeof data.wakeLabel === "string" ? data.wakeLabel.trim() : undefined,
     decoys: strings(data.decoys, "decoys"),

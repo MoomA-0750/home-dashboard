@@ -89,6 +89,23 @@ describe("persona.json の検証", () => {
     assert.throws(() => parsePersonaFile(JSON.stringify(persona({ id: "ハル" }))), /id は/);
   });
 
+  test("表情の身振り（motion）と、耳・尻尾の骨の指定（rig）を受け付ける", () => {
+    const parsed = parsePersonaFile(
+      JSON.stringify(
+        persona({
+          expressions: { ドヤ顔: { avatar: { doya_1: 1 }, motion: "proud" } },
+          rig: { ears: { left: ["Ear_L"], right: ["Ear_R"] }, tail: ["Tail"] },
+        }),
+      ),
+    );
+    assert.equal(parsed.expressions?.["ドヤ顔"].motion, "proud");
+    assert.deepEqual(parsed.rig, { ears: { left: ["Ear_L"], right: ["Ear_R"] }, tail: ["Tail"] });
+    assert.throws(
+      () => parsePersonaFile(JSON.stringify(persona({ expressions: { 笑: { motion: "../x" } } }))),
+      /motion は/,
+    );
+  });
+
   test("ウェイクワードが無いものや、表情名に括弧を含むものは受け付けない", () => {
     assert.throws(() => parsePersonaFile(JSON.stringify(persona({ wakeWords: [] }))), /wakeWords/);
     assert.throws(

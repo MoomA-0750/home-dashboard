@@ -3,6 +3,8 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { VRMLoaderPlugin, VRMUtils, type VRM } from "@pixiv/three-vrm";
 import type { VoiceState } from "../lib/useVoiceAssistant";
+import { AvatarAnimator, type AnimatorInputs } from "../avatar/animator";
+import { prepareRig, type AvatarRig, type RigOverrides } from "../avatar/rig";
 
 /**
  * 応答パネルに出すVRMアバター。three.js を含むので、App からは React.lazy で読み込む
@@ -17,15 +19,12 @@ interface LipsyncMessage {
   type: "voice-lipsync";
   cues: [number, string][];
   durationS: number;
-  /** その文を読み上げる間の表情（返答の（表情名）から）。VRMの表情名と重み */
-  expression: { name: string; avatar: Record<string, number> } | null;
+  /** その文を読み上げる間の表情（返答の（表情名）から）。VRMの表情名と重み、身振りの名前 */
+  expression: { name: string; avatar: Record<string, number>; motion?: string | null } | null;
 }
 
-const VOWEL_EXPRESSIONS: Record<string, string> = { a: "aa", i: "ih", u: "ou", e: "ee", o: "oh" };
-const MOUTH_EXPRESSIONS = Object.values(VOWEL_EXPRESSIONS);
 /** スピーカーから音が出るまでの遅れの見込み。口が声より先に動いて見えないよう、少しだけ遅らせる */
 const PLAYBACK_LATENCY_S = 0.08;
-const BLINK_DURATION_S = 0.16;
 
 const models = new Map<string, Promise<VRM>>();
 
@@ -97,22 +96,43 @@ export function loadAvatar(url: string): Promise<VRM> {
   return model;
 }
 
+export interface AvatarOverride {
+  motion: string | null;
+  expression: Record<string, number> | null;
+  /** 口パクの確認用に、母音を順に動かす */
+  talking: boolean;
+}
+
 interface VoiceAvatarProps {
   modelUrl: string;
   state: VoiceState;
   socket: WebSocket | null;
+  /** 耳・尻尾の骨の名前（persona.json の rig。省略時は名前から探す） */
+  rig?: RigOverrides;
+  /** 動きの確認画面から、表情・身振りを直接指定する（このときは WebSocket の口パクを使わない） */
+  override?: AvatarOverride;
   onError: (err: unknown) => void;
+  /** モデルを読み込み、耳・尻尾の骨を見つけたとき（動きの確認画面で、見つかった骨を出すため） */
+  onReady?: (rig: AvatarRig) => void;
 }
 
-export default function VoiceAvatar({ modelUrl, state, socket, onError }: VoiceAvatarProps) {
+const DEMO_VOWELS = ["a", "i", "u", "e", "o", "a", null, "o", "e", null];
+
+export default function VoiceAvatar({ modelUrl, state, socket, rig, override, onError, onReady }: VoiceAvatarProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const stateRef = useRef(state);
   stateRef.current = state;
+  const overrideRef = useRef(override);
+  overrideRef.current = override;
   const lipsyncRef = useRef<{ cues: [number, string][]; durationS: number; receivedAt: number } | null>(null);
-  // いまの表情（VRMの表情名と重み）。次の指定が来るか、新しいやり取りが始まるまで保つ
-  const expressionRef = useRef<Record<string, number> | null>(null);
+  // いまの表情と身振り。次の指定が来るか、新しいやり取りが始まるまで保つ
+  const expressionRef = useRef<{ avatar: Record<string, number>; motion: string | null } | null>(null);
   const onErrorRef = useRef(onError);
   onErrorRef.current = onError;
+  const rigRef = useRef(rig);
+  rigRef.current = rig;
+  const onReadyRef = useRef(onReady);
+  onReadyRef.current = onReady;
 
   useEffect(() => {
     if (!socket) return;
@@ -121,7 +141,9 @@ export default function VoiceAvatar({ modelUrl, state, socket, onError }: VoiceA
         const message = JSON.parse(event.data) as LipsyncMessage;
         if (message.type !== "voice-lipsync") return;
         lipsyncRef.current = { cues: message.cues, durationS: message.durationS, receivedAt: performance.now() };
-        if (message.expression) expressionRef.current = message.expression.avatar;
+        if (message.expression) {
+          expressionRef.current = { avatar: message.expression.avatar, motion: message.expression.motion ?? null };
+        }
       } catch {
         // ignore malformed messages
       }
@@ -142,6 +164,7 @@ export default function VoiceAvatar({ modelUrl, state, socket, onError }: VoiceA
     let disposed = false;
     let frame = 0;
     let vrm: VRM | null = null;
+    let animator: AvatarAnimator | null = null;
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     // 非力な端末で重くなりすぎないよう、高DPIでも描画解像度は抑える
@@ -171,42 +194,17 @@ export default function VoiceAvatar({ modelUrl, state, socket, onError }: VoiceA
 
     const timer = new THREE.Timer();
     const lookGoal = new THREE.Vector3();
-    const motion = { nextBlinkAt: 1.5, blinkStartedAt: -1 };
-    const weights = new Map<string, number>();
 
-    // 目標の重みへなめらかに寄せる（口の形が音素ごとにパタパタ切り替わらないように）
-    const approach = (name: string, target: number, rate: number, delta: number) => {
-      const current = weights.get(name) ?? 0;
-      const next = current + (target - current) * Math.min(1, delta * rate);
-      weights.set(name, next);
-      vrm?.expressionManager?.setValue(name, next);
-    };
-
-    // 設定の表情名をモデルの表情名に合わせる（VRM 0.x のカスタム表情は「Surprised」のように大文字始まりのことがある）
-    const resolvedNames = new Map<string, string | null>();
-    const resolveName = (name: string): string | null => {
-      if (!vrm?.expressionManager) return null;
-      if (!resolvedNames.has(name)) {
-        const manager = vrm.expressionManager;
-        const found =
-          manager.getExpression(name)?.expressionName ??
-          manager.expressions.find((e) => e.expressionName.toLowerCase() === name.toLowerCase())?.expressionName ??
-          null;
-        resolvedNames.set(name, found);
-      }
-      return resolvedNames.get(name) ?? null;
-    };
-    // これまでに動かした表情（指定が変わったら0へ戻すため）
-    const touchedExpressions = new Set<string>();
-
-    const currentVowel = (): string | null => {
+    const currentVowel = (t: number): string | null => {
+      const demo = overrideRef.current;
+      if (demo) return demo.talking ? DEMO_VOWELS[Math.floor(t * 7) % DEMO_VOWELS.length] : null;
       const lipsync = lipsyncRef.current;
       if (!lipsync || stateRef.current !== "speaking") return null;
       const elapsed = (performance.now() - lipsync.receivedAt) / 1000 - PLAYBACK_LATENCY_S;
       if (elapsed < 0 || elapsed > lipsync.durationS) return null;
       let vowel: string | null = null;
-      for (const [t, v] of lipsync.cues) {
-        if (t > elapsed) break;
+      for (const [time, v] of lipsync.cues) {
+        if (time > elapsed) break;
         vowel = v;
       }
       return vowel;
@@ -217,59 +215,24 @@ export default function VoiceAvatar({ modelUrl, state, socket, onError }: VoiceA
       timer.update(timestamp);
       const delta = Math.min(timer.getDelta(), 0.1);
       const t = timer.getElapsed();
-      if (!vrm) return;
-      const humanoid = vrm.humanoid;
+      if (!vrm || !animator) return;
       const current = stateRef.current;
-
-      // 呼吸と、ゆっくりした頭の揺れ
-      const spine = humanoid.getNormalizedBoneNode("spine");
-      if (spine) spine.rotation.x = Math.sin(t * 1.6) * 0.015;
-      const head = humanoid.getNormalizedBoneNode("head");
-      if (head) {
-        const tilt = current === "listening" ? 0.09 : 0;
-        head.rotation.z += (tilt + Math.sin(t * 0.7) * 0.02 - head.rotation.z) * Math.min(1, delta * 4);
-        head.rotation.y = Math.sin(t * 0.5) * 0.04;
-        head.rotation.x = current === "speaking" ? Math.sin(t * 3.1) * 0.015 : 0;
-      }
+      const demo = overrideRef.current;
+      const inputs: AnimatorInputs = {
+        state: current,
+        motion: demo ? demo.motion : (expressionRef.current?.motion ?? null),
+        expression: demo ? demo.expression : (expressionRef.current?.avatar ?? null),
+        vowel: currentVowel(t),
+      };
 
       // 視線: ふだんはこちら（カメラ）を見て、考えている間は少し上の方を見る
       const thinking = current === "thinking" || current === "transcribing";
       lookGoal.set(camera.position.x + (thinking ? 0.25 : 0), camera.position.y + (thinking ? 0.3 : 0), camera.position.z);
       lookTarget.position.lerp(lookGoal, Math.min(1, delta * 3));
 
-      // まばたき
-      if (t >= motion.nextBlinkAt) {
-        motion.blinkStartedAt = t;
-        motion.nextBlinkAt = t + 2 + Math.random() * 4;
-      }
-      const blinkPhase = (t - motion.blinkStartedAt) / BLINK_DURATION_S;
-      vrm.expressionManager?.setValue("blink", blinkPhase >= 0 && blinkPhase <= 1 ? Math.sin(blinkPhase * Math.PI) : 0);
-
-      // 口パク
-      const vowel = currentVowel();
-      for (const name of MOUTH_EXPRESSIONS) {
-        approach(name, vowel && VOWEL_EXPRESSIONS[vowel] === name ? 0.75 : 0, 22, delta);
-      }
-
-      // 表情。返答で（表情名）の指定があればそれを、無ければ状態に応じた控えめな表情にする
-      // （joy 系は目を閉じるモデルが多いので、既定は控えめにする）
-      const targets: Record<string, number> = expressionRef.current
-        ? { ...expressionRef.current }
-        : { happy: current === "speaking" || current === "idle" ? 0.2 : 0, sad: current === "error" ? 0.5 : 0 };
-      for (const name of Object.keys(targets)) {
-        const resolved = resolveName(name);
-        if (resolved) touchedExpressions.add(resolved);
-      }
-      const resolvedTargets = new Map<string, number>();
-      for (const [name, weight] of Object.entries(targets)) {
-        const resolved = resolveName(name);
-        if (resolved) resolvedTargets.set(resolved, weight);
-      }
-      for (const name of touchedExpressions) {
-        approach(name, resolvedTargets.get(name) ?? 0, 6, delta);
-      }
-
+      animator.updateBody(delta, t, inputs);
       vrm.update(delta);
+      animator.updateEarsAndTail(delta, t, inputs);
       renderer.render(scene, camera);
     };
 
@@ -278,22 +241,16 @@ export default function VoiceAvatar({ modelUrl, state, socket, onError }: VoiceA
         if (disposed) return;
         vrm = loaded;
         scene.add(vrm.scene);
-
-        // Tポーズのままだと腕が画面に入るので下ろす
-        const humanoid = vrm.humanoid;
-        const leftUpperArm = humanoid.getNormalizedBoneNode("leftUpperArm");
-        const rightUpperArm = humanoid.getNormalizedBoneNode("rightUpperArm");
-        // VRM 0.x（rotateVRM0 で向きを揃えたもの）と 1.0 とで、腕を下ろす回転の向きが逆になる
-        const armDown = vrm.meta.metaVersion === "0" ? 1.25 : -1.25;
-        if (leftUpperArm) leftUpperArm.rotation.z = armDown;
-        if (rightUpperArm) rightUpperArm.rotation.z = -armDown;
+        const avatarRig = prepareRig(vrm, rigRef.current);
+        animator = new AvatarAnimator(vrm, avatarRig);
+        onReadyRef.current?.(avatarRig);
         vrm.update(0);
 
-        // 頭の上（耳・髪を含めて首の付け根から約0.3m）から胸元までが収まるように、頭の位置からカメラを決める
+        // 頭の上（耳・髪を含めて首の付け根から約0.3m）から腰の上までが収まるように、頭の位置からカメラを決める
         const headPosition = new THREE.Vector3();
-        humanoid.getNormalizedBoneNode("head")?.getWorldPosition(headPosition);
-        const centerY = headPosition.y - 0.03;
-        camera.position.set(0, centerY, 1.55);
+        vrm.humanoid.getNormalizedBoneNode("head")?.getWorldPosition(headPosition);
+        const centerY = headPosition.y - 0.12;
+        camera.position.set(0, centerY, 2.0);
         camera.lookAt(0, centerY, 0);
         lookTarget.position.copy(camera.position);
         if (vrm.lookAt) vrm.lookAt.target = lookTarget;

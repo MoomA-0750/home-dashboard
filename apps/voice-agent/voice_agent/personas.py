@@ -38,16 +38,27 @@ class Expression:
     speaker: int | None = None
     speed: float | None = None
     keywords: tuple[str, ...] = ()
+    # 体の身振りの名前（画面の apps/web/src/avatar/motions.ts）。省略時は avatar の表情から推測する
+    motion: str | None = None
+
+
+# 身振りを指定していない表情は、いちばん強く動かす標準の表情から身振りを選ぶ
+_MOTION_BY_PRESET = {"happy": "happy", "surprised": "surprised", "sad": "sad", "angry": "angry", "relaxed": "relaxed"}
+
+
+def infer_motion(avatar: dict[str, float]) -> str | None:
+    presets = [(weight, _MOTION_BY_PRESET[name.lower()]) for name, weight in avatar.items() if name.lower() in _MOTION_BY_PRESET]
+    return max(presets)[1] if presets else None
 
 
 # キャラクターに設定が無くても使える表情。VRM の標準の表情（0.x の joy/fun/sorrow は three-vrm が happy/relaxed/sad に読み替える）
 DEFAULT_EXPRESSIONS = [
     Expression("ふつう", {}),
-    Expression("にっこり", {"happy": 0.6}, keywords=("笑", "にこ", "嬉", "喜", "楽し")),
-    Expression("びっくり", {"surprised": 0.8}, keywords=("驚", "びっくり", "目を丸")),
-    Expression("しょんぼり", {"sad": 0.7}, keywords=("しょんぼり", "悲し", "落ち込", "泣", "寂し")),
-    Expression("ぷんぷん", {"angry": 0.7}, keywords=("怒", "むっ", "ぷん", "むく")),
-    Expression("ほっこり", {"relaxed": 0.6}, keywords=("ほっ", "安心", "穏やか", "のんびり")),
+    Expression("にっこり", {"happy": 0.6}, keywords=("笑", "にこ", "嬉", "喜", "楽し"), motion="happy"),
+    Expression("びっくり", {"surprised": 0.8}, keywords=("驚", "びっくり", "目を丸"), motion="surprised"),
+    Expression("しょんぼり", {"sad": 0.7}, keywords=("しょんぼり", "悲し", "落ち込", "泣", "寂し"), motion="sad"),
+    Expression("ぷんぷん", {"angry": 0.7}, keywords=("怒", "むっ", "ぷん", "むく"), motion="angry"),
+    Expression("ほっこり", {"relaxed": 0.6}, keywords=("ほっ", "安心", "穏やか", "のんびり"), motion="relaxed"),
 ]
 
 
@@ -108,12 +119,14 @@ def _expressions(entry: dict) -> dict[str, Expression]:
     expressions = {e.name: e for e in DEFAULT_EXPRESSIONS}
     for name, spec in entry.get("expressions", {}).items():
         voice = spec.get("voice", {})
+        avatar = {k: float(v) for k, v in spec.get("avatar", {}).items()}
         expressions[name] = Expression(
             name=name,
-            avatar={k: float(v) for k, v in spec.get("avatar", {}).items()},
+            avatar=avatar,
             speaker=voice.get("speaker"),
             speed=voice.get("speed"),
             keywords=tuple(spec.get("keywords", [])),
+            motion=spec.get("motion") or infer_motion(avatar),
         )
     return expressions
 

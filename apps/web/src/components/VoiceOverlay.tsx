@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
-import { ACTIVE_VOICE_STATES, type VoiceSnapshot, type VoiceState } from "../lib/useVoiceAssistant";
+import { ACTIVE_VOICE_STATES, type VoicePersona, type VoiceSnapshot, type VoiceState } from "../lib/useVoiceAssistant";
 import { Icon } from "./Icon";
 
 // three.js を含むので、アバターを出すときだけ読み込む
@@ -22,6 +22,8 @@ interface VoiceOverlayProps {
   snapshot: VoiceSnapshot | null;
   /** VRMアバターのURL。無ければ状態を表す円だけを出す */
   avatarUrl: string | null;
+  /** 耳・尻尾の骨の名前の指定（persona.json の rig） */
+  avatarRig?: VoicePersona["rig"];
   socket: WebSocket | null;
   onCancel: () => void;
 }
@@ -38,7 +40,7 @@ function VoiceOrb({ state, badge = false }: { state: VoiceState; badge?: boolean
  * ウェイクワードを聞いてから返答し終えるまで、画面の手前に出すパネル。
  * 読み上げが終わったあともしばらく返答を残し、タップするか時間が経つと消える。
  */
-export function VoiceOverlay({ snapshot, avatarUrl, socket, onCancel }: VoiceOverlayProps) {
+export function VoiceOverlay({ snapshot, avatarUrl, avatarRig, socket, onCancel }: VoiceOverlayProps) {
   const [visible, setVisible] = useState(false);
   // 読み込みに失敗したアバター（キャラクターごとに別なので、URLで覚える）
   const [failedAvatarUrl, setFailedAvatarUrl] = useState<string | null>(null);
@@ -99,6 +101,7 @@ export function VoiceOverlay({ snapshot, avatarUrl, socket, onCancel }: VoiceOve
             <Suspense fallback={null}>
               <VoiceAvatar
                 modelUrl={avatarUrl}
+                rig={avatarRig ?? undefined}
                 state={state}
                 socket={socket}
                 onError={(err) => {

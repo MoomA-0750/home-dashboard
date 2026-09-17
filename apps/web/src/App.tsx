@@ -183,6 +183,7 @@ export function App() {
           personas={personas}
           onSelectDefaultPersona={(personaId) => setDefaultPersona(ctx.apiBaseUrl, personaId)}
           onImportPersona={(file, replace) => importPersona(ctx.apiBaseUrl, file, replace)}
+          avatarUrlFor={(personaId) => avatarUrlFor(ctx.apiBaseUrl, personas, personaId)}
           onDeletePersona={(personaId) => deletePersona(ctx.apiBaseUrl, personaId)}
           personaExportUrl={(personaId) => personaExportUrl(ctx.apiBaseUrl, personaId)}
           history={voiceHistory}
@@ -196,6 +197,7 @@ export function App() {
       <VoiceOverlay
         snapshot={voice}
         avatarUrl={avatarUrl(voice?.personaId ?? null)}
+        avatarRig={personas?.personas.find((persona) => persona.id === voice?.personaId)?.rig}
         socket={ctx.socket}
         onCancel={() => cancelVoiceAssistant(ctx.apiBaseUrl)}
       />

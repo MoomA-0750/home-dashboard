@@ -24,6 +24,7 @@ interface SettingsPanelProps {
   onImportPersona: (file: File, replace: boolean) => Promise<PersonaImportResult>;
   onDeletePersona: (personaId: string) => Promise<void>;
   personaExportUrl: (personaId: string) => string;
+  avatarUrlFor: (personaId: string) => string | null;
   history: VoiceTurnRecord[];
   /** サーバーにVRMアバターが置かれているか（置かれていなければ切り替えを出さない） */
   avatarAvailable: boolean;
@@ -49,6 +50,7 @@ export function SettingsPanel({
   onImportPersona,
   onDeletePersona,
   personaExportUrl,
+  avatarUrlFor,
   history,
   avatarAvailable,
   avatarEnabled,
@@ -84,6 +86,7 @@ export function SettingsPanel({
         onImportPersona={onImportPersona}
         onDeletePersona={onDeletePersona}
         personaExportUrl={personaExportUrl}
+        avatarUrlFor={avatarUrlFor}
         history={history}
         avatarAvailable={avatarAvailable}
         avatarEnabled={avatarEnabled}
@@ -113,6 +116,7 @@ interface VoiceSectionProps {
   onImportPersona: (file: File, replace: boolean) => Promise<PersonaImportResult>;
   onDeletePersona: (personaId: string) => Promise<void>;
   personaExportUrl: (personaId: string) => string;
+  avatarUrlFor: (personaId: string) => string | null;
   history: VoiceTurnRecord[];
   avatarAvailable: boolean;
   avatarEnabled: boolean;
@@ -140,6 +144,7 @@ function VoiceSection({
   onImportPersona,
   onDeletePersona,
   personaExportUrl,
+  avatarUrlFor,
   history,
   avatarAvailable,
   avatarEnabled,
@@ -221,6 +226,7 @@ function VoiceSection({
           onImport={onImportPersona}
           onDelete={onDeletePersona}
           exportUrl={personaExportUrl}
+          avatarUrlFor={avatarUrlFor}
         />
       )}
       {history.length > 0 && (

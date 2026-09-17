@@ -49,6 +49,8 @@ let snapshot = idleSnapshot();
 let agent: WebSocket | null = null;
 // エージェントが確かめたキャラクターの問題（ウェイクワードが音声認識の語彙に無い、など）
 let agentPersonaWarnings: Record<string, string[]> = {};
+// エージェントが確定したキャラクターごとの表情（共通の表情と、身振りの推測を済ませたもの）。「動きを確認」で使う
+let agentPersonaExpressions: Record<string, { expressions: Record<string, unknown> }> = {};
 
 function publish(next: VoiceSnapshot): void {
   snapshot = next;
@@ -100,6 +102,13 @@ export async function registerVoiceRoutes(app: FastifyInstance): Promise<void> {
             .catch((err) => app.log.error(err, "failed to record voice turn"));
           return;
         }
+        if (message.type === "personas-info") {
+          if (message.personas && typeof message.personas === "object") {
+            agentPersonaExpressions = message.personas;
+            broadcast({ type: "voice-personas" });
+          }
+          return;
+        }
         if (message.type !== "state") return;
         if (message.personaWarnings && typeof message.personaWarnings === "object") {
           const changed = JSON.stringify(message.personaWarnings) !== JSON.stringify(agentPersonaWarnings);
@@ -145,6 +154,9 @@ export async function registerVoiceRoutes(app: FastifyInstance): Promise<void> {
           hasAvatar: persona.avatarPath !== null,
           hasPrompt: persona.hasPrompt,
           builtIn: persona.builtIn,
+          rig: persona.meta?.rig ?? null,
+          // エージェントが起動していなければ、persona.json に書いた分だけ
+          expressions: agentPersonaExpressions[persona.id]?.expressions ?? persona.meta?.expressions ?? {},
           warnings: [...(await personaWarnings(persona)), ...(agentPersonaWarnings[persona.id] ?? [])],
         })),
       ),

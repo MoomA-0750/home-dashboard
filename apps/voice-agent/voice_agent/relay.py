@@ -25,12 +25,15 @@ class Relay:
         token: str,
         snapshot: Callable[[], dict],
         on_command: Callable[[dict], Awaitable[None]],
+        hello: Callable[[], dict] | None = None,
     ) -> None:
+        """hello は、接続するたびに状態と一緒に送る情報（キャラクターの表情の一覧など）"""
         ws_base = server_url.replace("https://", "wss://", 1).replace("http://", "ws://", 1)
         query = f"?{urlencode({'token': token})}" if token else ""
         self._url = f"{ws_base}/ws/voice-agent{query}"
         self._snapshot = snapshot
         self._on_command = on_command
+        self._hello = hello
         self._ws: websockets.ClientConnection | None = None
 
     async def run(self) -> None:
@@ -40,6 +43,8 @@ class Relay:
                     self._ws = ws
                     log.info("ダッシュボードのサーバーに接続しました")
                     await ws.send(json.dumps({"type": "state", **self._snapshot()}, ensure_ascii=False))
+                    if self._hello:
+                        await ws.send(json.dumps(self._hello(), ensure_ascii=False))
                     async for raw in ws:
                         try:
                             message = json.loads(raw)

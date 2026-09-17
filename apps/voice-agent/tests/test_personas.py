@@ -78,3 +78,22 @@ def test_check_personas_reports_unreachable_wake_words_and_voices(tmp_path):
         ]
     }
     assert check_personas(personas, None, {1}) == {"a": ["VOICEVOX に話者ID 70 がありません"]}
+
+
+def test_expression_motion_is_explicit_or_inferred(tmp_path):
+    """表情の身振りは persona.json の motion を使い、無ければいちばん強い標準の表情から推測する"""
+    write_persona(
+        tmp_path,
+        "a",
+        prompt="p",
+        expressions={
+            "ドヤ顔": {"avatar": {"doya_1": 1.0}, "motion": "proud"},
+            "てれ": {"avatar": {"happy": 0.3, "sad": 0.5}},
+            "無表情": {"avatar": {"custom": 1.0}},
+        },
+    )
+    expressions = load_personas(config_for(tmp_path)).get("a").expressions
+    assert expressions["ドヤ顔"].motion == "proud"
+    assert expressions["てれ"].motion == "sad"
+    assert expressions["無表情"].motion is None
+    assert expressions["にっこり"].motion == "happy"

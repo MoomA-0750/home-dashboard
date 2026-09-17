@@ -93,6 +93,10 @@ export interface VoicePersona {
   builtIn: boolean;
   /** 呼べない・表情が変わらないなどの問題（ウェイクワードが音声認識の語彙に無い、VRMに無い表情名 など） */
   warnings: string[];
+  /** 耳・尻尾の骨の名前の指定（persona.json の rig） */
+  rig: { ears?: { left?: string[]; right?: string[] }; tail?: string[] } | null;
+  /** （表情名）ごとの VRM の表情と身振り */
+  expressions: Record<string, { avatar?: Record<string, number>; motion?: string | null }>;
 }
 
 export interface VoicePersonas {
