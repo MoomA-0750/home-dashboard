@@ -373,6 +373,7 @@ class Assistant:
                         "type": "lipsync",
                         "turnId": self.turn_id,
                         "cues": sentence.mouth_cues,
+                        "beats": sentence.beats,
                         "durationS": sentence.duration_s,
                         "expression": (
                             {"name": expression.name, "avatar": expression.avatar, "motion": expression.motion}

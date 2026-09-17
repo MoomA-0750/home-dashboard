@@ -2,7 +2,7 @@ import asyncio
 import logging
 import re
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import httpx
 
@@ -148,6 +148,8 @@ class Speech:
     mouth_cues: list[tuple[float, str]]
     duration_s: float
     expression: Expression | None = None
+    # 強調の時刻（[再生開始からの秒, 強さ 0〜1]）。アバターがうなずきや手の振りを合わせる
+    beats: list[tuple[float, float]] = field(default_factory=list)
 
 
 def mouth_cues(query: dict) -> tuple[list[tuple[float, str]], float]:
@@ -177,6 +179,44 @@ class Voice:
     speed: float
 
 
+# これより近いビートはまとめる（細かすぎるうなずきは落ち着きがなく見える）
+MIN_BEAT_INTERVAL_S = 0.35
+
+
+def speech_beats(query: dict) -> list[tuple[float, float]]:
+    """
+    VOICEVOX の audio_query から、各アクセント句のアクセント核（高く発音される最後の拍）の開始時刻と、
+    文の中での音の高さの相対値を求める。身振りの「ストローク（強調）」は言葉の強調とほぼ同時に来るので、ここに合わせる
+    """
+    speed = query.get("speedScale") or 1.0
+    t = query["prePhonemeLength"]
+    raw: list[tuple[float, float]] = []
+    for phrase in query["accent_phrases"]:
+        moras = phrase["moras"]
+        nucleus = min(max(phrase.get("accent", 1), 1), len(moras)) - 1
+        pitch = max((m["pitch"] for m in moras), default=0.0)
+        for index, mora in enumerate(moras):
+            if index == nucleus:
+                raw.append((t / speed, pitch))
+            t += (mora.get("consonant_length") or 0) + mora["vowel_length"]
+        if pause := phrase.get("pause_mora"):
+            t += pause["vowel_length"]
+
+    voiced = [pitch for _, pitch in raw if pitch > 0]
+    if not voiced:
+        return []
+    low, high = min(voiced), max(voiced)
+    beats: list[tuple[float, float]] = []
+    for time, pitch in raw:
+        strength = 0.5 if high - low < 1e-6 else 0.3 + 0.7 * (pitch - low) / (high - low)
+        if beats and time - beats[-1][0] < MIN_BEAT_INTERVAL_S:
+            if strength > beats[-1][1]:
+                beats[-1] = (beats[-1][0], round(strength, 2))
+            continue
+        beats.append((round(time, 3), round(strength, 2)))
+    return beats
+
+
 class VoiceVox:
     def __init__(self, base_url: str) -> None:
         self._client = httpx.AsyncClient(base_url=base_url, timeout=60)
@@ -189,7 +229,7 @@ class VoiceVox:
         res = await self._client.post("/synthesis", params={"speaker": voice.speaker}, json=query)
         res.raise_for_status()
         cues, duration = mouth_cues(query)
-        return Speech(res.content, cues, duration)
+        return Speech(res.content, cues, duration, beats=speech_beats(query))
 
     async def speaker_ids(self) -> set[int] | None:
         """使える話者（スタイル）のID。VOICEVOX Engine につながらなければ None（確かめない）"""

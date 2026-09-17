@@ -31,6 +31,7 @@ export function PersonaPreview({ persona, modelUrl, onClose }: PersonaPreviewPro
   const [expression, setExpression] = useState<string | null>(null);
   const [motion, setMotion] = useState<string | null>(null);
   const [talking, setTalking] = useState(false);
+  const [restroke, setRestroke] = useState(0);
   const [rig, setRig] = useState<AvatarRig | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,7 +61,7 @@ export function PersonaPreview({ persona, modelUrl, onClose }: PersonaPreviewPro
                   state={state}
                   socket={null}
                   rig={persona.rig ?? undefined}
-                  override={{ motion: activeMotion, expression: spec?.avatar ?? null, talking }}
+                  override={{ motion: activeMotion, expression: spec?.avatar ?? null, talking, restroke }}
                   onReady={setRig}
                   onError={(err) => setError(`アバターを読み込めませんでした: ${err}`)}
                 />
@@ -76,7 +77,10 @@ export function PersonaPreview({ persona, modelUrl, onClose }: PersonaPreviewPro
                 </button>
               ))}
               <button type="button" aria-pressed={talking} onClick={() => setTalking((v) => !v)}>
-                口パク
+                口パク・強調
+              </button>
+              <button type="button" onClick={() => setRestroke((n) => n + 1)}>
+                身振りをもう一度
               </button>
             </div>
             <h4>表情（返答の（表情名））</h4>

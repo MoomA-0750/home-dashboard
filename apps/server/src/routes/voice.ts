@@ -89,6 +89,8 @@ export async function registerVoiceRoutes(app: FastifyInstance): Promise<void> {
             type: "voice-lipsync",
             turnId: message.turnId ?? null,
             cues: message.cues,
+            // 強調の時刻と強さ（VOICEVOX のアクセント核から）。アバターがうなずき・手の振りを合わせる
+            beats: Array.isArray(message.beats) ? message.beats : [],
             durationS: message.durationS,
             // その文を読み上げる間の表情（VRMの表情名と重み）。指定が無ければ null
             expression: message.expression ?? null,

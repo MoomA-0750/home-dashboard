@@ -3,7 +3,7 @@
 import pytest
 
 from voice_agent.personas import DEFAULT_EXPRESSIONS, Expression
-from voice_agent.speech import Directions, SentenceSplitter, clean_for_speech, mouth_cues
+from voice_agent.speech import Directions, SentenceSplitter, clean_for_speech, mouth_cues, speech_beats
 from voice_agent.stt import clean_transcript, wake_prefix_pattern
 
 REPLY = "今日の東京は雨模様で、雷を伴うところもあるみたいです。最高気温は24度、最低気温は21度で、10月並みの涼しさになります。傘は忘れずに"
@@ -203,3 +203,28 @@ def test_expression_changes_voice_style():
     asyncio.run(scenario())
     assert synthesized == [("ふつうに話すよ。", 70, 1.1), ("内緒だよ。", 71, 1.1), ("おしまい！", 70, 1.1)]
     assert played_expressions == [None, "ひそひそ", "にっこり"]
+
+
+def test_speech_beats_follow_accent_nucleus_and_pitch():
+    """強調の時刻は各アクセント句のアクセント核の拍の開始、強さは文の中での音の高さの相対値"""
+    query = {
+        "speedScale": 1.0,
+        "prePhonemeLength": 0.1,
+        "accent_phrases": [
+            {
+                "accent": 2,
+                "moras": [
+                    {"consonant_length": 0.05, "vowel_length": 0.1, "pitch": 5.5},
+                    {"consonant_length": 0.05, "vowel_length": 0.1, "pitch": 6.0},
+                    {"consonant_length": None, "vowel_length": 0.1, "pitch": 5.8},
+                ],
+                "pause_mora": {"vowel_length": 0.3},
+            },
+            {"accent": 1, "moras": [{"consonant_length": None, "vowel_length": 0.1, "pitch": 5.0}], "pause_mora": None},
+            # 前のビート（0.8秒）から0.35秒以内なので、まとめられる
+            {"accent": 1, "moras": [{"consonant_length": 0.05, "vowel_length": 0.2, "pitch": 5.0}], "pause_mora": None},
+        ],
+    }
+    # 1つ目: 句頭0.1秒＋1拍目0.15秒でアクセント核（2拍目）が始まる。いちばん高いので強さ1
+    # 2つ目: 1つ目の句の残り（0.3秒）と句末の間（0.3秒）の後。いちばん低いので強さ0.3
+    assert speech_beats(query) == [(0.25, 1.0), (0.8, 0.3)]

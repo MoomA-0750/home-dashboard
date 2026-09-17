@@ -3,7 +3,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { VRMLoaderPlugin, VRMUtils, type VRM } from "@pixiv/three-vrm";
 import type { VoiceState } from "../lib/useVoiceAssistant";
-import { AvatarAnimator, type AnimatorInputs } from "../avatar/animator";
+import { AvatarAnimator, type AnimatorInputs, type SpeechTiming } from "../avatar/animator";
 import { prepareRig, type AvatarRig, type RigOverrides } from "../avatar/rig";
 
 /**
@@ -18,6 +18,8 @@ import { prepareRig, type AvatarRig, type RigOverrides } from "../avatar/rig";
 interface LipsyncMessage {
   type: "voice-lipsync";
   cues: [number, string][];
+  /** 強調の時刻（読み上げ開始からの秒）と強さ */
+  beats?: [number, number][];
   durationS: number;
   /** その文を読み上げる間の表情（返答の（表情名）から）。VRMの表情名と重み、身振りの名前 */
   expression: { name: string; avatar: Record<string, number>; motion?: string | null } | null;
@@ -99,8 +101,10 @@ export function loadAvatar(url: string): Promise<VRM> {
 export interface AvatarOverride {
   motion: string | null;
   expression: Record<string, number> | null;
-  /** 口パクの確認用に、母音を順に動かす */
+  /** 口パクと強調（ビート）の確認用に、疑似的な文を読み上げ続ける */
   talking: boolean;
+  /** 変わったら、同じ身振りでもやり直す */
+  restroke?: number;
 }
 
 interface VoiceAvatarProps {
@@ -117,6 +121,14 @@ interface VoiceAvatarProps {
 }
 
 const DEMO_VOWELS = ["a", "i", "u", "e", "o", "a", null, "o", "e", null];
+// 確認画面の疑似的な文（3秒ごと）と、その中の強調
+const DEMO_SENTENCE_S = 3;
+const DEMO_BEATS: [number, number][] = [
+  [0.25, 0.8],
+  [0.9, 0.5],
+  [1.6, 1],
+  [2.3, 0.4],
+];
 
 export default function VoiceAvatar({ modelUrl, state, socket, rig, override, onError, onReady }: VoiceAvatarProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -124,7 +136,12 @@ export default function VoiceAvatar({ modelUrl, state, socket, rig, override, on
   stateRef.current = state;
   const overrideRef = useRef(override);
   overrideRef.current = override;
-  const lipsyncRef = useRef<{ cues: [number, string][]; durationS: number; receivedAt: number } | null>(null);
+  const lipsyncRef = useRef<{
+    cues: [number, string][];
+    beats: [number, number][];
+    durationS: number;
+    receivedAt: number;
+  } | null>(null);
   // いまの表情と身振り。次の指定が来るか、新しいやり取りが始まるまで保つ
   const expressionRef = useRef<{ avatar: Record<string, number>; motion: string | null } | null>(null);
   const onErrorRef = useRef(onError);
@@ -140,7 +157,12 @@ export default function VoiceAvatar({ modelUrl, state, socket, rig, override, on
       try {
         const message = JSON.parse(event.data) as LipsyncMessage;
         if (message.type !== "voice-lipsync") return;
-        lipsyncRef.current = { cues: message.cues, durationS: message.durationS, receivedAt: performance.now() };
+        lipsyncRef.current = {
+          cues: message.cues,
+          beats: message.beats ?? [],
+          durationS: message.durationS,
+          receivedAt: performance.now(),
+        };
         if (message.expression) {
           expressionRef.current = { avatar: message.expression.avatar, motion: message.expression.motion ?? null };
         }
@@ -195,6 +217,20 @@ export default function VoiceAvatar({ modelUrl, state, socket, rig, override, on
     const timer = new THREE.Timer();
     const lookGoal = new THREE.Vector3();
 
+    const speechTiming = (t: number): SpeechTiming | null => {
+      const demo = overrideRef.current;
+      if (demo) {
+        if (!demo.talking) return null;
+        const index = Math.floor(t / DEMO_SENTENCE_S);
+        return { id: index, startT: index * DEMO_SENTENCE_S, beats: DEMO_BEATS };
+      }
+      const lipsync = lipsyncRef.current;
+      if (!lipsync || stateRef.current !== "speaking") return null;
+      const sinceReceived = (performance.now() - lipsync.receivedAt) / 1000;
+      if (sinceReceived > lipsync.durationS + 1) return null;
+      return { id: lipsync.receivedAt, startT: t - sinceReceived + PLAYBACK_LATENCY_S, beats: lipsync.beats };
+    };
+
     const currentVowel = (t: number): string | null => {
       const demo = overrideRef.current;
       if (demo) return demo.talking ? DEMO_VOWELS[Math.floor(t * 7) % DEMO_VOWELS.length] : null;
@@ -213,7 +249,8 @@ export default function VoiceAvatar({ modelUrl, state, socket, rig, override, on
     const animate = (timestamp?: number) => {
       frame = requestAnimationFrame(animate);
       timer.update(timestamp);
-      const delta = Math.min(timer.getDelta(), 0.1);
+      // 2次系の動きは1コマが長くても発散しないので、描画の遅い端末でも実時間に近く進むよう上限を大きめにする
+      const delta = Math.min(timer.getDelta(), 0.25);
       const t = timer.getElapsed();
       if (!vrm || !animator) return;
       const current = stateRef.current;
@@ -223,6 +260,8 @@ export default function VoiceAvatar({ modelUrl, state, socket, rig, override, on
         motion: demo ? demo.motion : (expressionRef.current?.motion ?? null),
         expression: demo ? demo.expression : (expressionRef.current?.avatar ?? null),
         vowel: currentVowel(t),
+        speech: speechTiming(t),
+        restroke: demo?.restroke,
       };
 
       // 視線: ふだんはこちら（カメラ）を見て、考えている間は少し上の方を見る
