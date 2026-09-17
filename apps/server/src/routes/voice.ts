@@ -74,12 +74,19 @@ export async function registerVoiceRoutes(app: FastifyInstance): Promise<void> {
         if (message.type === "lipsync") {
           // 読み上げる1文ごとの口の形の時系列。覚えておく必要は無いのでそのまま画面へ流す
           if (!Array.isArray(message.cues) || typeof message.durationS !== "number") return;
-          broadcast({ type: "voice-lipsync", turnId: message.turnId ?? null, cues: message.cues, durationS: message.durationS });
+          broadcast({
+            type: "voice-lipsync",
+            turnId: message.turnId ?? null,
+            cues: message.cues,
+            durationS: message.durationS,
+            // その文を読み上げる間の表情（VRMの表情名と重み）。指定が無ければ null
+            expression: message.expression ?? null,
+          });
           return;
         }
         if (message.type === "turn") {
           // 誰がどこから話しかけられて何に答えたか。キャラクター同士で共有する会話の記憶として残す
-          appendTurn(message)
+          appendTurn(message.record ?? {})
             .then((record) => record && broadcast({ type: "voice-history", record }))
             .catch((err) => app.log.error(err, "failed to record voice turn"));
           return;

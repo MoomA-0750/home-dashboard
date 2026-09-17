@@ -16,7 +16,7 @@ from .claude import ClaudeConversation, ClaudeError
 from .config import Config, load_config
 from .personas import Persona, load_personas
 from .relay import Relay
-from .speech import SentenceSplitter, Speech, SpeechQueue, Voice, VoiceVox
+from .speech import Directions, Piece, SentenceSplitter, Speech, SpeechQueue, Voice, VoiceVox
 from .stt import Transcriber
 from .vad import VoiceActivity
 from .wake import SpeechRecognizer, Utterance, Word
@@ -74,6 +74,8 @@ class Assistant:
         # 次の音声チャンクを処理する前に聞き取りを始める（画面のマイクボタン・返答後の続けて話す）
         self._listen_request: dict | None = None
         self._listen_timeout = 0.0
+        # 返答の区切りごとの表情と文（記録に残す）
+        self._segments: list[Piece] = []
         self._chime_until = 0.0
         # ウェイクワードを言い始めた/言い終えた時刻、命令の声が聞こえ始めたか、最後に声が聞こえた時刻（いずれも認識器の時刻）
         self._wake_start = 0.0
@@ -246,18 +248,25 @@ class Assistant:
         return res.json()["records"]
 
     async def _record_turn(self, persona: Persona, status: str) -> None:
-        """誰が・どこから聞かれて・何に答えたかを、サーバーに記録してもらう"""
+        """誰に・どこから・何と話しかけられ、どの表情で何と答えたかを、構造化してサーバーに記録してもらう"""
         await self.relay.send(
             {
                 "type": "turn",
-                "at": datetime.now().astimezone().isoformat(timespec="seconds"),
-                "turnId": self.turn_id,
-                "personaId": persona.id,
-                "personaName": persona.name,
-                "source": self.source,
-                "transcript": self.transcript,
-                "response": self.response.strip(),
-                "status": status,
+                "record": {
+                    "id": self.turn_id,
+                    "at": datetime.now().astimezone().isoformat(timespec="seconds"),
+                    "conversationId": self.claude.session_id,
+                    "persona": {"id": persona.id, "name": persona.name},
+                    "input": {"source": self.source, "text": self.transcript},
+                    "output": {
+                        "text": self.response.strip(),
+                        "segments": [
+                            {"expression": p.expression.name if p.expression else None, "text": p.text}
+                            for p in self._segments
+                        ],
+                    },
+                    "status": status,
+                },
             }
         )
 
@@ -283,23 +292,29 @@ class Assistant:
                 await self.update(turn_id=uuid.uuid4().hex[:8], error=None, follow_up=False)
 
             await self.update(state="thinking", transcript=text, response="")
+            self._segments = []
 
             async def on_play(sentence: Speech, first: bool) -> None:
                 if first:
                     log.info("読み上げ開始（質問から%.1f秒）", time.monotonic() - asked_at)
                     await self.update(state="speaking")
-                # 画面のアバターは、これを受け取った時刻を再生開始とみなして口を動かす
+                # 画面のアバターは、これを受け取った時刻を再生開始とみなして口を動かし、表情を変える
+                expression = sentence.expression
                 await self.relay.send(
                     {
                         "type": "lipsync",
                         "turnId": self.turn_id,
                         "cues": sentence.mouth_cues,
                         "durationS": sentence.duration_s,
+                        "expression": {"name": expression.name, "avatar": expression.avatar} if expression else None,
                     }
                 )
 
             speech = SpeechQueue(self.tts, Voice(persona.speaker, persona.speed), self.player, on_play)
-            splitter = SentenceSplitter()
+            # 返答の（表情名）は表情と声のトーンの指定。画面にも読み上げにも出さない
+            directions = Directions(persona.expressions, hide_descriptions=self.personas.has_characters)
+            splitter = SentenceSplitter(directions)
+            raw_response = ""
             assert text is not None
             asked_at = time.monotonic()
             first_delta_s: float | None = None
@@ -308,17 +323,19 @@ class Assistant:
                 async for delta in stream:
                     if first_delta_s is None and delta.strip():
                         first_delta_s = time.monotonic() - asked_at
-                    self.response += delta
-                    await self.relay.publish()
-                    for sentence in splitter.feed(delta):
-                        speech.say(sentence)
-            for sentence in splitter.flush():
-                speech.say(sentence)
+                    raw_response += delta
+                    await self.update(response=directions.visible(raw_response))
+                    for piece in splitter.feed(delta):
+                        self._segments.append(piece)
+                        speech.say(piece)
+            for piece in splitter.flush():
+                self._segments.append(piece)
+                speech.say(piece)
             log.info(
                 "返答（最初の文字まで%.1f秒、全体%.1f秒）: %r",
                 first_delta_s or 0,
                 time.monotonic() - asked_at,
-                self.response.strip(),
+                raw_response.strip(),
             )
             await speech.finish()
             self.response = self.response.strip()

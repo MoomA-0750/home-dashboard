@@ -198,17 +198,17 @@ function VoiceSection({
           <h4 className="settings-panel__voice-history-title">最近のやり取り</h4>
           <ol className="settings-panel__voice-history">
             {history.map((record, index) => (
-              <li key={`${record.at}-${index}`} className="voice-history-item">
+              <li key={record.id ?? `${record.at}-${index}`} className="voice-history-item">
                 <div className="voice-history-item__head">
-                  <strong>{record.personaName}</strong>
+                  <strong>{record.persona.name}</strong>
                   <span>
-                    {SOURCE_LABELS[record.source] ?? record.source}・{formatTime(record.at)}
+                    {SOURCE_LABELS[record.input.source] ?? record.input.source}・{formatTime(record.at)}
                     {record.status === "cancelled" && "・中止"}
                     {record.status === "error" && "・エラー"}
                   </span>
                 </div>
-                <p className="voice-history-item__transcript">{record.transcript}</p>
-                {record.response && <p className="voice-history-item__response">{record.response}</p>}
+                <p className="voice-history-item__transcript">{record.input.text}</p>
+                {record.output.text && <p className="voice-history-item__response">{record.output.text}</p>}
               </li>
             ))}
           </ol>

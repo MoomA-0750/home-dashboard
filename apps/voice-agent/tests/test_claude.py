@@ -14,11 +14,20 @@ import pytest
 
 from voice_agent.claude import ClaudeConversation, format_history
 from voice_agent.config import load_config
-from voice_agent.personas import Persona, Personas
+from voice_agent.personas import Expression, Persona, Personas
 
 FAKE_CLAUDE = Path(__file__).with_name("fake_claude.py")
 
-PLUM = Persona("plum", "プラム", [["ねえ", "プラム"]], [], "一人称はプラム。明るく弾む口調。", 70, 1.1)
+PLUM = Persona(
+    "plum",
+    "プラム",
+    [["ねえ", "プラム"]],
+    [],
+    "一人称はプラム。明るく弾む口調。",
+    70,
+    1.1,
+    {"にっこり": Expression("にっこり", {"happy": 0.6}), "ドヤ顔": Expression("ドヤ顔", {"doya_1": 1.0})},
+)
 KARIN = Persona("karin", "カリン", [["ねえ", "カリン"]], [], "一人称はわたし。お姉さんぶる。", 2, 1.1)
 CHARACTERS = Personas([PLUM, KARIN], world="姉妹たちは一緒に暮らしている。")
 PLAIN = Personas([Persona("claude", "Claude", [["ねえ", "クロード"]], [], "", 3, 1.1)], world="")
@@ -171,8 +180,9 @@ def test_every_character_is_in_the_system_prompt(make_conversation):
     (start,) = [e for e in make_conversation.events() if e["event"] == "start"]
     prompt = option(start["args"], "--append-system-prompt")
     assert "姉妹たちは一緒に暮らしている。" in prompt
-    assert "## プラム\n一人称はプラム。明るく弾む口調。" in prompt
-    assert "## カリン\n一人称はわたし。お姉さんぶる。" in prompt
+    assert "## プラム\n一人称はプラム。明るく弾む口調。\n\n使える表情: （にっこり）、（ドヤ顔）" in prompt
+    # 表情の設定が無いキャラクターには（ ）を使わせない
+    assert "## カリン\n一人称はわたし。お姉さんぶる。\n\n表情の指定（ ）は使わない。" in prompt
 
 
 def test_message_names_who_should_answer(make_conversation):
@@ -197,23 +207,25 @@ def test_plain_assistant_has_no_character_header(make_conversation):
     assert "話しかけられた相手" not in message["content"]
 
 
+def history_record(at: str, persona: str, source: str, text: str, output: str, status: str = "answered") -> dict:
+    return {
+        "id": "t1",
+        "at": at,
+        "conversationId": "c1",
+        "persona": {"id": persona, "name": {"plum": "プラム", "karin": "カリン"}[persona]},
+        "input": {"source": source, "text": text},
+        "output": {"text": output, "segments": [{"expression": None, "text": output}]},
+        "status": status,
+    }
+
+
 def test_history_is_passed_only_when_a_new_conversation_starts(make_conversation):
     """前の会話（エージェントの再起動前や、間が空いた後）で誰が何に答えたかを、新しい会話の最初に渡す"""
     calls = []
 
     async def history() -> list[dict]:
         calls.append(True)
-        return [
-            {
-                "at": datetime.now().astimezone().isoformat(),
-                "personaId": "karin",
-                "personaName": "カリン",
-                "source": "wake",
-                "transcript": "明日の天気は？",
-                "response": "明日は雨よ。",
-                "status": "answered",
-            }
-        ]
+        return [history_record(datetime.now().astimezone().isoformat(), "karin", "wake", "明日の天気は？", "明日は雨よ。")]
 
     conversation = make_conversation(personas=CHARACTERS, history=history)
 
@@ -223,18 +235,41 @@ def test_history_is_passed_only_when_a_new_conversation_starts(make_conversation
 
     asyncio.run(scenario())
     first, second = [e["content"] for e in make_conversation.events() if e["event"] == "message"]
-    assert "ユーザーがカリンに声で「明日の天気は？」と話しかけ、カリンが「明日は雨よ。」と答えた" in first
-    assert "これまでのやり取り" not in second
+    assert "これまでのやり取りの記録" in first
+    assert "これまでのやり取りの記録" not in second
     assert len(calls) == 1
 
 
-def test_format_history_skips_old_and_unanswered_records():
+def test_history_is_given_as_structured_entries():
+    """文章だと「プラムに「…」 → プラム「…」」をキャラクターが質問したと読み違えたので、項目に分けて渡す"""
     now = datetime(2026, 9, 17, 12, 0)
     records = [
-        {"at": "2026-09-15T12:00:00", "personaName": "プラム", "source": "wake", "transcript": "古い", "response": "古い返事"},
-        {"at": "2026-09-17T11:00:00", "personaName": "プラム", "source": "text", "transcript": "中止", "response": ""},
-        {"at": "2026-09-17T11:30:00", "personaName": "カリン", "source": "button", "transcript": "新しい", "response": "新しい返事"},
+        history_record("2026-09-15T12:00:00", "plum", "wake", "古い", "古い返事"),
+        history_record("2026-09-17T11:00:00", "plum", "text", "エラー", "", status="error"),
+        history_record("2026-09-17T11:20:00", "plum", "wake", "長い話して", "途中まで", status="cancelled"),
+        history_record("2026-09-17T11:30:00", "karin", "button", "新しい", "新しい返事"),
     ]
-    text = format_history(records, now, hours=24, limit=20)
-    assert "古い" not in text and "中止" not in text
-    assert "09/17 11:30 ユーザーがカリンにボタンから声で「新しい」と話しかけ、カリンが「新しい返事」と答えた" in text
+    header, *lines = format_history(records, now, hours=24, limit=20).split("\n")
+    entries = [json.loads(line) for line in lines]
+    assert "1行1件のJSON" in header
+    assert entries == [
+        {
+            "時刻": "09/17 11:20",
+            "話しかけた人": "ユーザー",
+            "話しかけられた相手": "プラム",
+            "話しかけ方": "ウェイクワードで呼んで声で",
+            "ユーザーの発言": "長い話して",
+            "返答した相手": "プラム",
+            "返答": "途中まで",
+            "備考": "返答の途中でユーザーが中止した",
+        },
+        {
+            "時刻": "09/17 11:30",
+            "話しかけた人": "ユーザー",
+            "話しかけられた相手": "カリン",
+            "話しかけ方": "ボタンを押して声で",
+            "ユーザーの発言": "新しい",
+            "返答した相手": "カリン",
+            "返答": "新しい返事",
+        },
+    ]

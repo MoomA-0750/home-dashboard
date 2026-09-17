@@ -17,6 +17,8 @@ interface LipsyncMessage {
   type: "voice-lipsync";
   cues: [number, string][];
   durationS: number;
+  /** その文を読み上げる間の表情（返答の（表情名）から）。VRMの表情名と重み */
+  expression: { name: string; avatar: Record<string, number> } | null;
 }
 
 const VOWEL_EXPRESSIONS: Record<string, string> = { a: "aa", i: "ih", u: "ou", e: "ee", o: "oh" };
@@ -107,6 +109,8 @@ export default function VoiceAvatar({ modelUrl, state, socket, onError }: VoiceA
   const stateRef = useRef(state);
   stateRef.current = state;
   const lipsyncRef = useRef<{ cues: [number, string][]; durationS: number; receivedAt: number } | null>(null);
+  // いまの表情（VRMの表情名と重み）。次の指定が来るか、新しいやり取りが始まるまで保つ
+  const expressionRef = useRef<Record<string, number> | null>(null);
   const onErrorRef = useRef(onError);
   onErrorRef.current = onError;
 
@@ -117,6 +121,7 @@ export default function VoiceAvatar({ modelUrl, state, socket, onError }: VoiceA
         const message = JSON.parse(event.data) as LipsyncMessage;
         if (message.type !== "voice-lipsync") return;
         lipsyncRef.current = { cues: message.cues, durationS: message.durationS, receivedAt: performance.now() };
+        if (message.expression) expressionRef.current = message.expression.avatar;
       } catch {
         // ignore malformed messages
       }
@@ -124,6 +129,11 @@ export default function VoiceAvatar({ modelUrl, state, socket, onError }: VoiceA
     socket.addEventListener("message", onMessage);
     return () => socket.removeEventListener("message", onMessage);
   }, [socket]);
+
+  // 新しいやり取りが始まったら、前の返答の表情を持ち越さない
+  useEffect(() => {
+    if (state === "listening" || state === "transcribing" || state === "thinking") expressionRef.current = null;
+  }, [state]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -171,6 +181,23 @@ export default function VoiceAvatar({ modelUrl, state, socket, onError }: VoiceA
       weights.set(name, next);
       vrm?.expressionManager?.setValue(name, next);
     };
+
+    // 設定の表情名をモデルの表情名に合わせる（VRM 0.x のカスタム表情は「Surprised」のように大文字始まりのことがある）
+    const resolvedNames = new Map<string, string | null>();
+    const resolveName = (name: string): string | null => {
+      if (!vrm?.expressionManager) return null;
+      if (!resolvedNames.has(name)) {
+        const manager = vrm.expressionManager;
+        const found =
+          manager.getExpression(name)?.expressionName ??
+          manager.expressions.find((e) => e.expressionName.toLowerCase() === name.toLowerCase())?.expressionName ??
+          null;
+        resolvedNames.set(name, found);
+      }
+      return resolvedNames.get(name) ?? null;
+    };
+    // これまでに動かした表情（指定が変わったら0へ戻すため）
+    const touchedExpressions = new Set<string>();
 
     const currentVowel = (): string | null => {
       const lipsync = lipsyncRef.current;
@@ -224,9 +251,23 @@ export default function VoiceAvatar({ modelUrl, state, socket, onError }: VoiceA
         approach(name, vowel && VOWEL_EXPRESSIONS[vowel] === name ? 0.75 : 0, 22, delta);
       }
 
-      // 表情。joy 系は目を閉じるモデルが多いので控えめにする
-      approach("happy", current === "speaking" || current === "idle" ? 0.2 : 0, 3, delta);
-      approach("sad", current === "error" ? 0.5 : 0, 3, delta);
+      // 表情。返答で（表情名）の指定があればそれを、無ければ状態に応じた控えめな表情にする
+      // （joy 系は目を閉じるモデルが多いので、既定は控えめにする）
+      const targets: Record<string, number> = expressionRef.current
+        ? { ...expressionRef.current }
+        : { happy: current === "speaking" || current === "idle" ? 0.2 : 0, sad: current === "error" ? 0.5 : 0 };
+      for (const name of Object.keys(targets)) {
+        const resolved = resolveName(name);
+        if (resolved) touchedExpressions.add(resolved);
+      }
+      const resolvedTargets = new Map<string, number>();
+      for (const [name, weight] of Object.entries(targets)) {
+        const resolved = resolveName(name);
+        if (resolved) resolvedTargets.set(resolved, weight);
+      }
+      for (const name of touchedExpressions) {
+        approach(name, resolvedTargets.get(name) ?? 0, 6, delta);
+      }
 
       vrm.update(delta);
       renderer.render(scene, camera);

@@ -42,13 +42,15 @@ CHARACTERS_PROMPT = """
 - そのキャラクターとして、その一人称・口調で答える。ほかのキャラクターの台詞を代わりに書いたり、一人で何人も演じたりしない
 - 会話の記録はキャラクター全員で共有している。前に別のキャラクターが答えたことも踏まえて、
   そのキャラクターがユーザーに話していたこととして自然に扱う（例: 「さっきカリンちゃんが教えてたやつだね」）
-- （ ）の表情やしぐさの描写は画面にだけ表示され、読み上げられない。使うなら1回の返事に1つまで、短く書く
+- 気持ちが動いたら、文の頭に（表情名）を書いて、アバターの表情と声のトーンを変える（例: 「（にっこり）それいいね！」）。
+  表情名はそのキャラクターの「使える表情」から選び、しぐさの説明など表情名以外を（ ）に書かない。
+  （ ）は画面にも読み上げにも出ないので、（ ）の中身を相手が見ている前提で話さない。毎文に付ける必要はない
 - キャラクターを演じていても、天気・家電・音楽などの頼まれごとはツールを使ってきちんとこなし、
   上の読み上げのルール（短く話す、Markdownを使わない など）も守る
 """
 
 WEEKDAYS = "月火水木金土日"
-SOURCE_LABELS = {"wake": "声で", "follow-up": "続けて声で", "button": "ボタンから声で", "text": "文字で"}
+SOURCE_LABELS = {"wake": "ウェイクワードで呼んで声で", "follow-up": "続けて声で", "button": "ボタンを押して声で", "text": "文字で"}
 
 HistoryProvider = Callable[[], Awaitable[list[dict]]]
 
@@ -62,12 +64,20 @@ def build_system_prompt(personas: Personas, dashboard: bool) -> str:
         sections.append(f"## キャラクターたちの共通の設定\n{personas.world}")
     for persona in personas.personas:
         body = persona.prompt or "特別なキャラクター設定は無い。落ち着いた素のアシスタントとして答える。"
+        if persona.expressions:
+            body += "\n\n使える表情: " + "、".join(f"（{name}）" for name in persona.expressions)
+        else:
+            body += "\n\n表情の指定（ ）は使わない。"
         sections.append(f"## {persona.name}\n{body}")
     return prompt + "\n\n".join(sections)
 
 
 def format_history(records: list[dict], now: datetime, hours: float, limit: int) -> str:
-    """共有しているやり取りの記録を、新しい会話の最初に渡す文にする"""
+    """
+    共有しているやり取りの記録を、新しい会話の最初に渡す。
+    文章にすると「プラムに「…」 → プラム「…」」をキャラクターが質問したと読み違えたので、話しかけた人・相手・返答を
+    項目に分けた JSON のまま渡す
+    """
     since = now - timedelta(hours=hours)
     lines = []
     for record in records[-limit:]:
@@ -75,21 +85,25 @@ def format_history(records: list[dict], now: datetime, hours: float, limit: int)
             at = datetime.fromisoformat(record["at"]).astimezone().replace(tzinfo=None)
         except (KeyError, ValueError):
             continue
-        if at < since or not record.get("response"):
+        output = record.get("output", {}).get("text", "")
+        if at < since or not output:
             continue
-        source = SOURCE_LABELS.get(record.get("source", ""), "")
-        response = record["response"].replace("\n", " ")
-        if len(response) > 160:
-            response = response[:160] + "…"
-        name = record.get("personaName", "?")
-        # 「プラムに「…」 → プラム「…」」のような書き方だと、キャラクターが質問したと読み違えた。主語をはっきり書く
-        lines.append(
-            f"- {at:%m/%d %H:%M} ユーザーが{name}に{source}「{record.get('transcript', '')}」と話しかけ、"
-            f"{name}が「{response}」と答えた"
-        )
+        persona = record.get("persona", {}).get("name", "?")
+        entry = {
+            "時刻": f"{at:%m/%d %H:%M}",
+            "話しかけた人": "ユーザー",
+            "話しかけられた相手": persona,
+            "話しかけ方": SOURCE_LABELS.get(record.get("input", {}).get("source", ""), ""),
+            "ユーザーの発言": record.get("input", {}).get("text", ""),
+            "返答した相手": persona,
+            "返答": output if len(output) <= 200 else output[:200] + "…",
+        }
+        if record.get("status") == "cancelled":
+            entry["備考"] = "返答の途中でユーザーが中止した"
+        lines.append(json.dumps(entry, ensure_ascii=False))
     if not lines:
         return ""
-    return "[これまでのやり取りの記録（前の会話から引き継ぐ。誰が答えたかも含む）]\n" + "\n".join(lines)
+    return "[これまでのやり取りの記録（1行1件のJSON。前の会話から引き継ぐ）]\n" + "\n".join(lines)
 
 
 class ClaudeError(RuntimeError):
@@ -124,6 +138,11 @@ class ClaudeConversation:
         self._expire_task: asyncio.Task | None = None
         self._lock = asyncio.Lock()
         config.claude_cwd.mkdir(parents=True, exist_ok=True)
+
+    @property
+    def session_id(self) -> str | None:
+        """Claude Code の会話のID（記録で、どのやり取りが同じ会話だったかを見分けるのに使う）"""
+        return self._session_id
 
     async def start(self) -> None:
         """待ち時間を減らすため、最初の質問が来る前に起動しておく"""

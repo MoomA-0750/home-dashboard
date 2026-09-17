@@ -2,7 +2,8 @@
 
 import pytest
 
-from voice_agent.speech import SentenceSplitter, clean_for_speech, mouth_cues
+from voice_agent.personas import DEFAULT_EXPRESSIONS, Expression
+from voice_agent.speech import Directions, SentenceSplitter, clean_for_speech, mouth_cues
 from voice_agent.stt import clean_transcript, wake_prefix_pattern
 
 REPLY = "今日の東京は雨模様で、雷を伴うところもあるみたいです。最高気温は24度、最低気温は21度で、10月並みの涼しさになります。傘は忘れずに"
@@ -15,10 +16,21 @@ REPLY_PIECES = [
 ]
 
 
-def split_all(deltas: list[str]) -> list[str]:
-    splitter = SentenceSplitter()
+def split_all(deltas: list[str], directions: Directions | None = None) -> list[str]:
+    return [piece.text for piece in split_pieces(deltas, directions)]
+
+
+def split_pieces(deltas: list[str], directions: Directions | None = None):
+    splitter = SentenceSplitter(directions)
     pieces = [piece for delta in deltas for piece in splitter.feed(delta)]
     return pieces + splitter.flush()
+
+
+EXPRESSIONS = {e.name: e for e in DEFAULT_EXPRESSIONS} | {
+    "ドヤ顔": Expression("ドヤ顔", {"doya_1": 1.0}, keywords=("ドヤ", "得意")),
+    "ひそひそ": Expression("ひそひそ", {"relaxed": 0.4}, speaker=71, keywords=("小声",)),
+}
+CHARACTER = Directions(EXPRESSIONS, hide_descriptions=True)
 
 
 def test_splits_by_sentence_and_long_clause():
@@ -32,12 +44,41 @@ def test_split_does_not_depend_on_how_deltas_arrive(size):
     assert split_all(deltas) == REPLY_PIECES
 
 
-@pytest.mark.parametrize("size", [1, 4, 100])
-def test_stage_directions_are_not_split_or_spoken(size):
-    """（ ）の途中の句読点で区切ると閉じ括弧の無い断片になって読み上げてしまうので、括弧の中では区切らない"""
-    reply = "プラムにおまかせだよっ！（ドヤ顔で耳をピンと立てる、しっぽもふりふり。）明日は晴れだから、お出かけ日和だねっ！"
-    deltas = [reply[i : i + size] for i in range(0, len(reply), size)]
-    assert split_all(deltas) == ["プラムにおまかせだよっ！", "明日は晴れだから、", "お出かけ日和だねっ！"]
+REPLY_WITH_DIRECTIONS = (
+    "（ドヤ顔）プラムにおまかせだよっ！東京タワーは（333メートル）あるんだよ。"
+    "（嬉しそうに耳をピコピコ、させる）明日は晴れだから、お出かけ日和だねっ！（ひそひそ）内緒だよ。"
+)
+
+
+@pytest.mark.parametrize("size", [1, 4, 200])
+def test_directions_set_expression_and_are_not_spoken(size):
+    """（表情名）は表情と声の指定として読み、読み上げない。括弧の途中の句読点では区切らない"""
+    deltas = [REPLY_WITH_DIRECTIONS[i : i + size] for i in range(0, len(REPLY_WITH_DIRECTIONS), size)]
+    pieces = [(p.text, p.expression.name if p.expression else None) for p in split_pieces(deltas, CHARACTER)]
+    assert pieces == [
+        ("プラムにおまかせだよっ！", "ドヤ顔"),
+        # 数字を含む括弧は本文の補足として残す。表情は次の指定まで続く
+        ("東京タワーは（333メートル）あるんだよ。", "ドヤ顔"),
+        # 表情名ではない描写も隠し、keywords（嬉）から近い表情を選ぶ
+        ("明日は晴れだから、", "にっこり"),
+        ("お出かけ日和だねっ！", "にっこり"),
+        ("内緒だよ。", "ひそひそ"),
+    ]
+
+
+def test_visible_response_hides_directions_while_streaming():
+    assert CHARACTER.visible(REPLY_WITH_DIRECTIONS) == (
+        "プラムにおまかせだよっ！東京タワーは（333メートル）あるんだよ。明日は晴れだから、お出かけ日和だねっ！内緒だよ。"
+    )
+    # 書きかけの指定は、閉じる前から隠す
+    assert CHARACTER.visible("プラムだよ！（ドヤ") == "プラムだよ！"
+
+
+def test_plain_assistant_keeps_parentheses():
+    """キャラクターの無い素のアシスタントでは、括弧を指定として扱わない"""
+    plain = Directions({}, hide_descriptions=False)
+    assert plain.visible("（補足）そのままです") == "（補足）そのままです"
+    assert split_all(["（補足）そのままです。"], plain) == ["（補足）そのままです。"]
 
 
 def test_short_clause_is_not_split():
@@ -56,10 +97,8 @@ def test_newlines_between_messages_end_a_sentence():
         ("詳しくは https://example.com を見てね", "詳しくは  を見てね"),
         ("- 一つ目", "一つ目"),
         ("```", ""),
-        # キャラクターの表情・しぐさの描写は画面にだけ出して読み上げない
-        ("プラムにおまかせだよっ！（ドヤ顔で耳をピンと立てる）", "プラムにおまかせだよっ！"),
-        ("（目を丸くして驚く）", ""),
-        ("ええっ(小声)そうなの？", "ええっそうなの？"),
+        # 括弧は表情の指定かどうかを Directions が判断するので、ここでは消さない
+        ("東京タワーは（333メートル）", "東京タワーは（333メートル）"),
     ],
 )
 def test_clean_for_speech(text, expected):
@@ -128,3 +167,39 @@ def test_mouth_cues_follow_phoneme_lengths():
     cues, duration = mouth_cues(query)
     assert cues == [(0.0, "pau"), (0.05, "a"), (0.2, "i"), (0.3, "pau"), (0.525, "N"), (0.575, "pau")]
     assert duration == 0.625
+
+
+def test_expression_changes_voice_style():
+    """表情に声のスタイルがあれば、その区切りだけ話者を切り替える（無ければキャラクターの声のまま）"""
+    import asyncio
+
+    from voice_agent.speech import Speech, SpeechQueue, Voice
+
+    synthesized: list[tuple[str, int, float]] = []
+
+    class FakeTTS:
+        async def synthesize(self, text: str, voice: Voice) -> Speech:
+            synthesized.append((text, voice.speaker, voice.speed))
+            return Speech(b"", [], 0.0)
+
+    class FakePlayer:
+        async def play(self, wav: bytes) -> None:
+            pass
+
+        def stop(self) -> None:
+            pass
+
+    played_expressions: list[str | None] = []
+
+    async def on_play(speech: Speech, first: bool) -> None:
+        played_expressions.append(speech.expression.name if speech.expression else None)
+
+    async def scenario() -> None:
+        queue = SpeechQueue(FakeTTS(), Voice(speaker=70, speed=1.1), FakePlayer(), on_play)
+        for piece in split_pieces(["ふつうに話すよ。（ひそひそ）内緒だよ。（にっこり）おしまい！"], CHARACTER):
+            queue.say(piece)
+        await queue.finish()
+
+    asyncio.run(scenario())
+    assert synthesized == [("ふつうに話すよ。", 70, 1.1), ("内緒だよ。", 71, 1.1), ("おしまい！", 70, 1.1)]
+    assert played_expressions == [None, "ひそひそ", "にっこり"]

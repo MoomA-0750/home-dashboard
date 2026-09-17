@@ -153,15 +153,15 @@ export async function setDefaultPersona(apiBaseUrl: string, personaId: string): 
 
 export type VoiceTurnSource = "wake" | "follow-up" | "button" | "text";
 
-/** 誰が・どこから話しかけられて・何に答えたかの記録（サーバーの data/voice-history.jsonl） */
+/** 誰に・どこから・何と話しかけられ、どの表情で何と答えたかの記録（サーバーの data/voice-history.jsonl） */
 export interface VoiceTurnRecord {
+  id: string | null;
   at: string;
-  turnId: string | null;
-  personaId: string;
-  personaName: string;
-  source: VoiceTurnSource;
-  transcript: string;
-  response: string;
+  /** Claude Code の会話のID。同じ値のやり取りは同じ会話の中で続けて話したもの */
+  conversationId: string | null;
+  persona: { id: string; name: string };
+  input: { source: VoiceTurnSource; text: string };
+  output: { text: string; segments: { expression: string | null; text: string }[] };
   status: "answered" | "cancelled" | "error";
 }
 
