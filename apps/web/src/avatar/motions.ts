@@ -1,4 +1,5 @@
 import type { VRMHumanBoneName } from "@pixiv/three-vrm";
+import type { HandShape } from "./hands";
 
 /**
  * アバターの身振り。角度はすべて度で、VRM 1.0 の向き（モデルが +Z を向き、左手が +X、上が +Y）で書く。
@@ -18,6 +19,8 @@ export type BonePose = Partial<Record<VRMHumanBoneName, [number, number, number]
 
 export interface Pose {
   bones: BonePose;
+  /** 手の形（省略時は力を抜いた形）。指をまっすぐにしたままだと人形に見える */
+  hands?: { left?: HandShape; right?: HandShape };
   /** 耳。lift: + で立てる（- で伏せる）、spread: + で外へ開く、forward: + で前へ向ける（度） */
   ears?: { lift?: number; spread?: number; forward?: number };
   /** 尻尾。wag: 振り幅（度）、speed: 1秒あたりの往復回数、lift: + で持ち上げる（度） */
@@ -95,6 +98,7 @@ export const MOTIONS: Record<string, Pose> = {
   neutral: STATE_POSES.speaking,
   happy: {
     bones: { ...REST_POSE.bones, chest: [-3, 0, 0], head: [-2, 0, 7], leftUpperArm: [0, -10, -64], rightUpperArm: [0, 10, 64] },
+    hands: { left: "soft", right: "soft" },
     ears: { lift: 14 },
     tail: { wag: 24, speed: 1.6, lift: 10 },
     sway: { amount: 3, speed: 0.6 },
@@ -112,6 +116,7 @@ export const MOTIONS: Record<string, Pose> = {
       leftLowerArm: [0, -50, 0],
       rightLowerArm: [0, 50, 0],
     },
+    hands: { left: "open", right: "open" },
     ears: { lift: 25, spread: -6 },
     tail: { wag: 0, lift: 25 },
     hop: 0.04,
@@ -178,6 +183,7 @@ export const MOTIONS: Record<string, Pose> = {
       leftLowerArm: [0, -95, 0],
       rightLowerArm: [0, 95, 0],
     },
+    hands: { left: "soft", right: "soft" },
     ears: { lift: -18, spread: 8 },
     tail: { wag: 8, speed: 0.8, lift: -6 },
     sway: { amount: 4, speed: 0.7 },
@@ -192,6 +198,7 @@ export const MOTIONS: Record<string, Pose> = {
       leftLowerArm: [0, -105, 0],
       rightLowerArm: [0, 105, 0],
     },
+    hands: { left: "soft", right: "soft" },
     ears: { lift: 16 },
     tail: { wag: 26, speed: 1.4, lift: 12 },
     sway: { amount: 3, speed: 0.4 },
@@ -206,6 +213,7 @@ export const MOTIONS: Record<string, Pose> = {
       leftLowerArm: [0, -70, 0],
       rightLowerArm: [0, 70, 0],
     },
+    hands: { left: "open", right: "open" },
     ears: { lift: -10, spread: 12 },
     tail: { wag: 20, speed: 2.2 },
     jitter: 3,
@@ -227,6 +235,7 @@ export const MOTIONS: Record<string, Pose> = {
       rightUpperArm: [-50, 15, 70],
       rightLowerArm: [0, 118, 0],
     },
+    hands: { right: "soft" },
     ears: { lift: 4, forward: 20 },
     tail: { wag: 4, speed: 0.4 },
   },
@@ -253,6 +262,7 @@ export const MOTIONS: Record<string, Pose> = {
       leftLowerArm: [0, -125, 0],
       rightLowerArm: [0, 125, 0],
     },
+    hands: { left: "soft", right: "soft" },
     ears: { lift: 12, spread: -4 },
     tail: { wag: 18, speed: 1, lift: 8 },
     sway: { amount: 4, speed: 0.45 },

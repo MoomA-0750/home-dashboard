@@ -16,6 +16,14 @@ const STATES: [VoiceState, string][] = [
   ["error", "エラー"],
 ];
 
+/** ポーズは正面だけだと分からないので、回り込んで見られるようにする */
+const VIEWS: [number, string][] = [
+  [0, "正面"],
+  [35, "斜め"],
+  [85, "横"],
+  [180, "後ろ"],
+];
+
 interface PersonaPreviewProps {
   persona: VoicePersona;
   modelUrl: string;
@@ -32,6 +40,7 @@ export function PersonaPreview({ persona, modelUrl, onClose }: PersonaPreviewPro
   const [motion, setMotion] = useState<string | null>(null);
   const [talking, setTalking] = useState(false);
   const [restroke, setRestroke] = useState(0);
+  const [viewAngle, setViewAngle] = useState(0);
   const [rig, setRig] = useState<AvatarRig | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -61,7 +70,7 @@ export function PersonaPreview({ persona, modelUrl, onClose }: PersonaPreviewPro
                   state={state}
                   socket={null}
                   rig={persona.rig ?? undefined}
-                  override={{ motion: activeMotion, expression: spec?.avatar ?? null, talking, restroke }}
+                  override={{ motion: activeMotion, expression: spec?.avatar ?? null, talking, restroke, viewAngle }}
                   onReady={setRig}
                   onError={(err) => setError(`アバターを読み込めませんでした: ${err}`)}
                 />
@@ -82,6 +91,14 @@ export function PersonaPreview({ persona, modelUrl, onClose }: PersonaPreviewPro
               <button type="button" onClick={() => setRestroke((n) => n + 1)}>
                 身振りをもう一度
               </button>
+            </div>
+            <h4>見る向き</h4>
+            <div className="persona-preview__buttons">
+              {VIEWS.map(([value, label]) => (
+                <button key={value} type="button" aria-pressed={viewAngle === value} onClick={() => setViewAngle(value)}>
+                  {label}
+                </button>
+              ))}
             </div>
             <h4>表情（返答の（表情名））</h4>
             <div className="persona-preview__buttons">

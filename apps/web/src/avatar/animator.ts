@@ -2,7 +2,9 @@ import * as THREE from "three";
 import type { VRM, VRMHumanBoneName } from "@pixiv/three-vrm";
 import type { VoiceState } from "../lib/useVoiceAssistant";
 import { beatPulse, fractalNoise, SecondOrder } from "./dynamics";
-import { MOTIONS, REST_POSE, STATE_POSES, type Pose } from "./motions";
+import { FINGER_BONE_NAMES, handBones } from "./hands";
+import { MOTIONS, REST_POSE, STATE_POSES, type BonePose, type Pose } from "./motions";
+import { clampToLimits, NECK_SHARE, shoulderFollow, SPINE_TWIST_SHARE, stancePose } from "./posture";
 import { bendChain, humanoidAxis, setHumanoidRotation, type AvatarRig, type Chain } from "./rig";
 
 /**
@@ -73,6 +75,7 @@ const BONES: Partial<Record<VRMHumanBoneName, { group: BoneGroup; delay: number;
   rightLowerArm: { group: "lowerArm", delay: 0.1, posture: false },
   leftHand: { group: "hand", delay: 0.16, posture: false },
   rightHand: { group: "hand", delay: 0.16, posture: false },
+  ...Object.fromEntries(FINGER_BONE_NAMES.map((name) => [name, { group: "hand", delay: 0.2, posture: false }])),
 };
 const BONE_NAMES = Object.keys(BONES) as VRMHumanBoneName[];
 /** 腕を戻した後も、体幹・頭・肩に残す身振りの割合（しょんぼりの猫背などの気分は続ける） */
@@ -99,8 +102,23 @@ const X = new THREE.Vector3(1, 0, 0);
 const Y = new THREE.Vector3(0, 1, 0);
 const Z = new THREE.Vector3(0, 0, 1);
 
+/** 身振りの骨の角度に、手の形から決まる指の角度を足したもの（身振りごとに1回だけ作る） */
+const poseBonesCache = new WeakMap<Pose, BonePose>();
+function poseBones(pose: Pose): BonePose {
+  let bones = poseBonesCache.get(pose);
+  if (!bones) {
+    bones = {
+      ...handBones("left", pose.hands?.left ?? "relaxed"),
+      ...handBones("right", pose.hands?.right ?? "relaxed"),
+      ...pose.bones,
+    };
+    poseBonesCache.set(pose, bones);
+  }
+  return bones;
+}
+
 function bonePose(pose: Pose, bone: VRMHumanBoneName): Vec3 {
-  return pose.bones[bone] ?? REST_POSE.bones[bone] ?? [0, 0, 0];
+  return poseBones(pose)[bone] ?? poseBones(REST_POSE)[bone] ?? [0, 0, 0];
 }
 
 function lerp3(a: Vec3, b: Vec3, t: number): Vec3 {
@@ -239,6 +257,26 @@ export class AvatarAnimator {
         desired.set(name, posture ? lerp3(baseAngles, gestureAngles, POSTURE_KEEP) : baseAngles);
       }
     }
+    return this.distribute(desired);
+  }
+
+  /**
+   * 身振りには「頭をどう向けるか」「体をどうひねるか」だけを書き、体の理屈どおりに関節へ配り直す。
+   * - 頭の向きの半分を首が担う（首だけ・頭だけを回すと不自然になる）
+   * - ひねりは胸が主役で、腰にはごく少しだけ
+   */
+  private distribute(desired: Map<VRMHumanBoneName, Vec3>): Map<VRMHumanBoneName, Vec3> {
+    const head = desired.get("head")!;
+    const neck = desired.get("neck")!;
+    const total: Vec3 = [head[0] + neck[0], head[1] + neck[1], head[2] + neck[2]];
+    desired.set("head", [total[0] * (1 - NECK_SHARE), total[1] * (1 - NECK_SHARE), total[2] * (1 - NECK_SHARE)]);
+    desired.set("neck", [total[0] * NECK_SHARE, total[1] * NECK_SHARE, total[2] * NECK_SHARE]);
+
+    const spine = desired.get("spine")!;
+    const chest = desired.get("chest")!;
+    const twist = spine[1] + chest[1];
+    desired.set("spine", [spine[0], twist * SPINE_TWIST_SHARE, spine[2]]);
+    desired.set("chest", [chest[0], twist * (1 - SPINE_TWIST_SHARE), chest[2]]);
     return desired;
   }
 
@@ -255,7 +293,10 @@ export class AvatarAnimator {
     this.speechEnergy += ((inputs.vowel ? 1 : 0) - this.speechEnergy) * Math.min(1, delta * 8);
 
     const sway = pose.sway ?? REST_POSE.sway!;
-    const swayAngle = sway.amount * fractalNoise(t * sway.speed * 2, 1) + this.weightShift.update(delta, this.weightShiftTarget);
+    // どちらの足に体重を乗せているか（-1〜1）。ゆっくり左右へ移る
+    const stance = this.weightShift.update(delta, this.weightShiftTarget);
+    const contrapposto = stancePose({ side: stance, amount: 1 });
+    const swayAngle = sway.amount * fractalNoise(t * sway.speed * 2, 1) + stance * 2;
     const breath = Math.sin(t * 1.6) * (0.8 + 0.3 * fractalNoise(t * 0.2, 2));
     // ビートは読み上げの音と揃える必要があるので、実時間で見る
     const beat = this.beatAmount(t, inputs.speech);
@@ -286,7 +327,8 @@ export class AvatarAnimator {
       let [dx, dy, dz] = [0, 0, 0];
       switch (name) {
         case "hips":
-          dz = swayAngle * 0.6;
+          // 体重を乗せた側の骨盤が上がる
+          dz = swayAngle * 0.6 + contrapposto.hipsRoll;
           break;
         case "spine":
           dx = breath * 0.8;
@@ -294,18 +336,20 @@ export class AvatarAnimator {
           break;
         case "chest":
           dx = breath * 0.6 + beat * 1.5;
+          // 肩のラインは骨盤と逆に傾く
+          dz = contrapposto.shoulderTilt;
           break;
         case "head":
           dx = beat * 5 + fractalNoise(t * 0.25, 3) * 1.5 + (pose.wobble ?? 0) * Math.sin(t * 5);
           dy = fractalNoise(t * 0.15, 4) * 3 + glance;
           dz = swayAngle * 0.4 + fractalNoise(t * 0.2, 5) * 1.5 + (pose.wobble ?? 0) * Math.cos(t * 5);
           break;
-        // 腕を上げたら肩も少し上がる
+        // 腕が体から30度以上離れたら、超えた分の半分を肩が担う（肩甲上腕リズム）
         case "leftShoulder":
-          dz = (current.get("leftUpperArm")![2] - bonePose(REST_POSE, "leftUpperArm")[2]) * 0.12;
+          dz = shoulderFollow(current.get("leftUpperArm")![2], "left");
           break;
         case "rightShoulder":
-          dz = (current.get("rightUpperArm")![2] - bonePose(REST_POSE, "rightUpperArm")[2]) * 0.12;
+          dz = shoulderFollow(current.get("rightUpperArm")![2], "right");
           break;
         // ビートで前腕を小さく振る（右は少し遅らせて、左右が揃いすぎないようにする）
         case "leftLowerArm":
@@ -318,12 +362,23 @@ export class AvatarAnimator {
       if (pose.jitter && (name === "head" || name.endsWith("UpperArm"))) {
         dz += fractalNoise(t * 12, name.length) * pose.jitter;
       }
-      setHumanoidRotation(this.vrm, this.rig, name, [x + dx, y + dy, z + dz]);
+      setHumanoidRotation(this.vrm, this.rig, name, clampToLimits(name, [x + dx, y + dy, z + dz]));
+    }
+
+    // 脚は身振りでは動かさず、重心の片寄せだけで決める
+    for (const [name, angles] of Object.entries(contrapposto.bones)) {
+      const bone = name as VRMHumanBoneName;
+      setHumanoidRotation(this.vrm, this.rig, bone, clampToLimits(bone, angles as Vec3));
     }
 
     const hips = this.vrm.humanoid.getNormalizedBoneNode("hips");
     if (hips) {
-      hips.position.set(this.hipsRest.x, this.hipsRest.y + Math.max(0, this.hop.update(delta, 0)), this.hipsRest.z);
+      // 重心は支えている足の上へ寄る
+      hips.position.set(
+        this.hipsRest.x + contrapposto.hipsShift * this.rig.facing,
+        this.hipsRest.y + Math.max(0, this.hop.update(delta, 0)),
+        this.hipsRest.z,
+      );
     }
 
     this.updateFace(delta, t, inputs);
@@ -339,7 +394,7 @@ export class AvatarAnimator {
 
   private updateIdleEvents(t: number, idle: boolean) {
     if (t >= this.nextWeightShiftAt) {
-      this.weightShiftTarget = (Math.random() < 0.5 ? -1 : 1) * (1.5 + Math.random() * 1.5);
+      this.weightShiftTarget = (Math.random() < 0.5 ? -1 : 1) * (0.6 + Math.random() * 0.4);
       this.nextWeightShiftAt = t + 4 + Math.random() * 5;
     }
     if (idle && t >= this.nextGlanceAt) {

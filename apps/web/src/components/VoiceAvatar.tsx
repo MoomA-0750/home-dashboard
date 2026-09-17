@@ -105,6 +105,8 @@ export interface AvatarOverride {
   talking: boolean;
   /** 変わったら、同じ身振りでもやり直す */
   restroke?: number;
+  /** 見る向き（度）。0 で正面、90 で真横。ポーズを確かめるために回り込む */
+  viewAngle?: number;
 }
 
 interface VoiceAvatarProps {
@@ -200,6 +202,8 @@ export default function VoiceAvatar({ modelUrl, state, socket, rig, override, on
     scene.add(light);
 
     const camera = new THREE.PerspectiveCamera(24, 1, 0.1, 20);
+    const CAMERA_DISTANCE = 2.0;
+    let cameraCenterY = 1.2;
     const lookTarget = new THREE.Object3D();
     scene.add(lookTarget);
 
@@ -264,6 +268,11 @@ export default function VoiceAvatar({ modelUrl, state, socket, rig, override, on
         restroke: demo?.restroke,
       };
 
+      // 確認画面から見る向きを変えられる（正面・斜め・横）
+      const angle = THREE.MathUtils.degToRad(demo?.viewAngle ?? 0);
+      camera.position.set(Math.sin(angle) * CAMERA_DISTANCE, cameraCenterY, Math.cos(angle) * CAMERA_DISTANCE);
+      camera.lookAt(0, cameraCenterY, 0);
+
       // 視線: ふだんはこちら（カメラ）を見て、考えている間は少し上の方を見る
       const thinking = current === "thinking" || current === "transcribing";
       lookGoal.set(camera.position.x + (thinking ? 0.25 : 0), camera.position.y + (thinking ? 0.3 : 0), camera.position.z);
@@ -288,9 +297,9 @@ export default function VoiceAvatar({ modelUrl, state, socket, rig, override, on
         // 頭の上（耳・髪を含めて首の付け根から約0.3m）から腰の上までが収まるように、頭の位置からカメラを決める
         const headPosition = new THREE.Vector3();
         vrm.humanoid.getNormalizedBoneNode("head")?.getWorldPosition(headPosition);
-        const centerY = headPosition.y - 0.12;
-        camera.position.set(0, centerY, 2.0);
-        camera.lookAt(0, centerY, 0);
+        cameraCenterY = headPosition.y - 0.12;
+        camera.position.set(0, cameraCenterY, CAMERA_DISTANCE);
+        camera.lookAt(0, cameraCenterY, 0);
         lookTarget.position.copy(camera.position);
         if (vrm.lookAt) vrm.lookAt.target = lookTarget;
 
