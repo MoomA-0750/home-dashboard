@@ -25,7 +25,7 @@ def silence(seconds: float) -> bytes:
 
 VOICES = (2, 3, 8, 11, 14, 16, 20, 70)
 
-# テスト用のキャラクター設定（実際の config/voice-personas.json と同じ名前・おとり）。
+# テスト用のキャラクター設定（実際の config/voice-personas/ と同じ名前・おとり）。
 # おとり無しだと「ねえ、プランはどうする？」「ねえ、カラオケ行こう」などを誤検出し、
 # 「パラム」「クローン」のように名前と近すぎるおとりは、逆に正しい呼びかけを吸ってしまった
 PERSONAS = Personas(
@@ -154,7 +154,7 @@ def run_assistant(monkeypatch, tmp_path, vosk_model, pcm: bytes, listen_request:
     書き起こし以降（whisper・Claude・読み上げ）は呼ばない。
     """
     config = dataclasses.replace(
-        load_config(), chime=False, listen_timeout_s=3, claude_cwd=tmp_path, personas_path=tmp_path / "none.json"
+        load_config(), chime=False, listen_timeout_s=3, claude_cwd=tmp_path, personas_dir=tmp_path / "no-personas"
     )
     assistant = agent.Assistant(config)
     assistant.personas = PERSONAS

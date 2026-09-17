@@ -40,6 +40,9 @@ class Transcriber:
             model, device="cpu", compute_type=compute_type, download_root=str(CACHE_DIR / "whisper")
         )
 
+    def set_names(self, names: list[str]) -> None:
+        self._wake_prefix = wake_prefix_pattern(names) if names else _DEFAULT_WAKE_PREFIX
+
     def transcribe(self, pcm: bytes) -> str:
         segments, _ = self._model.transcribe(
             pcm_to_float(pcm),

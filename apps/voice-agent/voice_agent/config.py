@@ -51,7 +51,7 @@ class Config:
     end_silence_s: float
     max_utterance_s: float
 
-    personas_path: Path
+    personas_dir: Path
     history_turns: int
     history_hours: float
 
@@ -100,7 +100,7 @@ def load_config() -> Config:
         end_silence_s=float(_env("VOICE_END_SILENCE_S", "1.0")),
         max_utterance_s=float(_env("VOICE_MAX_UTTERANCE_S", "20")),
         # ウェイクワードごとのキャラクター。無ければ上の VOICE_WAKE_PHRASE で呼ぶ「Claude」1人だけ
-        personas_path=_path(_env("VOICE_PERSONAS_PATH", str(AGENT_DIR.parent.parent / "config" / "voice-personas.json"))),
+        personas_dir=_path(_env("VOICE_PERSONAS_DIR", str(AGENT_DIR.parent.parent / "config" / "voice-personas"))),
         # 新しい会話を始めるとき、キャラクター全員で共有している直近のやり取りを何件・何時間前まで渡すか
         history_turns=int(_env("VOICE_HISTORY_TURNS", "20")),
         history_hours=float(_env("VOICE_HISTORY_HOURS", "24")),

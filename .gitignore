@@ -12,9 +12,7 @@ config/homelab-hosts.json
 config/homeassistant.json
 # 応答パネルのVRMアバター。第三者のモデルを置く想定（再配布禁止のものも多い）なのでリポジトリに含めない
 config/*.vrm
-config/avatars/
-# ウェイクワードごとのキャラクター設定（プロンプトは個人のもの。形式は config/voice-personas.example.json）
-config/voice-personas.json
+# ウェイクワードごとのキャラクター（プロンプト・VRMは個人のもの。形式は config/voice-personas.example/）
 config/voice-personas/
 .DS_Store
 

@@ -21,7 +21,10 @@ import {
   askVoiceAssistant,
   cancelVoiceAssistant,
   avatarUrlFor,
+  deletePersona,
+  importPersona,
   listenVoiceAssistant,
+  personaExportUrl,
   setDefaultPersona,
   useAvatarEnabled,
   useVoiceAssistant,
@@ -179,6 +182,9 @@ export function App() {
           onAskVoice={(text) => askVoiceAssistant(ctx.apiBaseUrl, text)}
           personas={personas}
           onSelectDefaultPersona={(personaId) => setDefaultPersona(ctx.apiBaseUrl, personaId)}
+          onImportPersona={(file, replace) => importPersona(ctx.apiBaseUrl, file, replace)}
+          onDeletePersona={(personaId) => deletePersona(ctx.apiBaseUrl, personaId)}
+          personaExportUrl={(personaId) => personaExportUrl(ctx.apiBaseUrl, personaId)}
           history={voiceHistory}
           avatarAvailable={Boolean(personas?.personas.some((persona) => persona.hasAvatar))}
           avatarEnabled={avatarEnabled}

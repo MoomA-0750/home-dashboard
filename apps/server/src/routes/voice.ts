@@ -1,9 +1,11 @@
 import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyReply } from "fastify";
 import type { WebSocket } from "ws";
 import { agentTokenMatches } from "../agentToken.js";
+import { ServiceError } from "../serviceError.js";
 import { appendTurn, readRecentTurns } from "../voiceHistory.js";
+import { deletePersona, exportPersonaPackage, importPersonaPackage, personaWarnings } from "../voicePersonaPackages.js";
 import { readDefaultPersonaId, readPersonas, writeDefaultPersonaId } from "../voicePersonas.js";
 import { broadcast } from "../ws.js";
 
@@ -45,6 +47,8 @@ const idleSnapshot = (): VoiceSnapshot => ({
 
 let snapshot = idleSnapshot();
 let agent: WebSocket | null = null;
+// エージェントが確かめたキャラクターの問題（ウェイクワードが音声認識の語彙に無い、など）
+let agentPersonaWarnings: Record<string, string[]> = {};
 
 function publish(next: VoiceSnapshot): void {
   snapshot = next;
@@ -58,6 +62,11 @@ function sendToAgent(message: unknown): boolean {
 }
 
 export async function registerVoiceRoutes(app: FastifyInstance): Promise<void> {
+  // キャラクターのパッケージはZIPのまま受け取る（multipart を使わず、ファイルをそのまま送ってもらう）
+  app.addContentTypeParser(["application/zip", "application/x-zip-compressed"], { parseAs: "buffer" }, (_request, body, done) =>
+    done(null, body),
+  );
+
   app.get<{ Querystring: { token?: string } }>("/ws/voice-agent", { websocket: true }, (socket, request) => {
     if (!agentTokenMatches(request.query.token)) {
       socket.close(4401, "invalid token");
@@ -92,6 +101,11 @@ export async function registerVoiceRoutes(app: FastifyInstance): Promise<void> {
           return;
         }
         if (message.type !== "state") return;
+        if (message.personaWarnings && typeof message.personaWarnings === "object") {
+          const changed = JSON.stringify(message.personaWarnings) !== JSON.stringify(agentPersonaWarnings);
+          agentPersonaWarnings = message.personaWarnings;
+          if (changed) broadcast({ type: "voice-personas" });
+        }
         publish({
           connected: true,
           state: message.state,
@@ -123,8 +137,67 @@ export async function registerVoiceRoutes(app: FastifyInstance): Promise<void> {
     const personas = await readPersonas();
     return {
       defaultPersonaId: await readDefaultPersonaId(personas),
-      personas: personas.map(({ avatarPath, ...persona }) => ({ ...persona, hasAvatar: avatarPath !== null })),
+      personas: await Promise.all(
+        personas.map(async (persona) => ({
+          id: persona.id,
+          name: persona.name,
+          wakePhrase: persona.wakePhrase,
+          hasAvatar: persona.avatarPath !== null,
+          hasPrompt: persona.hasPrompt,
+          builtIn: persona.builtIn,
+          warnings: [...(await personaWarnings(persona)), ...(agentPersonaWarnings[persona.id] ?? [])],
+        })),
+      ),
     };
+  });
+
+  // キャラクターが増減したら、画面の一覧を取り直させ、エージェントに読み直させる
+  const personasChanged = () => {
+    broadcast({ type: "voice-personas" });
+    sendToAgent({ type: "reload-personas" });
+  };
+
+  const sendServiceError = (err: unknown, reply: FastifyReply) => {
+    if (err instanceof ServiceError) return reply.code(err.statusCode).send({ error: err.message });
+    throw err;
+  };
+
+  // キャラクターのパッケージ（persona.json・prompt.md・avatar.vrm のZIP）を取り込む。同じIDがあれば replace=true で上書き
+  app.post<{ Querystring: { replace?: string } }>(
+    "/api/voice/personas/import",
+    { bodyLimit: 150 * 1024 * 1024 },
+    async (request, reply) => {
+      if (!Buffer.isBuffer(request.body)) return reply.code(400).send({ error: "ZIPファイルを送ってください" });
+      try {
+        const result = await importPersonaPackage(new Uint8Array(request.body), { replace: request.query.replace === "true" });
+        personasChanged();
+        return result;
+      } catch (err) {
+        return sendServiceError(err, reply);
+      }
+    },
+  );
+
+  app.get<{ Params: { personaId: string } }>("/api/voice/personas/:personaId/export", async (request, reply) => {
+    try {
+      const { zip } = await exportPersonaPackage(request.params.personaId);
+      return reply
+        .type("application/zip")
+        .header("Content-Disposition", `attachment; filename="${request.params.personaId}.zip"`)
+        .send(Buffer.from(zip));
+    } catch (err) {
+      return sendServiceError(err, reply);
+    }
+  });
+
+  app.delete<{ Params: { personaId: string } }>("/api/voice/personas/:personaId", async (request, reply) => {
+    try {
+      await deletePersona(request.params.personaId);
+      personasChanged();
+      return { ok: true };
+    } catch (err) {
+      return sendServiceError(err, reply);
+    }
   });
 
   app.put<{ Body: { defaultPersonaId?: unknown } }>("/api/voice/settings", async (request, reply) => {

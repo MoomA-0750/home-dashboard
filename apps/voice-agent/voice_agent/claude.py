@@ -139,6 +139,14 @@ class ClaudeConversation:
         self._lock = asyncio.Lock()
         config.claude_cwd.mkdir(parents=True, exist_ok=True)
 
+    async def replace_personas(self, personas: Personas) -> None:
+        """キャラクターが増減したら、全員の設定を入れ直した新しい会話にする"""
+        async with self._lock:
+            self._personas = personas
+            self._session_id = None
+            await self._kill()
+            await self._ensure_process()
+
     @property
     def session_id(self) -> str | None:
         """Claude Code の会話のID（記録で、どのやり取りが同じ会話だったかを見分けるのに使う）"""

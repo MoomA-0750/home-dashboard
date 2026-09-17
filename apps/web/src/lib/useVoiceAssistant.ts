@@ -88,6 +88,11 @@ export interface VoicePersona {
   /** 表示用のウェイクワード（例: 「ねえプラム」） */
   wakePhrase: string;
   hasAvatar: boolean;
+  hasPrompt: boolean;
+  /** 設定ファイルが無いときの「Claude」。書き出し・削除はできない */
+  builtIn: boolean;
+  /** 呼べない・表情が変わらないなどの問題（ウェイクワードが音声認識の語彙に無い、VRMに無い表情名 など） */
+  warnings: string[];
 }
 
 export interface VoicePersonas {
@@ -140,6 +145,37 @@ export function useVoicePersonas(ctx: WidgetRuntimeContext): VoicePersonas | nul
 export function avatarUrlFor(apiBaseUrl: string, personas: VoicePersonas | null, personaId: string | null): string | null {
   const persona = personas?.personas.find((p) => p.id === personaId);
   return persona?.hasAvatar ? `${apiBaseUrl}/api/voice/avatars/${encodeURIComponent(persona.id)}` : null;
+}
+
+export interface PersonaImportResult {
+  id: string;
+  name: string;
+  replaced: boolean;
+  warnings: string[];
+}
+
+export class PersonaImportConflict extends Error {}
+
+/** キャラクターのパッケージ（ZIP）を取り込む。同じIDがあれば PersonaImportConflict（replace で上書き） */
+export async function importPersona(apiBaseUrl: string, file: File, replace = false): Promise<PersonaImportResult> {
+  const res = await fetch(`${apiBaseUrl}/api/voice/personas/import${replace ? "?replace=true" : ""}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/zip" },
+    body: file,
+  });
+  const body = await res.json().catch(() => ({}));
+  if (res.status === 409) throw new PersonaImportConflict(body.error);
+  if (!res.ok) throw new Error(body.error ?? `import error: ${res.status}`);
+  return body as PersonaImportResult;
+}
+
+export async function deletePersona(apiBaseUrl: string, personaId: string): Promise<void> {
+  const res = await fetch(`${apiBaseUrl}/api/voice/personas/${encodeURIComponent(personaId)}`, { method: "DELETE" });
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? `delete error: ${res.status}`);
+}
+
+export function personaExportUrl(apiBaseUrl: string, personaId: string): string {
+  return `${apiBaseUrl}/api/voice/personas/${encodeURIComponent(personaId)}/export`;
 }
 
 export async function setDefaultPersona(apiBaseUrl: string, personaId: string): Promise<void> {

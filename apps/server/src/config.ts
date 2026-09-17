@@ -81,7 +81,10 @@ export const config = {
      * config/ は Docker 運用でもホスト側をマウントしているので、イメージを作り直さずに差し替えられる
      */
     avatarPath: process.env.VOICE_AVATAR_PATH ?? join(configDir, "avatar.vrm"),
-    /** ウェイクワードごとに呼び分けるキャラクターの設定（形式は config/voice-personas.example.json） */
-    personasPath: process.env.VOICE_PERSONAS_PATH ?? join(configDir, "voice-personas.json"),
+    /**
+     * ウェイクワードごとに呼び分けるキャラクターを1人1ディレクトリで置く場所（形式は config/voice-personas.example/）。
+     * 設定画面からのインポート・削除でここに書き込むので、Docker 運用でも書き込めるようにマウントしておく
+     */
+    personasDir: process.env.VOICE_PERSONAS_DIR ?? join(configDir, "voice-personas"),
   },
 };

@@ -191,6 +191,15 @@ class VoiceVox:
         cues, duration = mouth_cues(query)
         return Speech(res.content, cues, duration)
 
+    async def speaker_ids(self) -> set[int] | None:
+        """使える話者（スタイル）のID。VOICEVOX Engine につながらなければ None（確かめない）"""
+        try:
+            res = await self._client.get("/speakers")
+            res.raise_for_status()
+        except httpx.HTTPError:
+            return None
+        return {style["id"] for speaker in res.json() for style in speaker["styles"]}
+
     async def check(self) -> str:
         res = await self._client.get("/version")
         res.raise_for_status()

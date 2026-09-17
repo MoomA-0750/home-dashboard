@@ -1,0 +1,13 @@
+{
+  "wakePrefix": "ねえ",
+  "commonDecoys": [
+    "ですね",
+    "あのね",
+    "寝る",
+    "ね"
+  ],
+  "order": [
+    "haru",
+    "claude"
+  ]
+}

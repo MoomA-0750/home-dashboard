@@ -1,6 +1,13 @@
 import { useState, type FormEvent } from "react";
 import type { WidgetRegistry } from "@home-dashboard/widget-sdk";
-import type { VoicePersonas, VoiceSnapshot, VoiceTurnRecord, VoiceTurnSource } from "../lib/useVoiceAssistant";
+import type {
+  PersonaImportResult,
+  VoicePersonas,
+  VoiceSnapshot,
+  VoiceTurnRecord,
+  VoiceTurnSource,
+} from "../lib/useVoiceAssistant";
+import { PersonaManager } from "./PersonaManager";
 import { Icon } from "./Icon";
 
 interface SettingsPanelProps {
@@ -14,6 +21,9 @@ interface SettingsPanelProps {
   onAskVoice: (text: string) => Promise<void>;
   personas: VoicePersonas | null;
   onSelectDefaultPersona: (personaId: string) => Promise<void>;
+  onImportPersona: (file: File, replace: boolean) => Promise<PersonaImportResult>;
+  onDeletePersona: (personaId: string) => Promise<void>;
+  personaExportUrl: (personaId: string) => string;
   history: VoiceTurnRecord[];
   /** サーバーにVRMアバターが置かれているか（置かれていなければ切り替えを出さない） */
   avatarAvailable: boolean;
@@ -36,6 +46,9 @@ export function SettingsPanel({
   onAskVoice,
   personas,
   onSelectDefaultPersona,
+  onImportPersona,
+  onDeletePersona,
+  personaExportUrl,
   history,
   avatarAvailable,
   avatarEnabled,
@@ -68,6 +81,9 @@ export function SettingsPanel({
         onAsk={onAskVoice}
         personas={personas}
         onSelectDefaultPersona={onSelectDefaultPersona}
+        onImportPersona={onImportPersona}
+        onDeletePersona={onDeletePersona}
+        personaExportUrl={personaExportUrl}
         history={history}
         avatarAvailable={avatarAvailable}
         avatarEnabled={avatarEnabled}
@@ -94,6 +110,9 @@ interface VoiceSectionProps {
   onAsk: (text: string) => Promise<void>;
   personas: VoicePersonas | null;
   onSelectDefaultPersona: (personaId: string) => Promise<void>;
+  onImportPersona: (file: File, replace: boolean) => Promise<PersonaImportResult>;
+  onDeletePersona: (personaId: string) => Promise<void>;
+  personaExportUrl: (personaId: string) => string;
   history: VoiceTurnRecord[];
   avatarAvailable: boolean;
   avatarEnabled: boolean;
@@ -118,6 +137,9 @@ function VoiceSection({
   onAsk,
   personas,
   onSelectDefaultPersona,
+  onImportPersona,
+  onDeletePersona,
+  personaExportUrl,
   history,
   avatarAvailable,
   avatarEnabled,
@@ -192,6 +214,14 @@ function VoiceSection({
           <input type="checkbox" checked={avatarEnabled} onChange={onToggleAvatar} />
           <span>この端末でアバターを表示（重い端末では切る）</span>
         </label>
+      )}
+      {personas && (
+        <PersonaManager
+          personas={personas}
+          onImport={onImportPersona}
+          onDelete={onDeletePersona}
+          exportUrl={personaExportUrl}
+        />
       )}
       {history.length > 0 && (
         <>

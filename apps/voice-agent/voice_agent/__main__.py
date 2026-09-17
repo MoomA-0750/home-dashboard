@@ -14,7 +14,7 @@ from vosk import Model
 from .audio import CHIME_DURATION_S, MISS_CHIME, WAKE_CHIME, MicrophoneError, Player, microphone
 from .claude import ClaudeConversation, ClaudeError
 from .config import Config, load_config
-from .personas import Persona, load_personas
+from .personas import Persona, check_personas, load_personas, load_vocabulary, personas_signature
 from .relay import Relay
 from .speech import Directions, Piece, SentenceSplitter, Speech, SpeechQueue, Voice, VoiceVox
 from .stt import Transcriber
@@ -25,6 +25,8 @@ log = logging.getLogger("voice_agent")
 
 # 返答の直後に続けて聞き始めるとき、読み上げの残響を声と取り違えないよう判定しない時間
 FOLLOW_UP_GRACE_S = 0.4
+# キャラクター設定のファイルを手で直したときに気づくまでの間隔
+PERSONAS_POLL_S = 5
 
 
 class Mode(enum.Enum):
@@ -48,6 +50,11 @@ class Assistant:
     def __init__(self, config: Config) -> None:
         self.config = config
         self.personas = load_personas(config)
+        # インポートしたキャラクターが実際に呼べるか（語彙に無いウェイクワードなど）。画面の設定に出す
+        self.persona_warnings: dict[str, list[str]] = {}
+        self._personas_signature = personas_signature(config)
+        self._reload_requested = False
+        self._vocabulary: set[str] | None = None
         self.player = Player(config.output_cmd)
         self.http = httpx.AsyncClient(base_url=config.server_url, timeout=10)
         self.claude = ClaudeConversation(config, self.personas, self._fetch_history)
@@ -93,6 +100,7 @@ class Assistant:
             "followUp": self.follow_up,
             "personaId": self.persona.id,
             "personaName": self.persona.name,
+            "personaWarnings": self.persona_warnings,
         }
 
     async def update(self, **fields) -> None:
@@ -113,6 +121,8 @@ class Assistant:
 
         log.info("モデルを読み込んでいます（Vosk: %s / whisper: %s）", c.vosk_model_dir.name, c.whisper_model)
         model = await loop.run_in_executor(None, Model, str(c.vosk_model_dir))
+        self.vosk_model = model
+        self._vocabulary = await loop.run_in_executor(None, load_vocabulary, c.vosk_model_dir)
         self.recognizer = SpeechRecognizer(model, self.personas)
         self.transcriber = await loop.run_in_executor(
             None, Transcriber, c.whisper_model, c.whisper_compute_type, self.personas.names
@@ -123,15 +133,54 @@ class Assistant:
             log.warning("VOICEVOX Engine に接続できません（%s）: %s", c.voicevox_url, err)
 
         await self.claude.start()
+        await self._check_personas()
         wake_phrases = ["".join(phrase) for p in self.personas.personas for phrase in p.wake_phrases]
         log.info("%s で待機します", "・".join(f"「{w}」" for w in wake_phrases))
-        await asyncio.gather(self.relay.run(), self._listen_loop())
+        await asyncio.gather(self.relay.run(), self._listen_loop(), self._watch_personas())
+
+    async def _check_personas(self) -> None:
+        speakers = await self.tts.speaker_ids()
+        self.persona_warnings = check_personas(self.personas, self._vocabulary, speakers)
+        for persona_id, warnings in self.persona_warnings.items():
+            for warning in warnings:
+                log.warning("%s: %s", persona_id, warning)
+
+    async def _watch_personas(self) -> None:
+        """設定画面からのインポート・削除はサーバーが知らせてくるが、ファイルを手で直した場合もここで気づく"""
+        loop = asyncio.get_running_loop()
+        while True:
+            await asyncio.sleep(PERSONAS_POLL_S)
+            signature = await loop.run_in_executor(None, personas_signature, self.config)
+            if signature != self._personas_signature:
+                self._reload_requested = True
+
+    async def _reload_personas(self) -> None:
+        """
+        キャラクターを読み直す。ウェイクワードの文法・書き起こしから落とす名前・Claude への設定をまとめて差し替える。
+        Claude はシステムプロンプトに全員の設定を持っているので新しい会話にする（直近のやり取りは記録から引き継がれる）
+        """
+        loop = asyncio.get_running_loop()
+        self._reload_requested = False
+        self._personas_signature = await loop.run_in_executor(None, personas_signature, self.config)
+        personas = await loop.run_in_executor(None, load_personas, self.config)
+        self.personas = personas
+        self.recognizer = SpeechRecognizer(self.vosk_model, personas)
+        self._chime_until = 0.0
+        self.transcriber.set_names(personas.names)
+        self.persona = personas.get(self.persona.id)
+        await self.claude.replace_personas(personas)
+        await self._check_personas()
+        log.info("キャラクターを読み直しました: %s", "・".join(p.name for p in personas.personas))
+        await self.relay.publish()
 
     async def _listen_loop(self) -> None:
         loop = asyncio.get_running_loop()
         while True:
             try:
                 async for chunk in microphone(self.config.input_cmd):
+                    # 応答や聞き取りの途中で文法やキャラクターを差し替えないよう、待機中になってから読み直す
+                    if self._reload_requested and self.mode is Mode.IDLE and self._listen_request is None:
+                        await self._reload_personas()
                     if self._reset_requested:
                         self._reset_requested = False
                         self.recognizer.reset()
@@ -378,6 +427,9 @@ class Assistant:
         elif kind == "cancel":
             await self._cancel_turn()
             await self.update(state="idle", follow_up=False)
+        elif kind == "reload-personas":
+            # 設定画面でキャラクターをインポート・削除した
+            self._reload_requested = True
         elif kind == "listen":
             # 画面のマイクボタン。ウェイクワード無しで聞き始める（読み上げ中なら止めて聞く）
             await self._cancel_turn()

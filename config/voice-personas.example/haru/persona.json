@@ -1,0 +1,40 @@
+{
+  "id": "haru",
+  "name": "ハル",
+  "wakeWords": [
+    "ハル"
+  ],
+  "decoys": [
+    "春",
+    "張る",
+    "貼る"
+  ],
+  "voice": {
+    "speaker": 8,
+    "speed": 1.1
+  },
+  "expressions": {
+    "ドヤ顔": {
+      "avatar": {
+        "happy": 0.4
+      },
+      "keywords": [
+        "ドヤ",
+        "得意"
+      ]
+    },
+    "ひそひそ": {
+      "avatar": {
+        "relaxed": 0.4
+      },
+      "voice": {
+        "speaker": 8,
+        "speed": 0.95
+      },
+      "keywords": [
+        "小声",
+        "内緒"
+      ]
+    }
+  }
+}
