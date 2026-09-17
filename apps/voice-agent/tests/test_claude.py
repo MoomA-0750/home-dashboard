@@ -7,14 +7,21 @@ import json
 import os
 import signal
 import sys
+from datetime import datetime
 from pathlib import Path
 
 import pytest
 
-from voice_agent.claude import ClaudeConversation
+from voice_agent.claude import ClaudeConversation, format_history
 from voice_agent.config import load_config
+from voice_agent.personas import Persona, Personas
 
 FAKE_CLAUDE = Path(__file__).with_name("fake_claude.py")
+
+PLUM = Persona("plum", "プラム", [["ねえ", "プラム"]], [], "一人称はプラム。明るく弾む口調。", 70, 1.1)
+KARIN = Persona("karin", "カリン", [["ねえ", "カリン"]], [], "一人称はわたし。お姉さんぶる。", 2, 1.1)
+CHARACTERS = Personas([PLUM, KARIN], world="姉妹たちは一緒に暮らしている。")
+PLAIN = Personas([Persona("claude", "Claude", [["ねえ", "クロード"]], [], "", 3, 1.1)], world="")
 
 
 @pytest.fixture
@@ -25,7 +32,7 @@ def make_conversation(tmp_path, monkeypatch):
     wrapper.write_text(f'#!/bin/sh\nexec "{sys.executable}" "{FAKE_CLAUDE}" "$@"\n')
     wrapper.chmod(0o755)
 
-    def make(**overrides) -> ClaudeConversation:
+    def make(personas: Personas = PLAIN, history=None, **overrides) -> ClaudeConversation:
         defaults = {
             "claude_bin": str(wrapper),
             "claude_cwd": tmp_path / "workspace",
@@ -35,7 +42,7 @@ def make_conversation(tmp_path, monkeypatch):
             "claude_timeout_s": 10,
         }
         config = dataclasses.replace(load_config(), **{**defaults, **overrides})
-        return ClaudeConversation(config)
+        return ClaudeConversation(config, personas, history)
 
     def events() -> list[dict]:
         return [json.loads(line) for line in log.read_text().splitlines()] if log.exists() else []
@@ -49,8 +56,8 @@ def make_conversation(tmp_path, monkeypatch):
             os.kill(event["pid"], signal.SIGKILL)
 
 
-async def collect(conversation: ClaudeConversation, text: str) -> str:
-    async with contextlib.aclosing(conversation.ask(text)) as stream:
+async def collect(conversation: ClaudeConversation, text: str, persona: Persona = PLAIN.personas[0]) -> str:
+    async with contextlib.aclosing(conversation.ask(text, persona)) as stream:
         return "".join([delta async for delta in stream])
 
 
@@ -121,7 +128,7 @@ def test_cancel_restarts_process_and_resumes_conversation(make_conversation):
         received: list[str] = []
 
         async def slow_turn() -> None:
-            async with contextlib.aclosing(conversation.ask("SLOW な質問")) as stream:
+            async with contextlib.aclosing(conversation.ask("SLOW な質問", PLAIN.personas[0])) as stream:
                 async for delta in stream:
                     received.append(delta)
 
@@ -155,3 +162,79 @@ def test_starts_new_conversation_after_idle(make_conversation):
     assert len(starts) == 2
     assert "--resume" not in starts[1]["args"]
     assert events[-1]["pid"] == starts[1]["pid"]
+
+
+def test_every_character_is_in_the_system_prompt(make_conversation):
+    """記憶を共有するため会話は1本にし、全員の設定を最初から渡しておく"""
+    conversation = make_conversation(personas=CHARACTERS)
+    asyncio.run(collect(conversation, "こんにちは", PLUM))
+    (start,) = [e for e in make_conversation.events() if e["event"] == "start"]
+    prompt = option(start["args"], "--append-system-prompt")
+    assert "姉妹たちは一緒に暮らしている。" in prompt
+    assert "## プラム\n一人称はプラム。明るく弾む口調。" in prompt
+    assert "## カリン\n一人称はわたし。お姉さんぶる。" in prompt
+
+
+def test_message_names_who_should_answer(make_conversation):
+    """同じ会話の中で、質問ごとに応答するキャラクターを切り替える（誰が答えたかが会話に残る）"""
+    conversation = make_conversation(personas=CHARACTERS)
+
+    async def scenario() -> None:
+        await collect(conversation, "明日の天気は？", PLUM)
+        await collect(conversation, "さっきプラムは何て言ってた？", KARIN)
+
+    asyncio.run(scenario())
+    messages = [e["content"] for e in make_conversation.events() if e["event"] == "message"]
+    assert "[話しかけられた相手: プラム]\n明日の天気は？" in messages[0]
+    assert "[話しかけられた相手: カリン]\nさっきプラムは何て言ってた？" in messages[1]
+    assert len({e["pid"] for e in make_conversation.events()}) == 1
+
+
+def test_plain_assistant_has_no_character_header(make_conversation):
+    conversation = make_conversation()
+    asyncio.run(collect(conversation, "こんにちは"))
+    (message,) = [e for e in make_conversation.events() if e["event"] == "message"]
+    assert "話しかけられた相手" not in message["content"]
+
+
+def test_history_is_passed_only_when_a_new_conversation_starts(make_conversation):
+    """前の会話（エージェントの再起動前や、間が空いた後）で誰が何に答えたかを、新しい会話の最初に渡す"""
+    calls = []
+
+    async def history() -> list[dict]:
+        calls.append(True)
+        return [
+            {
+                "at": datetime.now().astimezone().isoformat(),
+                "personaId": "karin",
+                "personaName": "カリン",
+                "source": "wake",
+                "transcript": "明日の天気は？",
+                "response": "明日は雨よ。",
+                "status": "answered",
+            }
+        ]
+
+    conversation = make_conversation(personas=CHARACTERS, history=history)
+
+    async def scenario() -> None:
+        await collect(conversation, "おはよう", PLUM)
+        await collect(conversation, "さっきの話だけど", PLUM)
+
+    asyncio.run(scenario())
+    first, second = [e["content"] for e in make_conversation.events() if e["event"] == "message"]
+    assert "ユーザーがカリンに声で「明日の天気は？」と話しかけ、カリンが「明日は雨よ。」と答えた" in first
+    assert "これまでのやり取り" not in second
+    assert len(calls) == 1
+
+
+def test_format_history_skips_old_and_unanswered_records():
+    now = datetime(2026, 9, 17, 12, 0)
+    records = [
+        {"at": "2026-09-15T12:00:00", "personaName": "プラム", "source": "wake", "transcript": "古い", "response": "古い返事"},
+        {"at": "2026-09-17T11:00:00", "personaName": "プラム", "source": "text", "transcript": "中止", "response": ""},
+        {"at": "2026-09-17T11:30:00", "personaName": "カリン", "source": "button", "transcript": "新しい", "response": "新しい返事"},
+    ]
+    text = format_history(records, now, hours=24, limit=20)
+    assert "古い" not in text and "中止" not in text
+    assert "09/17 11:30 ユーザーがカリンにボタンから声で「新しい」と話しかけ、カリンが「新しい返事」と答えた" in text

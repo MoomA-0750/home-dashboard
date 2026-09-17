@@ -15,7 +15,9 @@ export interface VoiceSnapshot {
   error: string | null;
   /** 返答の直後で、ウェイクワード無しで続けて話せる間 */
   followUp: boolean;
-  wakePhrase: string | null;
+  /** いま応答しているキャラクター */
+  personaId: string | null;
+  personaName: string | null;
 }
 
 export const ACTIVE_VOICE_STATES: VoiceState[] = ["listening", "transcribing", "thinking", "speaking"];
@@ -80,22 +82,120 @@ export function useAvatarEnabled(): [boolean, (enabled: boolean) => void] {
   return [enabled, update];
 }
 
-/** 応答パネルに出すVRMアバターのURL。サーバーに置かれていなければ null */
-export function useAvatarUrl(apiBaseUrl: string): string | null {
-  const [url, setUrl] = useState<string | null>(null);
+export interface VoicePersona {
+  id: string;
+  name: string;
+  /** 表示用のウェイクワード（例: 「ねえプラム」） */
+  wakePhrase: string;
+  hasAvatar: boolean;
+}
+
+export interface VoicePersonas {
+  /** 画面のマイクボタン・文字入力で応答するキャラクター（設定画面で変えられる） */
+  defaultPersonaId: string;
+  personas: VoicePersona[];
+}
+
+async function fetchJson<T>(url: string): Promise<T | null> {
+  try {
+    const res = await fetch(url);
+    return res.ok ? ((await res.json()) as T) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** ウェイクワードごとに呼び分けるキャラクターの一覧。既定のキャラクターが（他の端末で）変わったら取り直す */
+export function useVoicePersonas(ctx: WidgetRuntimeContext): VoicePersonas | null {
+  const [personas, setPersonas] = useState<VoicePersonas | null>(null);
+  const [version, setVersion] = useState(0);
+
   useEffect(() => {
-    const candidate = `${apiBaseUrl}/api/voice/avatar`;
     let cancelled = false;
-    fetch(candidate, { method: "HEAD" })
-      .then((res) => {
-        if (!cancelled && res.ok) setUrl(candidate);
-      })
-      .catch(() => undefined);
+    fetchJson<VoicePersonas>(`${ctx.apiBaseUrl}/api/voice/personas`).then((data) => {
+      if (!cancelled && data) setPersonas(data);
+    });
     return () => {
       cancelled = true;
     };
-  }, [apiBaseUrl]);
-  return url;
+  }, [ctx.apiBaseUrl, ctx.socket, version]);
+
+  useEffect(() => {
+    if (!ctx.socket) return;
+    const socket = ctx.socket;
+    const onMessage = (event: MessageEvent) => {
+      try {
+        if (JSON.parse(event.data).type === "voice-personas") setVersion((v) => v + 1);
+      } catch {
+        // ignore malformed messages
+      }
+    };
+    socket.addEventListener("message", onMessage);
+    return () => socket.removeEventListener("message", onMessage);
+  }, [ctx.socket]);
+
+  return personas;
+}
+
+export function avatarUrlFor(apiBaseUrl: string, personas: VoicePersonas | null, personaId: string | null): string | null {
+  const persona = personas?.personas.find((p) => p.id === personaId);
+  return persona?.hasAvatar ? `${apiBaseUrl}/api/voice/avatars/${encodeURIComponent(persona.id)}` : null;
+}
+
+export async function setDefaultPersona(apiBaseUrl: string, personaId: string): Promise<void> {
+  const res = await fetch(`${apiBaseUrl}/api/voice/settings`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ defaultPersonaId: personaId }),
+  });
+  if (!res.ok) throw new Error(`voice settings error: ${res.status}`);
+}
+
+export type VoiceTurnSource = "wake" | "follow-up" | "button" | "text";
+
+/** 誰が・どこから話しかけられて・何に答えたかの記録（サーバーの data/voice-history.jsonl） */
+export interface VoiceTurnRecord {
+  at: string;
+  turnId: string | null;
+  personaId: string;
+  personaName: string;
+  source: VoiceTurnSource;
+  transcript: string;
+  response: string;
+  status: "answered" | "cancelled" | "error";
+}
+
+/** 直近のやり取りの記録。enabled の間だけ取得し、新しい記録が届いたら先頭に足す */
+export function useVoiceHistory(ctx: WidgetRuntimeContext, enabled: boolean, limit = 10): VoiceTurnRecord[] {
+  const [records, setRecords] = useState<VoiceTurnRecord[]>([]);
+
+  useEffect(() => {
+    if (!enabled) return;
+    let cancelled = false;
+    fetchJson<{ records: VoiceTurnRecord[] }>(`${ctx.apiBaseUrl}/api/voice/history?limit=${limit}`).then((data) => {
+      if (!cancelled && data) setRecords([...data.records].reverse());
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [ctx.apiBaseUrl, ctx.socket, enabled, limit]);
+
+  useEffect(() => {
+    if (!enabled || !ctx.socket) return;
+    const socket = ctx.socket;
+    const onMessage = (event: MessageEvent) => {
+      try {
+        const message = JSON.parse(event.data);
+        if (message.type === "voice-history") setRecords((prev) => [message.record, ...prev].slice(0, limit));
+      } catch {
+        // ignore malformed messages
+      }
+    };
+    socket.addEventListener("message", onMessage);
+    return () => socket.removeEventListener("message", onMessage);
+  }, [ctx.socket, enabled, limit]);
+
+  return records;
 }
 
 export async function askVoiceAssistant(apiBaseUrl: string, text: string): Promise<void> {

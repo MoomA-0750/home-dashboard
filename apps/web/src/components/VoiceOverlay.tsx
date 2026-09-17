@@ -10,11 +10,11 @@ const RESPONSE_LINGER_MS = 15_000;
 const ERROR_LINGER_MS = 6_000;
 
 const STATUS_LABELS: Record<VoiceState, string> = {
-  idle: "Claude",
+  idle: "",
   listening: "聞いています",
   transcribing: "聞き取っています",
   thinking: "考えています",
-  speaking: "Claude",
+  speaking: "",
   error: "うまくいきませんでした",
 };
 
@@ -40,7 +40,8 @@ function VoiceOrb({ state, badge = false }: { state: VoiceState; badge?: boolean
  */
 export function VoiceOverlay({ snapshot, avatarUrl, socket, onCancel }: VoiceOverlayProps) {
   const [visible, setVisible] = useState(false);
-  const [avatarFailed, setAvatarFailed] = useState(false);
+  // 読み込みに失敗したアバター（キャラクターごとに別なので、URLで覚える）
+  const [failedAvatarUrl, setFailedAvatarUrl] = useState<string | null>(null);
   const wasActiveRef = useRef(false);
   const responseRef = useRef<HTMLParagraphElement>(null);
 
@@ -76,7 +77,13 @@ export function VoiceOverlay({ snapshot, avatarUrl, socket, onCancel }: VoiceOve
 
   const prompt =
     state === "listening" && !snapshot.transcript ? "どうぞ、話しかけてください" : snapshot.transcript;
-  const status = state === "listening" && snapshot.followUp ? "続けてどうぞ" : STATUS_LABELS[state];
+  const personaName = snapshot.personaName ?? "Claude";
+  const status =
+    state === "listening" && snapshot.followUp
+      ? "続けてどうぞ"
+      : state === "idle" || state === "speaking"
+        ? personaName
+        : STATUS_LABELS[state];
 
   return (
     <div className="voice-overlay" data-state={state} onClick={() => !active && setVisible(false)}>
@@ -87,7 +94,7 @@ export function VoiceOverlay({ snapshot, avatarUrl, socket, onCancel }: VoiceOve
         aria-label="音声アシスタント"
         onClick={(event) => event.stopPropagation()}
       >
-        {avatarUrl && !avatarFailed ? (
+        {avatarUrl && avatarUrl !== failedAvatarUrl ? (
           <div className="voice-figure">
             <Suspense fallback={null}>
               <VoiceAvatar
@@ -96,7 +103,7 @@ export function VoiceOverlay({ snapshot, avatarUrl, socket, onCancel }: VoiceOve
                 socket={socket}
                 onError={(err) => {
                   console.error("failed to load avatar", err);
-                  setAvatarFailed(true);
+                  setFailedAvatarUrl(avatarUrl);
                 }}
               />
             </Suspense>

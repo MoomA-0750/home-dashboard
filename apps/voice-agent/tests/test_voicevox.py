@@ -7,7 +7,7 @@ import wave
 import pytest
 
 from voice_agent.config import load_config
-from voice_agent.speech import VoiceVox
+from voice_agent.speech import Voice, VoiceVox
 
 pytestmark = pytest.mark.audio
 
@@ -16,7 +16,8 @@ pytestmark = pytest.mark.audio
 def test_mouth_cues_match_synthesized_audio(speech_pcm, text):
     # speech_pcm は VOICEVOX Engine が無ければスキップさせるために使う
     config = load_config()
-    speech = asyncio.run(VoiceVox(config.voicevox_url, config.voicevox_speaker, config.voicevox_speed).synthesize(text))
+    voice = Voice(config.voicevox_speaker, config.voicevox_speed)
+    speech = asyncio.run(VoiceVox(config.voicevox_url).synthesize(text, voice))
     with wave.open(io.BytesIO(speech.wav)) as w:
         actual = w.getnframes() / w.getframerate()
     # アバターの口が声とずれて見えない程度（実測で20ms前後）に揃っていること

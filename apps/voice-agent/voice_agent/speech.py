@@ -16,6 +16,10 @@ _CLAUSE_END = re.compile(r"[、，,]")
 # かかるので、1文丸ごと待つと声が出るまで何秒も空く
 MIN_CLAUSE_CHARS = 12
 _MARKDOWN = re.compile(r"[*_#`>|]+|^\s*[-・]\s+", re.M)
+# キャラクターの表情・しぐさの描写（「（耳をパタパタさせる）」）。画面には出すが読み上げない
+_STAGE_DIRECTION = re.compile(r"（[^（）]*）|\([^()]*\)")
+_OPEN_PARENS = "（("
+_CLOSE_PARENS = "）)"
 _URL = re.compile(r"https?://\S+")
 
 
@@ -34,12 +38,24 @@ class SentenceSplitter:
         return [s for s in (clean_for_speech(s) for s in sentences) if s]
 
     def _next_break(self) -> int | None:
-        sentence = _SENTENCE_END.search(self._pending)
+        # 描写の（ ）の途中では区切らない（区切ると閉じ括弧の無い断片になり、読み上げから外せなくなる）
+        depth_at = self._paren_depths()
+        sentence = next((m for m in _SENTENCE_END.finditer(self._pending) if depth_at[m.start()] == 0), None)
         limit = sentence.start() if sentence else len(self._pending)
         for clause in _CLAUSE_END.finditer(self._pending, 0, limit):
-            if clause.start() >= MIN_CLAUSE_CHARS:
+            if clause.start() >= MIN_CLAUSE_CHARS and depth_at[clause.start()] == 0:
                 return clause.end()
         return sentence.end() if sentence else None
+
+    def _paren_depths(self) -> list[int]:
+        depths, depth = [], 0
+        for ch in self._pending:
+            if ch in _OPEN_PARENS:
+                depth += 1
+            elif ch in _CLOSE_PARENS:
+                depth = max(0, depth - 1)
+            depths.append(depth)
+        return depths
 
     def flush(self) -> list[str]:
         rest, self._pending = clean_for_speech(self._pending), ""
@@ -49,8 +65,10 @@ class SentenceSplitter:
 def clean_for_speech(text: str) -> str:
     """指示していても混ざることがある記号やURLを、読み上げ前に落とす"""
     text = _URL.sub("", text)
+    text = _STAGE_DIRECTION.sub("", text)
     text = _MARKDOWN.sub("", text)
-    return text.strip()
+    # 描写だけの文（「（ドヤ顔で耳を立てる）」）は、句読点しか残らないので読まない
+    return "" if not re.search(r"[^\s、。！？!?,.，]", text) else text.strip()
 
 
 @dataclass
@@ -82,18 +100,22 @@ def mouth_cues(query: dict) -> tuple[list[tuple[float, str]], float]:
     return cues, round(t / speed, 3)
 
 
-class VoiceVox:
-    def __init__(self, base_url: str, speaker: int, speed: float) -> None:
-        self._client = httpx.AsyncClient(base_url=base_url, timeout=60)
-        self._speaker = speaker
-        self._speed = speed
+@dataclass(frozen=True)
+class Voice:
+    speaker: int
+    speed: float
 
-    async def synthesize(self, text: str) -> Speech:
-        res = await self._client.post("/audio_query", params={"text": text, "speaker": self._speaker})
+
+class VoiceVox:
+    def __init__(self, base_url: str) -> None:
+        self._client = httpx.AsyncClient(base_url=base_url, timeout=60)
+
+    async def synthesize(self, text: str, voice: Voice) -> Speech:
+        res = await self._client.post("/audio_query", params={"text": text, "speaker": voice.speaker})
         res.raise_for_status()
         query = res.json()
-        query["speedScale"] = self._speed
-        res = await self._client.post("/synthesis", params={"speaker": self._speaker}, json=query)
+        query["speedScale"] = voice.speed
+        res = await self._client.post("/synthesis", params={"speaker": voice.speaker}, json=query)
         res.raise_for_status()
         cues, duration = mouth_cues(query)
         return Speech(res.content, cues, duration)
@@ -113,9 +135,12 @@ class SpeechQueue:
     （返答の書き出しから声が出るまでの待ち時間と、文と文の間の途切れを短くするため）。
     """
 
-    def __init__(self, tts: VoiceVox, player: Player, on_play: Callable[[Speech, bool], Awaitable[None]]) -> None:
+    def __init__(
+        self, tts: VoiceVox, voice: Voice, player: Player, on_play: Callable[[Speech, bool], Awaitable[None]]
+    ) -> None:
         """on_play(speech, first) は各文の再生を始める直前に呼ばれる"""
         self._tts = tts
+        self._voice = voice
         self._player = player
         self._on_play = on_play
         self._texts: asyncio.Queue = asyncio.Queue()
@@ -138,7 +163,7 @@ class SpeechQueue:
     async def _synthesize_loop(self) -> None:
         while (text := await self._texts.get()) is not _END:
             try:
-                await self._audio.put(await self._tts.synthesize(text))
+                await self._audio.put(await self._tts.synthesize(text, self._voice))
             except httpx.HTTPError as err:
                 log.error("VOICEVOXでの音声合成に失敗しました: %s", err)
         await self._audio.put(_END)

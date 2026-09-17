@@ -3,7 +3,7 @@
 import pytest
 
 from voice_agent.speech import SentenceSplitter, clean_for_speech, mouth_cues
-from voice_agent.stt import clean_transcript
+from voice_agent.stt import clean_transcript, wake_prefix_pattern
 
 REPLY = "今日の東京は雨模様で、雷を伴うところもあるみたいです。最高気温は24度、最低気温は21度で、10月並みの涼しさになります。傘は忘れずに"
 REPLY_PIECES = [
@@ -32,6 +32,14 @@ def test_split_does_not_depend_on_how_deltas_arrive(size):
     assert split_all(deltas) == REPLY_PIECES
 
 
+@pytest.mark.parametrize("size", [1, 4, 100])
+def test_stage_directions_are_not_split_or_spoken(size):
+    """（ ）の途中の句読点で区切ると閉じ括弧の無い断片になって読み上げてしまうので、括弧の中では区切らない"""
+    reply = "プラムにおまかせだよっ！（ドヤ顔で耳をピンと立てる、しっぽもふりふり。）明日は晴れだから、お出かけ日和だねっ！"
+    deltas = [reply[i : i + size] for i in range(0, len(reply), size)]
+    assert split_all(deltas) == ["プラムにおまかせだよっ！", "明日は晴れだから、", "お出かけ日和だねっ！"]
+
+
 def test_short_clause_is_not_split():
     assert split_all(["はい、そうです。"]) == ["はい、そうです。"]
 
@@ -48,6 +56,10 @@ def test_newlines_between_messages_end_a_sentence():
         ("詳しくは https://example.com を見てね", "詳しくは  を見てね"),
         ("- 一つ目", "一つ目"),
         ("```", ""),
+        # キャラクターの表情・しぐさの描写は画面にだけ出して読み上げない
+        ("プラムにおまかせだよっ！（ドヤ顔で耳をピンと立てる）", "プラムにおまかせだよっ！"),
+        ("（目を丸くして驚く）", ""),
+        ("ええっ(小声)そうなの？", "ええっそうなの？"),
     ],
 )
 def test_clean_for_speech(text, expected):
@@ -76,6 +88,24 @@ def test_clean_for_speech(text, expected):
 )
 def test_clean_transcript(transcript, expected):
     assert clean_transcript(transcript) == expected
+
+
+@pytest.mark.parametrize(
+    ("transcript", "expected"),
+    [
+        ("ネープラム 明日の天気は", "明日の天気は"),
+        ("ねぇ、ぷらむちゃん、電気消して", "電気消して"),
+        ("ねえカリン、エアコンを25度にして", "エアコンを25度にして"),
+        ("ねぇあまなつ、みんなで何の話してたの?", "みんなで何の話してたの?"),
+        ("ねえ甘夏、音楽かけて", "音楽かけて"),
+        ("Necrode今何時?", "今何時?"),
+        # 名前で始まらない命令は残す
+        ("プラモデルの作り方を教えて", "プラモデルの作り方を教えて"),
+    ],
+)
+def test_clean_transcript_with_persona_names(transcript, expected):
+    pattern = wake_prefix_pattern(["プラム", "カリン", "花梨", "あまなつ", "甘夏", "クロード"])
+    assert clean_transcript(transcript, pattern) == expected
 
 
 def test_mouth_cues_follow_phoneme_lengths():

@@ -1,0 +1,23 @@
+{
+  "wakePrefix": "ねえ",
+  "commonDecoys": ["ですね", "あのね", "寝る", "ね"],
+  "world": "voice-personas.example/world.md",
+  "personas": [
+    {
+      "id": "haru",
+      "name": "ハル",
+      "wakeWords": ["ハル"],
+      "decoys": ["春", "張る", "貼る"],
+      "prompt": "voice-personas.example/haru.md",
+      "avatar": "avatars/haru.vrm",
+      "voice": { "speaker": 8, "speed": 1.1 }
+    },
+    {
+      "id": "claude",
+      "name": "クロード",
+      "wakeWords": ["クロード"],
+      "decoys": ["クローゼット", "クローバー", "クロール", "クロス", "黒", "モネ"],
+      "voice": { "speaker": 3, "speed": 1.1 }
+    }
+  ]
+}

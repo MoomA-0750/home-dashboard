@@ -76,10 +76,12 @@ export const config = {
      */
     agentToken: process.env.VOICE_AGENT_TOKEN ?? "",
     /**
-     * 応答パネルに出すVRMアバター。無ければアバターは出さず、状態を表す円だけになる。
+     * キャラクターの設定ファイルが無いときに、応答パネルに出すVRMアバター。無ければ状態を表す円だけになる。
      * 第三者のモデルを置く想定なのでリポジトリには含めない（config/*.vrm は .gitignore 済み）。
      * config/ は Docker 運用でもホスト側をマウントしているので、イメージを作り直さずに差し替えられる
      */
     avatarPath: process.env.VOICE_AVATAR_PATH ?? join(configDir, "avatar.vrm"),
+    /** ウェイクワードごとに呼び分けるキャラクターの設定（形式は config/voice-personas.example.json） */
+    personasPath: process.env.VOICE_PERSONAS_PATH ?? join(configDir, "voice-personas.json"),
   },
 };

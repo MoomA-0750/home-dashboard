@@ -988,6 +988,81 @@ button.widget-card {
   cursor: default;
 }
 
+.settings-panel__voice-persona {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 0 0 0.75rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.settings-panel__voice-persona select {
+  padding: 0.6rem 0.9rem;
+  border-radius: var(--inner-radius);
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 0.95rem;
+}
+
+.settings-panel__voice-persona option {
+  background: #0a1730;
+}
+
+.settings-panel__voice-history-title {
+  margin: 1.25rem 0 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.settings-panel__voice-history {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.voice-history-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.6rem 0.8rem;
+  border-radius: calc(var(--inner-radius) - 4px);
+  background: var(--glass-bg);
+  font-size: 0.8rem;
+}
+
+.voice-history-item__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  color: var(--text-secondary);
+}
+
+.voice-history-item__head strong {
+  color: var(--text-primary);
+}
+
+.voice-history-item__transcript,
+.voice-history-item__response {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-height: 1.5;
+  text-box-trim: none;
+}
+
+.voice-history-item__transcript {
+  color: var(--text-secondary);
+}
+
 .settings-panel__voice-option {
   display: flex;
   align-items: center;

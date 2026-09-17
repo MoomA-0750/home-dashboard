@@ -25,15 +25,56 @@ const MOUTH_EXPRESSIONS = Object.values(VOWEL_EXPRESSIONS);
 const PLAYBACK_LATENCY_S = 0.08;
 const BLINK_DURATION_S = 0.16;
 
-let modelPromise: Promise<VRM> | null = null;
+const models = new Map<string, Promise<VRM>>();
 
-/** モデルは数十MBあるので、一度読んだものを使い回す（パネルを閉じても捨てない） */
+const GLB_MAGIC = 0x46546c67;
+const JSON_CHUNK = 0x4e4f534a;
+
+/**
+ * GLB の JSON チャンクにある NaN / Infinity を 0 に置き換える。
+ * 書き出しツールによっては揺れもののコライダーの半径などに NaN を書くことがあり（JSONとして不正）、
+ * そのままだと GLTFLoader が読めない（あまなつのモデルで実際に起きた）。
+ */
+function sanitizeGlb(buffer: ArrayBuffer): ArrayBuffer {
+  const view = new DataView(buffer);
+  if (view.getUint32(0, true) !== GLB_MAGIC || view.getUint32(16, true) !== JSON_CHUNK) return buffer;
+  const jsonLength = view.getUint32(12, true);
+  const json = new TextDecoder().decode(new Uint8Array(buffer, 20, jsonLength));
+  const fixed = json.replace(/(?<=[:,[]\s*)-?(?:NaN|Infinity)(?=\s*[,}\]])/g, "0");
+  if (fixed === json) return buffer;
+
+  let encoded = new TextEncoder().encode(fixed);
+  const padded = Math.ceil(encoded.length / 4) * 4;
+  if (padded !== encoded.length) {
+    const withSpaces = new Uint8Array(padded).fill(0x20);
+    withSpaces.set(encoded);
+    encoded = withSpaces;
+  }
+  const rest = new Uint8Array(buffer, 20 + jsonLength);
+  const output = new Uint8Array(20 + encoded.length + rest.length);
+  const out = new DataView(output.buffer);
+  out.setUint32(0, GLB_MAGIC, true);
+  out.setUint32(4, view.getUint32(4, true), true);
+  out.setUint32(8, output.length, true);
+  out.setUint32(12, encoded.length, true);
+  out.setUint32(16, JSON_CHUNK, true);
+  output.set(encoded, 20);
+  output.set(rest, 20 + encoded.length);
+  return output.buffer;
+}
+
+/** モデルは数十MBあるので、一度読んだものをキャラクター（URL）ごとに使い回す（パネルを閉じても捨てない） */
 export function loadAvatar(url: string): Promise<VRM> {
-  if (!modelPromise) {
+  let model = models.get(url);
+  if (!model) {
     const loader = new GLTFLoader();
     loader.register((parser) => new VRMLoaderPlugin(parser));
-    modelPromise = loader
-      .loadAsync(url)
+    model = fetch(url)
+      .then((res) => {
+        if (!res.ok) throw new Error(`avatar fetch error: ${res.status}`);
+        return res.arrayBuffer();
+      })
+      .then((buffer) => loader.parseAsync(sanitizeGlb(buffer), ""))
       .then((gltf) => {
         const vrm = gltf.userData.vrm as VRM;
         VRMUtils.removeUnnecessaryVertices(gltf.scene);
@@ -46,11 +87,12 @@ export function loadAvatar(url: string): Promise<VRM> {
         return vrm;
       })
       .catch((err) => {
-        modelPromise = null;
+        models.delete(url);
         throw err;
       });
+    models.set(url, model);
   }
-  return modelPromise;
+  return model;
 }
 
 interface VoiceAvatarProps {
@@ -200,8 +242,10 @@ export default function VoiceAvatar({ modelUrl, state, socket, onError }: VoiceA
         const humanoid = vrm.humanoid;
         const leftUpperArm = humanoid.getNormalizedBoneNode("leftUpperArm");
         const rightUpperArm = humanoid.getNormalizedBoneNode("rightUpperArm");
-        if (leftUpperArm) leftUpperArm.rotation.z = 1.25;
-        if (rightUpperArm) rightUpperArm.rotation.z = -1.25;
+        // VRM 0.x（rotateVRM0 で向きを揃えたもの）と 1.0 とで、腕を下ろす回転の向きが逆になる
+        const armDown = vrm.meta.metaVersion === "0" ? 1.25 : -1.25;
+        if (leftUpperArm) leftUpperArm.rotation.z = armDown;
+        if (rightUpperArm) rightUpperArm.rotation.z = -armDown;
         vrm.update(0);
 
         // 頭の上（耳・髪を含めて首の付け根から約0.3m）から胸元までが収まるように、頭の位置からカメラを決める

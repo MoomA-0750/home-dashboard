@@ -20,10 +20,13 @@ import { VoiceOverlay } from "./components/VoiceOverlay";
 import {
   askVoiceAssistant,
   cancelVoiceAssistant,
+  avatarUrlFor,
   listenVoiceAssistant,
+  setDefaultPersona,
   useAvatarEnabled,
-  useAvatarUrl,
   useVoiceAssistant,
+  useVoiceHistory,
+  useVoicePersonas,
 } from "./lib/useVoiceAssistant";
 
 /**
@@ -50,23 +53,28 @@ function readStoredSidebarWidth(): number {
 export function App() {
   const ctx = useRuntimeContext();
   const voice = useVoiceAssistant(ctx);
+  const personas = useVoicePersonas(ctx);
   const [avatarEnabled, setAvatarEnabled] = useAvatarEnabled();
-  const serverAvatarUrl = useAvatarUrl(ctx.apiBaseUrl);
-  const avatarUrl = avatarEnabled ? serverAvatarUrl : null;
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const voiceHistory = useVoiceHistory(ctx, settingsOpen);
+  const avatarUrl = (personaId: string | null) =>
+    avatarEnabled ? avatarUrlFor(ctx.apiBaseUrl, personas, personaId) : null;
+  const defaultAvatarUrl = avatarUrl(personas?.defaultPersonaId ?? null);
 
-  // アバターは数十MBあるので、最初に話しかけられる前に読み込んでおく（起動直後の描画の邪魔をしないよう少し待つ）
+  // アバターは数十MBあるので、既定のキャラクターの分だけ、最初に話しかけられる前に読み込んでおく
+  // （ほかのキャラクターは呼ばれたときに読む。起動直後の描画の邪魔をしないよう少し待つ）
   useEffect(() => {
-    if (!avatarUrl) return;
+    if (!defaultAvatarUrl) return;
     const timer = setTimeout(() => {
       import("./components/VoiceAvatar")
-        .then((module) => module.loadAvatar(avatarUrl))
+        .then((module) => module.loadAvatar(defaultAvatarUrl))
         .catch((err) => console.error("failed to preload avatar", err));
     }, 3000);
     return () => clearTimeout(timer);
-  }, [avatarUrl]);
+  }, [defaultAvatarUrl]);
+
   const [instances, setInstances] = useState<WidgetInstance[] | null>(null);
   const [editMode, setEditMode] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(readStoredSidebarWidth);
   const loadedRef = useRef(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout>>();
@@ -169,16 +177,19 @@ export function App() {
           onAdd={handleAdd}
           voice={voice}
           onAskVoice={(text) => askVoiceAssistant(ctx.apiBaseUrl, text)}
-          avatarAvailable={serverAvatarUrl !== null}
+          personas={personas}
+          onSelectDefaultPersona={(personaId) => setDefaultPersona(ctx.apiBaseUrl, personaId)}
+          history={voiceHistory}
+          avatarAvailable={Boolean(personas?.personas.some((persona) => persona.hasAvatar))}
           avatarEnabled={avatarEnabled}
           onToggleAvatar={() => setAvatarEnabled(!avatarEnabled)}
           onClose={() => setSettingsOpen(false)}
         />
       )}
-      <VoiceLauncher snapshot={voice} onListen={() => listenVoiceAssistant(ctx.apiBaseUrl)} />
+      <VoiceLauncher snapshot={voice} personas={personas} onListen={() => listenVoiceAssistant(ctx.apiBaseUrl)} />
       <VoiceOverlay
         snapshot={voice}
-        avatarUrl={avatarUrl}
+        avatarUrl={avatarUrl(voice?.personaId ?? null)}
         socket={ctx.socket}
         onCancel={() => cancelVoiceAssistant(ctx.apiBaseUrl)}
       />

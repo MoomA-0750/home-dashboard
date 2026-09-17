@@ -6,14 +6,17 @@ import logging
 import shutil
 import time
 import uuid
+from datetime import datetime
 
+import httpx
 from vosk import Model
 
 from .audio import CHIME_DURATION_S, MISS_CHIME, WAKE_CHIME, MicrophoneError, Player, microphone
 from .claude import ClaudeConversation, ClaudeError
 from .config import Config, load_config
+from .personas import Persona, load_personas
 from .relay import Relay
-from .speech import SentenceSplitter, Speech, SpeechQueue, VoiceVox
+from .speech import SentenceSplitter, Speech, SpeechQueue, Voice, VoiceVox
 from .stt import Transcriber
 from .vad import VoiceActivity
 from .wake import SpeechRecognizer, Utterance, Word
@@ -37,13 +40,18 @@ class Assistant:
     """
     マイク → ウェイクワード検出（Vosk）→ 命令の録音 → 書き起こし（whisper）→ Claude Code → 読み上げ（VOICEVOX）
     を回す本体。画面に出す状態（state/transcript/response/error）はここが持ち、変わるたびにサーバーへ送る。
+
+    ウェイクワードごとにキャラクター（personas.py）を呼び分ける。呼ばれたキャラクターの声で読み上げ、
+    やり取りのたびに「誰が・どこから聞かれて・何に答えたか」をサーバーに送って記録してもらう。
     """
 
     def __init__(self, config: Config) -> None:
         self.config = config
+        self.personas = load_personas(config)
         self.player = Player(config.output_cmd)
-        self.claude = ClaudeConversation(config)
-        self.tts = VoiceVox(config.voicevox_url, config.voicevox_speaker, config.voicevox_speed)
+        self.http = httpx.AsyncClient(base_url=config.server_url, timeout=10)
+        self.claude = ClaudeConversation(config, self.personas, self._fetch_history)
+        self.tts = VoiceVox(config.voicevox_url)
         self.relay = Relay(config.server_url, config.agent_token, self.snapshot, self.handle_command)
 
         self.state = "idle"
@@ -53,6 +61,9 @@ class Assistant:
         self.error: str | None = None
         # ウェイクワード無しで続けて話せる時間帯か（返答の直後）
         self.follow_up = False
+        # いま応答しているキャラクターと、どこから話しかけられたか（wake / follow-up / button / text）
+        self.persona: Persona = self.personas.personas[0]
+        self.source = "wake"
 
         self.mode = Mode.IDLE
         self.turn_task: asyncio.Task | None = None
@@ -63,7 +74,6 @@ class Assistant:
         # 次の音声チャンクを処理する前に聞き取りを始める（画面のマイクボタン・返答後の続けて話す）
         self._listen_request: dict | None = None
         self._listen_timeout = 0.0
-        self._voice_turn = False
         self._chime_until = 0.0
         # ウェイクワードを言い始めた/言い終えた時刻、命令の声が聞こえ始めたか、最後に声が聞こえた時刻（いずれも認識器の時刻）
         self._wake_start = 0.0
@@ -79,7 +89,8 @@ class Assistant:
             "response": self.response,
             "error": self.error,
             "followUp": self.follow_up,
-            "wakePhrase": "".join(self.config.wake_phrase),
+            "personaId": self.persona.id,
+            "personaName": self.persona.name,
         }
 
     async def update(self, **fields) -> None:
@@ -100,15 +111,18 @@ class Assistant:
 
         log.info("モデルを読み込んでいます（Vosk: %s / whisper: %s）", c.vosk_model_dir.name, c.whisper_model)
         model = await loop.run_in_executor(None, Model, str(c.vosk_model_dir))
-        self.recognizer = SpeechRecognizer(model, c.wake_phrase, c.wake_decoys)
-        self.transcriber = await loop.run_in_executor(None, Transcriber, c.whisper_model, c.whisper_compute_type)
+        self.recognizer = SpeechRecognizer(model, self.personas)
+        self.transcriber = await loop.run_in_executor(
+            None, Transcriber, c.whisper_model, c.whisper_compute_type, self.personas.names
+        )
         try:
             log.info("VOICEVOX Engine %s", await self.tts.check())
         except Exception as err:  # 起動順の都合で後から立ち上がることもあるので、ここでは止めない
             log.warning("VOICEVOX Engine に接続できません（%s）: %s", c.voicevox_url, err)
 
         await self.claude.start()
-        log.info("「%s」で待機します", "".join(c.wake_phrase))
+        wake_phrases = ["".join(phrase) for p in self.personas.personas for phrase in p.wake_phrases]
+        log.info("%s で待機します", "・".join(f"「{w}」" for w in wake_phrases))
         await asyncio.gather(self.relay.run(), self._listen_loop())
 
     async def _listen_loop(self) -> None:
@@ -125,7 +139,14 @@ class Assistant:
                     if (request := self._listen_request) is not None and self.mode is not Mode.BUSY:
                         self._listen_request = None
                         now = self.recognizer.now
-                        await self._begin_listening(now, now, [], **request)
+                        await self._begin_listening(
+                            now,
+                            now,
+                            [],
+                            persona=self.personas.get(request.get("persona_id")),
+                            source=request.get("source", "button"),
+                            follow_up=request.get("follow_up", False),
+                        )
                     if self.mode is Mode.BUSY:
                         continue
                     utterance, voice = await loop.run_in_executor(None, self._process_chunk, chunk)
@@ -148,19 +169,27 @@ class Assistant:
     async def _on_idle_audio(self, utterance: Utterance | None) -> None:
         if utterance is None:
             return
-        wake_index = self.recognizer.find_wake(utterance)
-        if wake_index is None:
+        hit = self.recognizer.find_wake(utterance)
+        if hit is None:
             return
-        log.info("ウェイクワードを検出しました: %s", " ".join(w.word for w in utterance.words))
-        words = utterance.words
-        wake_start = words[wake_index - len(self.config.wake_phrase) + 1].start
-        # 「ねえクロード、電気消して」と続けて言われた場合は、ウェイクワードの後ろがもう命令になっている
-        await self._begin_listening(wake_start, words[wake_index].end, words[wake_index + 1 :])
+        persona = self.personas.get(hit.persona_id)
+        log.info("%sのウェイクワードを検出しました: %s", persona.name, " ".join(w.word for w in utterance.words))
+        # 「ねえプラム、電気消して」と続けて言われた場合は、ウェイクワードの後ろがもう命令になっている
+        await self._begin_listening(hit.start, hit.end, hit.rest, persona=persona, source="wake")
 
     async def _begin_listening(
-        self, wake_start: float, start: float, words: list[Word], *, follow_up: bool = False
+        self,
+        wake_start: float,
+        start: float,
+        words: list[Word],
+        *,
+        persona: Persona,
+        source: str,
+        follow_up: bool = False,
     ) -> None:
         c = self.config
+        self.persona = persona
+        self.source = source
         self.mode = Mode.LISTENING
         self._wake_start = wake_start
         self._listen_start = start
@@ -209,9 +238,30 @@ class Assistant:
 
     def _start_turn(self, *, audio: bytes | None = None, text: str | None = None) -> None:
         self.mode = Mode.BUSY
-        self.turn_task = asyncio.create_task(self._run_turn(audio, text, follow_up=self.follow_up))
+        self.turn_task = asyncio.create_task(self._run_turn(audio, text, persona=self.persona, follow_up=self.follow_up))
 
-    async def _run_turn(self, audio: bytes | None, text: str | None, *, follow_up: bool) -> None:
+    async def _fetch_history(self) -> list[dict]:
+        res = await self.http.get("/api/voice/history", params={"limit": self.config.history_turns})
+        res.raise_for_status()
+        return res.json()["records"]
+
+    async def _record_turn(self, persona: Persona, status: str) -> None:
+        """誰が・どこから聞かれて・何に答えたかを、サーバーに記録してもらう"""
+        await self.relay.send(
+            {
+                "type": "turn",
+                "at": datetime.now().astimezone().isoformat(timespec="seconds"),
+                "turnId": self.turn_id,
+                "personaId": persona.id,
+                "personaName": persona.name,
+                "source": self.source,
+                "transcript": self.transcript,
+                "response": self.response.strip(),
+                "status": status,
+            }
+        )
+
+    async def _run_turn(self, audio: bytes | None, text: str | None, *, persona: Persona, follow_up: bool) -> None:
         loop = asyncio.get_running_loop()
         speech: SpeechQueue | None = None
         listen_again = False
@@ -248,13 +298,13 @@ class Assistant:
                     }
                 )
 
-            speech = SpeechQueue(self.tts, self.player, on_play)
+            speech = SpeechQueue(self.tts, Voice(persona.speaker, persona.speed), self.player, on_play)
             splitter = SentenceSplitter()
             assert text is not None
             asked_at = time.monotonic()
             first_delta_s: float | None = None
             # 中止されたときに Claude 側の後始末（読みかけの応答を捨てる）が確実に走るよう、明示的に閉じる
-            async with contextlib.aclosing(self.claude.ask(text)) as stream:
+            async with contextlib.aclosing(self.claude.ask(text, persona)) as stream:
                 async for delta in stream:
                     if first_delta_s is None and delta.strip():
                         first_delta_s = time.monotonic() - asked_at
@@ -272,6 +322,7 @@ class Assistant:
             )
             await speech.finish()
             self.response = self.response.strip()
+            await self._record_turn(persona, "answered")
             # 声で話しかけられたときだけ、ウェイクワード無しで続けて話せるようにする
             # （画面から文字で聞いた人が、続けて声で話すことはまず無い）
             if audio is not None and self.config.follow_up_s > 0:
@@ -279,27 +330,33 @@ class Assistant:
             else:
                 await self.update(state="idle")
         except asyncio.CancelledError:
+            if self.state in ("thinking", "speaking"):
+                await self._record_turn(persona, "cancelled")
             await self.update(state="idle")
             raise
         except ClaudeError as err:
             log.error("%s", err)
             await self.update(state="error", error=str(err))
+            await self._record_turn(persona, "error")
         except Exception as err:
             log.exception("応答中にエラーが発生しました")
             await self.update(state="error", error=f"応答中にエラーが発生しました: {err}")
+            await self._record_turn(persona, "error")
         finally:
             if speech:
                 speech.cancel()
             self.mode = Mode.IDLE
             self._reset_requested = True
             if listen_again:
-                self._listen_request = {"follow_up": True}
+                self._listen_request = {"follow_up": True, "persona_id": persona.id, "source": "follow-up"}
 
     async def handle_command(self, message: dict) -> None:
         """画面側からの操作（サーバー経由）"""
         kind = message.get("type")
         if kind == "ask" and isinstance(message.get("text"), str) and message["text"].strip():
             await self._cancel_turn()
+            self.persona = self.personas.get(message.get("personaId"))
+            self.source = "text"
             self._start_turn(text=message["text"].strip())
         elif kind == "cancel":
             await self._cancel_turn()
@@ -307,7 +364,7 @@ class Assistant:
         elif kind == "listen":
             # 画面のマイクボタン。ウェイクワード無しで聞き始める（読み上げ中なら止めて聞く）
             await self._cancel_turn()
-            self._listen_request = {}
+            self._listen_request = {"persona_id": message.get("personaId"), "source": "button"}
 
     async def _cancel_turn(self) -> None:
         self._listen_request = None

@@ -3,10 +3,11 @@ import contextlib
 import json
 import logging
 import time
-from collections.abc import AsyncIterator
-from datetime import datetime
+from collections.abc import AsyncIterator, Awaitable, Callable
+from datetime import datetime, timedelta
 
 from .config import Config
+from .personas import Persona, Personas
 
 log = logging.getLogger(__name__)
 
@@ -32,7 +33,63 @@ DASHBOARD_PROMPT = """
 - ツールが失敗したら、返ってきた理由を短く伝える
 """
 
+CHARACTERS_PROMPT = """
+# キャラクター
+この家の音声アシスタントは、次のキャラクターたちが声を担当している。
+
+- 話しかけてくるのは、この家に住むユーザー（人間）。メッセージの先頭の [話しかけられた相手: 名前] は、
+  ユーザーが呼んだキャラクター（あなたが演じる相手）で、話しかけた人ではない
+- そのキャラクターとして、その一人称・口調で答える。ほかのキャラクターの台詞を代わりに書いたり、一人で何人も演じたりしない
+- 会話の記録はキャラクター全員で共有している。前に別のキャラクターが答えたことも踏まえて、
+  そのキャラクターがユーザーに話していたこととして自然に扱う（例: 「さっきカリンちゃんが教えてたやつだね」）
+- （ ）の表情やしぐさの描写は画面にだけ表示され、読み上げられない。使うなら1回の返事に1つまで、短く書く
+- キャラクターを演じていても、天気・家電・音楽などの頼まれごとはツールを使ってきちんとこなし、
+  上の読み上げのルール（短く話す、Markdownを使わない など）も守る
+"""
+
 WEEKDAYS = "月火水木金土日"
+SOURCE_LABELS = {"wake": "声で", "follow-up": "続けて声で", "button": "ボタンから声で", "text": "文字で"}
+
+HistoryProvider = Callable[[], Awaitable[list[dict]]]
+
+
+def build_system_prompt(personas: Personas, dashboard: bool) -> str:
+    prompt = SYSTEM_PROMPT + (DASHBOARD_PROMPT if dashboard else "")
+    if not personas.has_characters:
+        return prompt
+    sections = [CHARACTERS_PROMPT]
+    if personas.world:
+        sections.append(f"## キャラクターたちの共通の設定\n{personas.world}")
+    for persona in personas.personas:
+        body = persona.prompt or "特別なキャラクター設定は無い。落ち着いた素のアシスタントとして答える。"
+        sections.append(f"## {persona.name}\n{body}")
+    return prompt + "\n\n".join(sections)
+
+
+def format_history(records: list[dict], now: datetime, hours: float, limit: int) -> str:
+    """共有しているやり取りの記録を、新しい会話の最初に渡す文にする"""
+    since = now - timedelta(hours=hours)
+    lines = []
+    for record in records[-limit:]:
+        try:
+            at = datetime.fromisoformat(record["at"]).astimezone().replace(tzinfo=None)
+        except (KeyError, ValueError):
+            continue
+        if at < since or not record.get("response"):
+            continue
+        source = SOURCE_LABELS.get(record.get("source", ""), "")
+        response = record["response"].replace("\n", " ")
+        if len(response) > 160:
+            response = response[:160] + "…"
+        name = record.get("personaName", "?")
+        # 「プラムに「…」 → プラム「…」」のような書き方だと、キャラクターが質問したと読み違えた。主語をはっきり書く
+        lines.append(
+            f"- {at:%m/%d %H:%M} ユーザーが{name}に{source}「{record.get('transcript', '')}」と話しかけ、"
+            f"{name}が「{response}」と答えた"
+        )
+    if not lines:
+        return ""
+    return "[これまでのやり取りの記録（前の会話から引き継ぐ。誰が答えたかも含む）]\n" + "\n".join(lines)
 
 
 class ClaudeError(RuntimeError):
@@ -50,10 +107,16 @@ class ClaudeConversation:
     部屋にいる人（やテレビの音）なら誰でも話しかけられるので、Claude Code の権限は絞って起動する:
     --restricted でユーザー/プロジェクト設定（許可ルールやhooks）を読まず、--strict-mcp-config で
     ダッシュボードのMCPサーバー以外を読み込まず、使えるツールを明示したものだけにする。
+
+    キャラクターが複数いても会話は1本にして、記憶を全員で共有する。全員の設定をシステムプロンプトに入れておき、
+    質問ごとに「話しかけられた相手」を添えてそのキャラクターとして答えさせる（誰が答えたかが会話に残る）。
+    新しい会話を始めるときは、history から直近のやり取りの記録をもらって最初の質問に添える。
     """
 
-    def __init__(self, config: Config) -> None:
+    def __init__(self, config: Config, personas: Personas, history: HistoryProvider | None = None) -> None:
         self._config = config
+        self._personas = personas
+        self._history = history
         self._proc: asyncio.subprocess.Process | None = None
         self._stderr_tail = b""
         self._session_id: str | None = None
@@ -70,7 +133,6 @@ class ClaudeConversation:
     def _args(self, resume: str | None) -> list[str]:
         c = self._config
         allowed = [t for t in c.claude_tools.split(",") if t]
-        system_prompt = SYSTEM_PROMPT
         args = [
             c.claude_bin,
             "-p",
@@ -91,7 +153,7 @@ class ClaudeConversation:
             # ファイルではなく文字列で渡す（トークンをディスクに書かないため）
             args += ["--mcp-config", json.dumps({"mcpServers": {"dashboard": server}})]
             allowed.append("mcp__dashboard")
-            system_prompt += DASHBOARD_PROMPT
+        system_prompt = build_system_prompt(self._personas, c.dashboard_mcp)
         # --tools は「使える」ようにするだけで、-p では許可を求める場面で拒否になる。同じものを事前に許可しておく
         args += ["--allowedTools", ",".join(allowed), "--append-system-prompt", system_prompt]
         if c.claude_model:
@@ -145,18 +207,30 @@ class ClaudeConversation:
 
         self._expire_task = asyncio.create_task(expire())
 
-    async def ask(self, text: str) -> AsyncIterator[str]:
+    async def ask(self, text: str, persona: Persona) -> AsyncIterator[str]:
         """返答のテキストを差分で返す。ツール呼び出しを挟んで複数メッセージに分かれた場合は間に改行を入れる"""
-        async with self._lock, contextlib.aclosing(self._ask(text)) as stream:
+        async with self._lock, contextlib.aclosing(self._ask(text, persona)) as stream:
             async for delta in stream:
                 yield delta
 
-    async def _ask(self, text: str) -> AsyncIterator[str]:
+    async def _ask(self, text: str, persona: Persona) -> AsyncIterator[str]:
         proc = await self._ensure_process()
         assert proc.stdin is not None and proc.stdout is not None
 
         now = datetime.now()
-        content = f"[現在日時: {now:%Y-%m-%d %H:%M}（{WEEKDAYS[now.weekday()]}）]\n{text}"
+        lines = [f"[現在日時: {now:%Y-%m-%d %H:%M}（{WEEKDAYS[now.weekday()]}）]"]
+        if self._session_id is None and self._history:
+            try:
+                records = await self._history()
+            except Exception as err:  # 記録が取れなくても質問には答える
+                log.warning("やり取りの記録を取得できませんでした: %s", err)
+                records = []
+            if block := format_history(records, now, self._config.history_hours, self._config.history_turns):
+                lines.append(block)
+        if self._personas.has_characters:
+            lines.append(f"[話しかけられた相手: {persona.name}]")
+        lines.append(text)
+        content = "\n".join(lines)
         message = {"type": "user", "message": {"role": "user", "content": content}}
         completed = False
         try:

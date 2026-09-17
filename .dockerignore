@@ -9,3 +9,7 @@ config/homelab-hosts.json
 apps/voice-agent
 # VRMアバターはイメージに焼き込まず、実行時にマウントした config/ から読む（再配布禁止のモデルを含めないため）
 config/*.vrm
+config/avatars
+# キャラクター設定も実行時にマウントした config/ から読む
+config/voice-personas.json
+config/voice-personas

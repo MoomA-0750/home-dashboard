@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import type { WidgetRegistry } from "@home-dashboard/widget-sdk";
-import type { VoiceSnapshot } from "../lib/useVoiceAssistant";
+import type { VoicePersonas, VoiceSnapshot, VoiceTurnRecord, VoiceTurnSource } from "../lib/useVoiceAssistant";
 import { Icon } from "./Icon";
 
 interface SettingsPanelProps {
@@ -12,6 +12,9 @@ interface SettingsPanelProps {
   onAdd: (widgetId: string) => void;
   voice: VoiceSnapshot | null;
   onAskVoice: (text: string) => Promise<void>;
+  personas: VoicePersonas | null;
+  onSelectDefaultPersona: (personaId: string) => Promise<void>;
+  history: VoiceTurnRecord[];
   /** サーバーにVRMアバターが置かれているか（置かれていなければ切り替えを出さない） */
   avatarAvailable: boolean;
   avatarEnabled: boolean;
@@ -31,6 +34,9 @@ export function SettingsPanel({
   onAdd,
   voice,
   onAskVoice,
+  personas,
+  onSelectDefaultPersona,
+  history,
   avatarAvailable,
   avatarEnabled,
   onToggleAvatar,
@@ -60,6 +66,9 @@ export function SettingsPanel({
       <VoiceSection
         voice={voice}
         onAsk={onAskVoice}
+        personas={personas}
+        onSelectDefaultPersona={onSelectDefaultPersona}
+        history={history}
         avatarAvailable={avatarAvailable}
         avatarEnabled={avatarEnabled}
         onToggleAvatar={onToggleAvatar}
@@ -83,17 +92,43 @@ export function SettingsPanel({
 interface VoiceSectionProps {
   voice: VoiceSnapshot | null;
   onAsk: (text: string) => Promise<void>;
+  personas: VoicePersonas | null;
+  onSelectDefaultPersona: (personaId: string) => Promise<void>;
+  history: VoiceTurnRecord[];
   avatarAvailable: boolean;
   avatarEnabled: boolean;
   onToggleAvatar: () => void;
 }
 
 /** 音声アシスタントの接続状況と、声の代わりにテキストで話しかける入力欄（マイクの無い端末・動作確認用） */
-function VoiceSection({ voice, onAsk, avatarAvailable, avatarEnabled, onToggleAvatar }: VoiceSectionProps) {
+const SOURCE_LABELS: Record<VoiceTurnSource, string> = {
+  wake: "声",
+  "follow-up": "続けて",
+  button: "ボタン",
+  text: "文字",
+};
+
+function formatTime(iso: string): string {
+  const date = new Date(iso);
+  return `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:${String(date.getMinutes()).padStart(2, "0")}`;
+}
+
+function VoiceSection({
+  voice,
+  onAsk,
+  personas,
+  onSelectDefaultPersona,
+  history,
+  avatarAvailable,
+  avatarEnabled,
+  onToggleAvatar,
+}: VoiceSectionProps) {
   const [text, setText] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const connected = Boolean(voice?.connected);
+  const defaultPersona = personas?.personas.find((persona) => persona.id === personas.defaultPersonaId);
+  const wakePhrases = personas?.personas.map((persona) => persona.wakePhrase) ?? [];
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -116,15 +151,34 @@ function VoiceSection({ voice, onAsk, avatarAvailable, avatarEnabled, onToggleAv
       <p className="settings-panel__voice-status">
         <span className={`status-dot${connected ? " status-dot--ok" : ""}`} aria-hidden="true" />
         {connected
-          ? `待機中（「${voice?.wakePhrase ?? "ウェイクワード"}」で呼び出せます）`
+          ? `待機中（${wakePhrases.map((phrase) => `「${phrase}」`).join("")}で呼び出せます）`
           : "音声エージェントが起動していません"}
       </p>
+      {personas && personas.personas.length > 1 && (
+        <label className="settings-panel__voice-persona">
+          <span>ボタン・文字入力で応答するキャラクター</span>
+          <select
+            value={personas.defaultPersonaId}
+            onChange={(event) => {
+              onSelectDefaultPersona(event.target.value).catch((err) =>
+                setError(err instanceof Error ? err.message : String(err)),
+              );
+            }}
+          >
+            {personas.personas.map((persona) => (
+              <option key={persona.id} value={persona.id}>
+                {persona.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       <form className="settings-panel__voice-form" onSubmit={handleSubmit}>
         <input
           type="text"
           value={text}
           onChange={(event) => setText(event.target.value)}
-          placeholder="テキストで話しかける"
+          placeholder={defaultPersona ? `${defaultPersona.name}に文字で話しかける` : "テキストで話しかける"}
           aria-label="音声アシスタントへのメッセージ"
           disabled={!connected}
         />
@@ -138,6 +192,27 @@ function VoiceSection({ voice, onAsk, avatarAvailable, avatarEnabled, onToggleAv
           <input type="checkbox" checked={avatarEnabled} onChange={onToggleAvatar} />
           <span>この端末でアバターを表示（重い端末では切る）</span>
         </label>
+      )}
+      {history.length > 0 && (
+        <>
+          <h4 className="settings-panel__voice-history-title">最近のやり取り</h4>
+          <ol className="settings-panel__voice-history">
+            {history.map((record, index) => (
+              <li key={`${record.at}-${index}`} className="voice-history-item">
+                <div className="voice-history-item__head">
+                  <strong>{record.personaName}</strong>
+                  <span>
+                    {SOURCE_LABELS[record.source] ?? record.source}・{formatTime(record.at)}
+                    {record.status === "cancelled" && "・中止"}
+                    {record.status === "error" && "・エラー"}
+                  </span>
+                </div>
+                <p className="voice-history-item__transcript">{record.transcript}</p>
+                {record.response && <p className="voice-history-item__response">{record.response}</p>}
+              </li>
+            ))}
+          </ol>
+        </>
       )}
     </section>
   );

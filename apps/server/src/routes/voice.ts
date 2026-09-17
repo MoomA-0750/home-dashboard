@@ -3,7 +3,8 @@ import { stat } from "node:fs/promises";
 import type { FastifyInstance } from "fastify";
 import type { WebSocket } from "ws";
 import { agentTokenMatches } from "../agentToken.js";
-import { config } from "../config.js";
+import { appendTurn, readRecentTurns } from "../voiceHistory.js";
+import { readDefaultPersonaId, readPersonas, writeDefaultPersonaId } from "../voicePersonas.js";
 import { broadcast } from "../ws.js";
 
 /**
@@ -25,7 +26,9 @@ interface VoiceSnapshot {
   error: string | null;
   /** 返答の直後で、ウェイクワード無しで続けて話せる間 */
   followUp: boolean;
-  wakePhrase: string | null;
+  /** いま応答しているキャラクター */
+  personaId: string | null;
+  personaName: string | null;
 }
 
 const idleSnapshot = (): VoiceSnapshot => ({
@@ -36,7 +39,8 @@ const idleSnapshot = (): VoiceSnapshot => ({
   response: "",
   error: null,
   followUp: false,
-  wakePhrase: null,
+  personaId: null,
+  personaName: null,
 });
 
 let snapshot = idleSnapshot();
@@ -73,6 +77,13 @@ export async function registerVoiceRoutes(app: FastifyInstance): Promise<void> {
           broadcast({ type: "voice-lipsync", turnId: message.turnId ?? null, cues: message.cues, durationS: message.durationS });
           return;
         }
+        if (message.type === "turn") {
+          // 誰がどこから話しかけられて何に答えたか。キャラクター同士で共有する会話の記憶として残す
+          appendTurn(message)
+            .then((record) => record && broadcast({ type: "voice-history", record }))
+            .catch((err) => app.log.error(err, "failed to record voice turn"));
+          return;
+        }
         if (message.type !== "state") return;
         publish({
           connected: true,
@@ -82,7 +93,8 @@ export async function registerVoiceRoutes(app: FastifyInstance): Promise<void> {
           response: message.response ?? "",
           error: message.error ?? null,
           followUp: Boolean(message.followUp),
-          wakePhrase: message.wakePhrase ?? null,
+          personaId: message.personaId ?? null,
+          personaName: message.personaName ?? null,
         });
       } catch {
         // ignore malformed messages
@@ -99,32 +111,65 @@ export async function registerVoiceRoutes(app: FastifyInstance): Promise<void> {
 
   app.get("/api/voice/state", async () => snapshot);
 
-  // 応答パネルに出すVRMアバター（config.voice.avatarPath）。置いていなければ404で、画面は円だけを出す。
+  // キャラクターの一覧と、画面のマイクボタン・文字入力で応答する既定のキャラクター
+  app.get("/api/voice/personas", async () => {
+    const personas = await readPersonas();
+    return {
+      defaultPersonaId: await readDefaultPersonaId(personas),
+      personas: personas.map(({ avatarPath, ...persona }) => ({ ...persona, hasAvatar: avatarPath !== null })),
+    };
+  });
+
+  app.put<{ Body: { defaultPersonaId?: unknown } }>("/api/voice/settings", async (request, reply) => {
+    const personas = await readPersonas();
+    const id = request.body?.defaultPersonaId;
+    if (typeof id !== "string" || !personas.some((persona) => persona.id === id)) {
+      return reply.code(400).send({ error: "unknown persona" });
+    }
+    await writeDefaultPersonaId(id);
+    // 他の端末の設定画面・マイクボタンの表示にも反映する
+    broadcast({ type: "voice-personas" });
+    return { ok: true };
+  });
+
+  app.get<{ Querystring: { limit?: string } }>("/api/voice/history", async (request) => {
+    const limit = Math.min(200, Math.max(1, Number(request.query.limit) || 20));
+    return { records: await readRecentTurns(limit) };
+  });
+
+  // キャラクターのVRMアバター。置いていなければ404で、画面は円だけを出す。
   // 数十MBあるので、ファイルが変わらない限りブラウザのキャッシュを使わせる
-  app.get("/api/voice/avatar", async (request, reply) => {
-    const info = await stat(config.voice.avatarPath).catch(() => null);
-    if (!info?.isFile()) return reply.code(404).send({ error: "avatar not found" });
+  app.get<{ Params: { personaId: string } }>("/api/voice/avatars/:personaId", async (request, reply) => {
+    const persona = (await readPersonas()).find((p) => p.id === request.params.personaId);
+    const info = persona?.avatarPath ? await stat(persona.avatarPath).catch(() => null) : null;
+    if (!persona?.avatarPath || !info?.isFile()) return reply.code(404).send({ error: "avatar not found" });
     const etag = `"${info.size.toString(16)}-${Math.floor(info.mtimeMs).toString(16)}"`;
     reply.header("ETag", etag).header("Cache-Control", "no-cache");
     if (request.headers["if-none-match"] === etag) return reply.code(304).send();
     return reply
       .type("model/gltf-binary")
       .header("Content-Length", info.size)
-      .send(createReadStream(config.voice.avatarPath));
+      .send(createReadStream(persona.avatarPath));
   });
 
-  // 画面からテキストで話しかける（マイクが無い端末や、声を出せない場面向け）
+  // 画面からテキストで話しかける（マイクが無い端末や、声を出せない場面向け）。応答するのは既定のキャラクター
   app.post<{ Body: { text?: unknown } }>("/api/voice/ask", async (request, reply) => {
     const text = typeof request.body?.text === "string" ? request.body.text.trim() : "";
     if (!text) return reply.code(400).send({ error: "text is required" });
     if (text.length > 2000) return reply.code(400).send({ error: "text is too long" });
-    if (!sendToAgent({ type: "ask", text })) return reply.code(503).send({ error: "voice agent is not connected" });
+    const personaId = await readDefaultPersonaId(await readPersonas());
+    if (!sendToAgent({ type: "ask", text, personaId })) {
+      return reply.code(503).send({ error: "voice agent is not connected" });
+    }
     return { ok: true };
   });
 
-  // 画面のマイクボタン。ウェイクワード無しで聞き始めさせる
+  // 画面のマイクボタン。ウェイクワード無しで、既定のキャラクターが聞き始める
   app.post("/api/voice/listen", async (_request, reply) => {
-    if (!sendToAgent({ type: "listen" })) return reply.code(503).send({ error: "voice agent is not connected" });
+    const personaId = await readDefaultPersonaId(await readPersonas());
+    if (!sendToAgent({ type: "listen", personaId })) {
+      return reply.code(503).send({ error: "voice agent is not connected" });
+    }
     return { ok: true };
   });
 
