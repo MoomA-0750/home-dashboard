@@ -23,9 +23,16 @@ API_PROXY_TARGET=http://localhost:8788 pnpm --filter @home-dashboard/web dev
 ブラウザは、インストール済みの Google Chrome を使う。別のものを使うなら `CHROME_PATH` で指定する。
 
 ```sh
-export CHROME_PATH=/usr/bin/chromium   # 例: Linux の Chromium
 export DASHBOARD_URL=http://localhost:5173/   # 既定値
+
+# ブラウザを指定する場合の例
+export CHROME_PATH=/usr/bin/chromium                                                        # Linux
+export CHROME_PATH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"           # macOS
+export CHROME_PATH="/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary"
 ```
+
+描画の速さで作業効率が大きく変わる。GPUの無いサーバー（ソフトウェア描画）では実測4fps、
+M1 の MacBook Air では60fpsだった。ポーズを詰めるときはGPUのある機械で作業し、仕上げに実際の表示端末で確かめるとよい。
 
 ## コマ送りで撮る
 
