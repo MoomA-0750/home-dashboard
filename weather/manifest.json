@@ -1,0 +1,53 @@
+{
+  "id": "weather",
+  "name": "天気",
+  "version": "1.3.0",
+  "description": "Open-Meteo（キー不要）から、家の地点の天気を出す。Weather 画面（今の天気・1時間ごと・10日間・UV・日の出入り・風・湿度・気圧・視程・大気質）、ホームの時刻の横の天気・天気ウィジェット・音声アシスタントの get_weather",
+  "apiVersion": 1,
+  "settingsNote": "地点の緯度・経度は地図アプリなどで調べて入れます。",
+  "settings": [
+    {
+      "key": "name",
+      "label": "地名",
+      "kind": "text",
+      "env": "WEATHER_LOCATION_NAME",
+      "default": "Tokyo"
+    },
+    {
+      "key": "lat",
+      "label": "緯度",
+      "kind": "number",
+      "env": "WEATHER_LAT",
+      "default": 35.6895,
+      "min": -90,
+      "max": 90
+    },
+    {
+      "key": "lon",
+      "label": "経度",
+      "kind": "number",
+      "env": "WEATHER_LON",
+      "default": 139.6917,
+      "min": -180,
+      "max": 180
+    }
+  ],
+  "locales": {
+    "en": {
+      "name": "Weather",
+      "description": "Weather for your home location from Open-Meteo (no key needed). The Weather screen (current conditions, hourly, 10-day, UV, sunrise and sunset, wind, humidity, pressure, visibility, air quality), the weather next to the clock on Home, the weather widget, and the voice assistant's get_weather",
+      "settingsNote": "Look up the latitude and longitude in a map app or similar.",
+      "settings": {
+        "name": {
+          "label": "Place name"
+        },
+        "lat": {
+          "label": "Latitude"
+        },
+        "lon": {
+          "label": "Longitude"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,189 @@
+/* extensions/claude/src/web.css */
+.widget-limits {
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 0.6rem;
+  font-variant-numeric: tabular-nums;
+}
+.widget-limits--empty {
+  justify-content: center;
+}
+.widget-limits__title-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.widget-limits__title {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+.widget-limits__stale {
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(251, 191, 36, 0.18);
+  color: var(--accent-warn);
+  font-size: 0.7rem;
+}
+.widget-limits__rows {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  flex: 1;
+}
+.widget-limits__row {
+  --limit-color: var(--accent-ok);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 0.4rem;
+  min-width: 0;
+}
+.widget-limits__row--warm {
+  --limit-color: var(--accent-warn);
+}
+.widget-limits__row--hot {
+  --limit-color: #f87171;
+}
+.widget-limits__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.widget-limits__label {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.widget-limits__percent {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--limit-color);
+}
+.widget-limits__percent small {
+  margin-left: 0.1rem;
+  font-size: 0.9rem;
+  font-weight: 400;
+}
+.widget-limits__bar {
+  height: 0.45rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  overflow: hidden;
+}
+.widget-limits__bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--limit-color);
+}
+.widget-limits__sub {
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-box-trim: none;
+}
+.widget-limits--empty .widget-limits__sub {
+  white-space: normal;
+  line-height: 1.5;
+}
+.widget-usage {
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 0.15rem;
+  font-variant-numeric: tabular-nums;
+}
+.widget-usage__label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+.widget-usage__value {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+.widget-usage__sub {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+.widget-usage__block {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.widget-usage__bar {
+  height: 0.35rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  overflow: hidden;
+}
+.widget-usage__bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent-ok);
+}
+.widget-usage-detail section {
+  margin-bottom: 1.25rem;
+}
+.widget-usage-detail h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+.widget-usage-detail__breakdown,
+.widget-usage-detail__models,
+.widget-usage-detail__daily {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-variant-numeric: tabular-nums;
+}
+.widget-usage-detail__breakdown li,
+.widget-usage-detail__models li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 0.15rem 0;
+  font-size: 0.85rem;
+}
+.widget-usage-detail__breakdown-total {
+  border-top: 1px solid var(--glass-border);
+  margin-top: 0.25rem;
+  padding-top: 0.35rem !important;
+  font-weight: 600;
+}
+.widget-usage-detail__model {
+  color: var(--text-secondary);
+}
+.widget-usage-detail__daily li {
+  display: grid;
+  grid-template-columns: 3rem 1fr 3.5rem;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  padding: 0.1rem 0;
+}
+.widget-usage-detail__daily-bar {
+  height: 0.5rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+.widget-usage-detail__daily-bar > span {
+  display: block;
+  height: 100%;
+  background: rgba(96, 165, 250, 0.85);
+}
+.widget-usage-detail__daily-value,
+.widget-usage-detail__date {
+  color: var(--text-secondary);
+}
+.widget-usage-detail__daily-value {
+  text-align: right;
+}

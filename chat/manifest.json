@@ -1,0 +1,26 @@
+{
+  "id": "chat",
+  "name": "チャット",
+  "version": "1.2.0",
+  "description": "画面から音声アシスタントと話すチャット（サイドバーの Chat）。どの端末にも出る。機能の口「チャットアプリ」を持ち、iMessage などが入ると、Chat 画面の右上で切り替えられる。画面は本体の音声アシスタント（返事の声・話している相手）と一緒に動くので、本体に入っている",
+  "apiVersion": 1,
+  "features": [
+    {
+      "id": "chat",
+      "name": "チャットアプリ",
+      "description": "Chat 画面の右上で、音声アシスタントと切り替えて使うチャット（iMessage など）"
+    }
+  ],
+  "locales": {
+    "en": {
+      "name": "Chat",
+      "description": "Chat with the voice assistant from the screen (Chat in the sidebar). Shown on every device. It has the \"Chat apps\" feature slot, so when iMessage or similar is installed, you can switch at the top right of the Chat screen. The screen works together with the built-in voice assistant (reply voice and who you're talking to), so it's built in",
+      "features": {
+        "chat": {
+          "name": "Chat apps",
+          "description": "Chats used in place of the voice assistant, switched at the top right of the Chat screen (iMessage and others)"
+        }
+      }
+    }
+  }
+}

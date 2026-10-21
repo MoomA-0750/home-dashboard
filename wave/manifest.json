@@ -1,0 +1,44 @@
+{
+  "id": "wave",
+  "name": "wave",
+  "version": "1.2.0",
+  "description": "wave（自作の YouTube Music クライアント）の再生中の曲と操作・キュー・プレイリスト・おすすめを、Media（画面・ウィジェット・音声アシスタントの音楽の操作）へ渡す",
+  "apiVersion": 1,
+  "provides": [
+    "music"
+  ],
+  "settingsNote": "wave-api のトークンは、wave の relay-deploy-v2 で `docker compose exec wave-api /app/bin/api token` で出します。Docker で動かすダッシュボードからは http://wave-api:8793 です（README 参照）。",
+  "settingsTest": "/test",
+  "settings": [
+    {
+      "key": "url",
+      "label": "wave-api の URL",
+      "kind": "url",
+      "env": "WAVE_API_URL",
+      "default": "http://127.0.0.1:8793",
+      "placeholder": "http://127.0.0.1:8793"
+    },
+    {
+      "key": "token",
+      "label": "トークン",
+      "kind": "secret",
+      "env": "WAVE_API_TOKEN"
+    }
+  ],
+  "locales": {
+    "en": {
+      "name": "wave",
+      "description": "Sends wave's (a homemade YouTube Music client) now playing, controls, queue, playlists, and suggestions to Media (the screen, widget, and the voice assistant's music controls)",
+      "settingsNote": "Get the wave-api token by running `docker compose exec wave-api /app/bin/api token` in wave's relay-deploy-v2. From a dashboard running in Docker, the URL is http://wave-api:8793 (see the README).",
+      "settings": {
+        "url": {
+          "label": "wave-api URL",
+          "placeholder": "http://127.0.0.1:8793"
+        },
+        "token": {
+          "label": "Token"
+        }
+      }
+    }
+  }
+}
