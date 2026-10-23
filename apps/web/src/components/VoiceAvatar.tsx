@@ -66,33 +66,37 @@ function sanitizeGlb(buffer: ArrayBuffer): ArrayBuffer {
   return output.buffer;
 }
 
+/** モデルを読み込む（使い回さない。表示中のアバターと別に、アイコンを撮るときなどに使う） */
+export function fetchAvatar(url: string): Promise<VRM> {
+  const loader = new GLTFLoader();
+  loader.register((parser) => new VRMLoaderPlugin(parser));
+  return fetch(url)
+    .then((res) => {
+      if (!res.ok) throw new Error(`avatar fetch error: ${res.status}`);
+      return res.arrayBuffer();
+    })
+    .then((buffer) => loader.parseAsync(sanitizeGlb(buffer), ""))
+    .then((gltf) => {
+      const vrm = gltf.userData.vrm as VRM;
+      VRMUtils.removeUnnecessaryVertices(gltf.scene);
+      VRMUtils.combineSkeletons(gltf.scene);
+      VRMUtils.rotateVRM0(vrm);
+      // 揺れものやアニメーションでバウンディングボックスから外れた部分が消えないように
+      vrm.scene.traverse((object) => {
+        object.frustumCulled = false;
+      });
+      return vrm;
+    });
+}
+
 /** モデルは数十MBあるので、一度読んだものをキャラクター（URL）ごとに使い回す（パネルを閉じても捨てない） */
 export function loadAvatar(url: string): Promise<VRM> {
   let model = models.get(url);
   if (!model) {
-    const loader = new GLTFLoader();
-    loader.register((parser) => new VRMLoaderPlugin(parser));
-    model = fetch(url)
-      .then((res) => {
-        if (!res.ok) throw new Error(`avatar fetch error: ${res.status}`);
-        return res.arrayBuffer();
-      })
-      .then((buffer) => loader.parseAsync(sanitizeGlb(buffer), ""))
-      .then((gltf) => {
-        const vrm = gltf.userData.vrm as VRM;
-        VRMUtils.removeUnnecessaryVertices(gltf.scene);
-        VRMUtils.combineSkeletons(gltf.scene);
-        VRMUtils.rotateVRM0(vrm);
-        // 揺れものやアニメーションでバウンディングボックスから外れた部分が消えないように
-        vrm.scene.traverse((object) => {
-          object.frustumCulled = false;
-        });
-        return vrm;
-      })
-      .catch((err) => {
-        models.delete(url);
-        throw err;
-      });
+    model = fetchAvatar(url).catch((err) => {
+      models.delete(url);
+      throw err;
+    });
     models.set(url, model);
   }
   return model;
@@ -190,9 +194,10 @@ export default function VoiceAvatar({ modelUrl, state, socket, rig, override, on
     let vrm: VRM | null = null;
     let animator: AvatarAnimator | null = null;
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    // 非力な端末で重くなりすぎないよう、高DPIでも描画解像度は抑える
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    // 非力な端末（コアの少ない壁の端末など）では画素を減らす。高DPIの画面は細かいのでアンチエイリアスも要らない
+    const weakDevice = (navigator.hardwareConcurrency ?? 4) <= 4;
+    const renderer = new THREE.WebGLRenderer({ antialias: window.devicePixelRatio < 2 && !weakDevice, alpha: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, weakDevice ? 1 : 1.5));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     container.appendChild(renderer.domElement);
 
@@ -220,6 +225,10 @@ export default function VoiceAvatar({ modelUrl, state, socket, rig, override, on
 
     const timer = new THREE.Timer();
     const lookGoal = new THREE.Vector3();
+    // 視線の先（ゆっくり動く）と、そこからの小さな跳び（サッカード）。人の目は1点を見続けず、ときどき小さく跳ぶ
+    const lookBase = new THREE.Vector3();
+    const saccade = new THREE.Vector3();
+    let nextSaccadeAt = 0;
 
     const speechTiming = (t: number): SpeechTiming | null => {
       const demo = overrideRef.current;
@@ -250,8 +259,15 @@ export default function VoiceAvatar({ modelUrl, state, socket, rig, override, on
       return vowel;
     };
 
+    // 描くのは1秒に30コマまで（60コマの画面でも、動きは十分なめらかで、描く手間は半分になる）
+    const FRAME_MS = 1000 / 30;
+    let lastFrameAt = -Infinity;
     const animate = (timestamp?: number) => {
       frame = requestAnimationFrame(animate);
+      if (timestamp !== undefined) {
+        if (timestamp - lastFrameAt < FRAME_MS - 2) return;
+        lastFrameAt = timestamp;
+      }
       timer.update(timestamp);
       // 2次系の動きは1コマが長くても発散しないので、描画の遅い端末でも実時間に近く進むよう上限を大きめにする
       const delta = Math.min(timer.getDelta(), 0.25);
@@ -275,8 +291,19 @@ export default function VoiceAvatar({ modelUrl, state, socket, rig, override, on
 
       // 視線: ふだんはこちら（カメラ）を見て、考えている間は少し上の方を見る
       const thinking = current === "thinking" || current === "transcribing";
-      lookGoal.set(camera.position.x + (thinking ? 0.25 : 0), camera.position.y + (thinking ? 0.3 : 0), camera.position.z);
-      lookTarget.position.lerp(lookGoal, Math.min(1, delta * 3));
+      lookGoal.set(
+        camera.position.x + (thinking ? 0.25 : 0),
+        camera.position.y + (thinking ? 0.3 : 0),
+        camera.position.z,
+      );
+      lookBase.lerp(lookGoal, Math.min(1, delta * 3));
+      if (t >= nextSaccadeAt) {
+        // 考えている間はよそを見ているので跳ばさない。話している間は少し多めに
+        if (thinking) saccade.set(0, 0, 0);
+        else saccade.set((Math.random() - 0.5) * 0.24, (Math.random() - 0.5) * 0.14, 0);
+        nextSaccadeAt = t + (current === "speaking" ? 0.6 : 1) + Math.random() * 1.8;
+      }
+      lookTarget.position.copy(lookBase).add(saccade);
 
       animator.updateBody(delta, t, inputs);
       vrm.update(delta);
@@ -301,6 +328,7 @@ export default function VoiceAvatar({ modelUrl, state, socket, rig, override, on
         camera.position.set(0, cameraCenterY, CAMERA_DISTANCE);
         camera.lookAt(0, cameraCenterY, 0);
         lookTarget.position.copy(camera.position);
+        lookBase.copy(camera.position);
         if (vrm.lookAt) vrm.lookAt.target = lookTarget;
 
         animate();
@@ -316,6 +344,8 @@ export default function VoiceAvatar({ modelUrl, state, socket, rig, override, on
       // モデル自体は次に開いたときに使い回すので捨てない。シーンから外して描画資源だけ解放する
       if (vrm) scene.remove(vrm.scene);
       timer.dispose();
+      // WebGL のコンテキストはブラウザごとに数に上限があるので、ガベージコレクションを待たずに手放す
+      renderer.forceContextLoss();
       renderer.dispose();
       renderer.domElement.remove();
     };

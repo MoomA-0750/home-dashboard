@@ -29,7 +29,7 @@ log = logging.getLogger(__name__)
 class Expression:
     """
     返答の中の（表情名）で切り替える表情と声のトーン。
-    avatar は VRM の表情名と重み（例: {"happy": 0.6}）、speaker/speed は VOICEVOX のスタイルID・話速（省略時はキャラクターの声のまま）。
+    avatar は VRM の表情名と重み（例: {"happy": 0.6}）、speaker/speed/engine は合成エンジンのスタイルID・話速・エンジン（省略時はキャラクターの声のまま）。
     keywords は、Claude が一覧に無い言葉（「（嬉しそうに笑う）」）を書いてしまったときに、どの表情とみなすかの手がかり
     """
 
@@ -37,6 +37,7 @@ class Expression:
     avatar: dict[str, float]
     speaker: int | None = None
     speed: float | None = None
+    engine: str | None = None
     keywords: tuple[str, ...] = ()
     # 体の身振りの名前（画面の apps/web/src/avatar/motions.ts）。省略時は avatar の表情から推測する
     motion: str | None = None
@@ -78,6 +79,8 @@ class Persona:
     expressions: dict[str, Expression] = field(default_factory=dict)
     # 画面に出す呼び名（ウェイクワードが表示名と違う読みのとき）。書き起こしからウェイクワードを落とすのにも使う
     wake_label: str | None = None
+    # 声の合成エンジン（voicevox / aivis。speech.ENGINES）
+    engine: str = "voicevox"
 
 
 @dataclass(frozen=True)
@@ -110,6 +113,23 @@ class Personas:
     def has_characters(self) -> bool:
         return any(p.prompt for p in self.personas)
 
+    def mentioned(self, text: str) -> Persona | None:
+        """
+        文字で話しかけたときの「@カリン」（全角の＠も）。いちばん前にある呼びかけのキャラクターを返す。
+        表示名・呼び名・ウェイクワードの表記（「花梨」）・ID のどれで書いてもよい
+        """
+        found: tuple[int, int, Persona] | None = None
+        for persona in self.personas:
+            aliases = {persona.name, persona.id, persona.wake_label or ""}
+            aliases |= {"".join(phrase[1:]) for phrase in persona.wake_phrases if len(phrase) > 1}
+            for alias in filter(None, aliases):
+                for match in re.finditer(r"[@＠]\s*" + re.escape(alias), text, re.IGNORECASE):
+                    # 同じ位置なら長い名前を優先する（「カリン」と「カリンちゃん」が別人のときなど）
+                    key = (match.start(), -len(alias))
+                    if found is None or key < found[:2]:
+                        found = (*key, persona)
+        return found[2] if found else None
+
 
 def _words(value: str) -> list[str]:
     return [w for w in value.replace(",", " ").split() if w]
@@ -125,10 +145,20 @@ def _expressions(entry: dict) -> dict[str, Expression]:
             avatar=avatar,
             speaker=voice.get("speaker"),
             speed=voice.get("speed"),
+            engine=_engine(voice.get("engine")) if voice.get("engine") else None,
             keywords=tuple(spec.get("keywords", [])),
             motion=spec.get("motion") or infer_motion(avatar),
         )
     return expressions
+
+
+ENGINE_NAMES = {"voicevox": "VOICEVOX", "aivis": "AivisSpeech"}
+
+
+def _engine(value: object) -> str:
+    if value not in ENGINE_NAMES:
+        raise ValueError(f"voice.engine は {' / '.join(ENGINE_NAMES)} のどれかにしてください: {value}")
+    return str(value)
 
 
 PERSONA_ID = re.compile(r"^[a-z0-9][a-z0-9_-]{0,31}$")
@@ -165,12 +195,23 @@ def load_personas(config: Config) -> Personas:
         return _fallback(config)
 
     common_path = root / "common.json"
-    common = json.loads(common_path.read_text(encoding="utf-8")) if common_path.exists() else {}
+    try:
+        common = json.loads(common_path.read_text(encoding="utf-8")) if common_path.exists() else {}
+    except (OSError, ValueError) as err:
+        # 書きかけ・手で壊したときに、エージェントごと落ちて再起動を繰り返さないよう、共通の設定なしで読む
+        log.warning("common.json を読めませんでした（共通の設定なしで読みます）: %s", err)
+        common = {}
+    if not isinstance(common, dict):
+        common = {}
     prefix = _words(common.get("wakePrefix", "ねえ"))
     # 名前によらず「ね」で終わる語など、誰を呼ぶ場合にも紛らわしい語
     common_decoys = common.get("commonDecoys", DEFAULT_COMMON_DECOYS)
     order = {persona_id: i for i, persona_id in enumerate(common.get("order", []))}
     dirs.sort(key=lambda d: (order.get(d.name, len(order)), d.name))
+    # 設定画面で切ったキャラクターは読み込まない（ウェイクワードに反応しない）。全員を切ってあるときは全員を読む
+    disabled = set(common.get("disabled", []))
+    if any(d.name not in disabled for d in dirs):
+        dirs = [d for d in dirs if d.name not in disabled]
 
     personas = []
     for directory in dirs:
@@ -190,6 +231,7 @@ def load_personas(config: Config) -> Personas:
                     speed=float(voice.get("speed", config.voicevox_speed)),
                     expressions=_expressions(entry) if prompt else {},
                     wake_label=entry.get("wakeLabel"),
+                    engine=_engine(voice.get("engine", "voicevox")),
                 )
             )
         except (OSError, ValueError, KeyError, TypeError) as err:
@@ -216,7 +258,9 @@ def personas_signature(config: Config) -> tuple:
     return tuple(sorted(signature))
 
 
-def check_personas(personas: Personas, vocabulary: set[str] | None, speakers: set[int] | None) -> dict[str, list[str]]:
+def check_personas(
+    personas: Personas, vocabulary: set[str] | None, speakers: dict[str, set[int] | None]
+) -> dict[str, list[str]]:
     """
     インポートしたキャラクターが実際に呼べるかを確かめる。Vosk の文法は語彙に無い語を黙って捨てるので、
     ウェイクワードが語彙に無いと、いくら呼んでも反応しない。
@@ -234,10 +278,14 @@ def check_personas(personas: Personas, vocabulary: set[str] | None, speakers: se
             missing_decoys = [word for word in persona.decoys if word not in vocabulary]
             if missing_decoys:
                 found.append(f"おとり単語「{'・'.join(missing_decoys)}」が語彙に無いため、効いていません")
-        if speakers is not None:
-            voice_ids = {persona.speaker} | {e.speaker for e in persona.expressions.values() if e.speaker is not None}
-            for speaker in sorted(voice_ids - speakers):
-                found.append(f"VOICEVOX に話者ID {speaker} がありません")
+        # speakers はエンジンごとの話者ID。つながらなかったエンジン（None）は確かめない
+        voices = {(persona.engine, persona.speaker)} | {
+            (e.engine or persona.engine, e.speaker) for e in persona.expressions.values() if e.speaker is not None
+        }
+        for engine, speaker in sorted(voices):
+            known = speakers.get(engine)
+            if known is not None and speaker not in known:
+                found.append(f"{ENGINE_NAMES[engine]} に話者ID {speaker} がありません")
         if found:
             warnings[persona.id] = found
     return warnings

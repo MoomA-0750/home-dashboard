@@ -69,6 +69,7 @@ class Config:
     voicevox_url: str
     voicevox_speaker: int
     voicevox_speed: float
+    aivisspeech_url: str
 
     chime: bool
 
@@ -104,8 +105,10 @@ def load_config() -> Config:
         # 新しい会話を始めるとき、キャラクター全員で共有している直近のやり取りを何件・何時間前まで渡すか
         history_turns=int(_env("VOICE_HISTORY_TURNS", "20")),
         history_hours=float(_env("VOICE_HISTORY_HOURS", "24")),
-        # このホストのCPUにAVXが無いとsmallは1発話に5秒ほどかかる。精度より応答速度を優先してbaseを既定にしている
-        whisper_model=_env("VOICE_WHISPER_MODEL", "base"),
+        # 実測（i5-9400 の6コア・int8、VOICEVOX の声に雑音を足した10文）: base は1発話0.8秒・文字の誤り27%、
+        # small は2.1秒・16%、large-v3-turbo は8秒・4%。話しかけて待てる長さで一番当たる small を既定にする
+        # （CPU に AVX2 が無いと small でも5秒ほどかかるので、そのときは base にする）
+        whisper_model=_env("VOICE_WHISPER_MODEL", "small"),
         whisper_compute_type=_env("VOICE_WHISPER_COMPUTE_TYPE", "int8"),
         claude_bin=_env("VOICE_CLAUDE_BIN", "claude"),
         claude_model=_env("VOICE_CLAUDE_MODEL", "sonnet"),
@@ -120,5 +123,7 @@ def load_config() -> Config:
         voicevox_url=_env("VOICEVOX_URL", "http://127.0.0.1:50021").rstrip("/"),
         voicevox_speaker=int(_env("VOICEVOX_SPEAKER", "3")),
         voicevox_speed=float(_env("VOICEVOX_SPEED", "1.1")),
+        # persona.json で voice.engine を "aivis" にしたキャラクターの声（VOICEVOX と同じ形の API）
+        aivisspeech_url=_env("AIVISSPEECH_URL", "http://127.0.0.1:10101").rstrip("/"),
         chime=_env("VOICE_CHIME", "true") != "false",
     )

@@ -33,15 +33,29 @@ _DEFAULT_WAKE_PREFIX = wake_prefix_pattern(["クロード"])
 _HALLUCINATIONS = ("ご視聴ありがとうございました", "チャンネル登録", "おやすみなさい", "字幕")
 
 
+# 書き起こしの手がかり（最初に読ませる文）。家で話しかけることの多い言葉を並べておくと、似た音の言葉（天気と電気、
+# 照明と証明など）や名前の書き方がそろう（実測: 名前と家の言葉を渡すと、それを含む文の誤りが半分ほどになる）
+_VOCABULARY = "今日の天気、リビングの電気、寝室の照明、エアコン、明日の予定、流れている曲、音量。"
+
+
+def vocabulary_prompt(names: list[str]) -> str:
+    return f"{'、'.join(names)}。{_VOCABULARY}" if names else _VOCABULARY
+
+
 class Transcriber:
     def __init__(self, model: str, compute_type: str, names: list[str] | None = None) -> None:
         self._wake_prefix = wake_prefix_pattern(names) if names else _DEFAULT_WAKE_PREFIX
-        self._model = WhisperModel(
-            model, device="cpu", compute_type=compute_type, download_root=str(CACHE_DIR / "whisper")
-        )
+        self._prompt = vocabulary_prompt(names or [])
+        options = {"device": "cpu", "compute_type": compute_type, "download_root": str(CACHE_DIR / "whisper")}
+        try:
+            # 落としてあれば、起動のたびに Hugging Face へ問い合わせない
+            self._model = WhisperModel(model, local_files_only=True, **options)
+        except Exception:
+            self._model = WhisperModel(model, **options)
 
     def set_names(self, names: list[str]) -> None:
         self._wake_prefix = wake_prefix_pattern(names) if names else _DEFAULT_WAKE_PREFIX
+        self._prompt = vocabulary_prompt(names)
 
     def transcribe(self, pcm: bytes) -> str:
         segments, _ = self._model.transcribe(
@@ -52,6 +66,7 @@ class Transcriber:
             vad_filter=True,
             condition_on_previous_text=False,
             without_timestamps=True,
+            initial_prompt=self._prompt,
         )
         text = "".join(s.text for s in segments).strip()
         return clean_transcript(text, self._wake_prefix)

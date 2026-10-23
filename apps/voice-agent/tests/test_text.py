@@ -3,7 +3,14 @@
 import pytest
 
 from voice_agent.personas import DEFAULT_EXPRESSIONS, Expression
-from voice_agent.speech import Directions, SentenceSplitter, clean_for_speech, mouth_cues, speech_beats
+from voice_agent.speech import (
+    Directions,
+    SentenceSplitter,
+    clean_for_speech,
+    estimate_lengths,
+    mouth_cues,
+    speech_beats,
+)
 from voice_agent.stt import clean_transcript, wake_prefix_pattern
 
 REPLY = "今日の東京は雨模様で、雷を伴うところもあるみたいです。最高気温は24度、最低気温は21度で、10月並みの涼しさになります。傘は忘れずに"
@@ -205,6 +212,47 @@ def test_expression_changes_voice_style():
     assert played_expressions == [None, "ひそひそ", "にっこり"]
 
 
+def test_missing_expression_voice_falls_back_to_persona_voice():
+    """表情の声がエンジンに無くても黙らず、キャラクターのふだんの声で読む"""
+    import asyncio
+
+    import httpx
+
+    from voice_agent.speech import Speech, SpeechQueue, Voice
+
+    synthesized: list[int] = []
+
+    class FakeTTS:
+        async def synthesize(self, text: str, voice: Voice) -> Speech:
+            synthesized.append(voice.speaker)
+            if voice.speaker == 71:
+                raise httpx.HTTPError("404 Not Found")
+            return Speech(b"", [], 0.0)
+
+    class FakePlayer:
+        async def play(self, wav: bytes) -> None:
+            pass
+
+        def stop(self) -> None:
+            pass
+
+    played: list[str | None] = []
+
+    async def on_play(speech: Speech, first: bool) -> None:
+        played.append(speech.expression.name if speech.expression else None)
+
+    async def scenario() -> None:
+        queue = SpeechQueue(FakeTTS(), Voice(speaker=70, speed=1.1), FakePlayer(), on_play)
+        for piece in split_pieces(["（ひそひそ）内緒だよ。"], CHARACTER):
+            queue.say(piece)
+        await queue.finish()
+
+    asyncio.run(scenario())
+    assert synthesized == [71, 70]
+    # 声はふだんのものでも、表情はそのまま付ける
+    assert played == ["ひそひそ"]
+
+
 def test_speech_beats_follow_accent_nucleus_and_pitch():
     """強調の時刻は各アクセント句のアクセント核の拍の開始、強さは文の中での音の高さの相対値"""
     query = {
@@ -228,3 +276,28 @@ def test_speech_beats_follow_accent_nucleus_and_pitch():
     # 1つ目: 句頭0.1秒＋1拍目0.15秒でアクセント核（2拍目）が始まる。いちばん高いので強さ1
     # 2つ目: 1つ目の句の残り（0.3秒）と句末の間（0.3秒）の後。いちばん低いので強さ0.3
     assert speech_beats(query) == [(0.25, 1.0), (0.8, 0.3)]
+
+
+def test_estimated_lengths_span_the_synthesized_audio():
+    """音素の長さを返さないエンジン（AivisSpeech）でも、口パクが音声の長さに収まり、読点で口を閉じる"""
+    mora = lambda vowel, consonant=None: {  # noqa: E731
+        "text": "", "consonant": consonant, "consonant_length": 0.0 if consonant else None,
+        "vowel": vowel, "vowel_length": 0.0, "pitch": 0.0,
+    }
+    query = {
+        "speedScale": 1.25,
+        "prePhonemeLength": 0.1,
+        "postPhonemeLength": 0.1,
+        "accent_phrases": [
+            {"moras": [mora("o"), mora("a", "h"), mora("o", "y"), mora("pau")], "accent": 4, "pause_mora": None},
+            {"moras": [mora("a", "n"), mora("e", "n")], "accent": 1, "pause_mora": None},
+        ],
+    }
+    estimated = estimate_lengths(query, 2.0)
+    cues, duration = mouth_cues(estimated)
+    assert duration == pytest.approx(2.0, abs=0.01)
+    times = [t for t, _ in cues]
+    assert times == sorted(times) and times[1] == pytest.approx(0.1 / 1.25)
+    assert [v for _, v in cues][1:-1] == ["o", "a", "o", "pau", "a", "e"]
+    # 声のある拍は同じ高さにするので、身振りはアクセント句ごとに同じ強さで出る
+    assert [s for _, s in speech_beats(estimated)] == [0.5, 0.5]

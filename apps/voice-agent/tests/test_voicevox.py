@@ -1,4 +1,4 @@
-"""VOICEVOX Engine と実際につないで、口パクの時系列が合成した音声と揃うかを確かめる"""
+"""VOICEVOX Engine・AivisSpeech Engine と実際につないで、口パクの時系列が合成した音声と揃うかを確かめる"""
 
 import asyncio
 import io
@@ -26,3 +26,24 @@ def test_mouth_cues_match_synthesized_audio(speech_pcm, text):
     assert times == sorted(times)
     assert times[-1] <= speech.duration_s
     assert {v for _, v in speech.mouth_cues} & {"a", "i", "u", "e", "o"}
+
+
+def test_aivisspeech_mouth_cues_span_synthesized_audio():
+    config = load_config()
+
+    async def synthesize():
+        engine = VoiceVox(config.aivisspeech_url, estimate_timing=True)
+        speakers = await engine.speaker_ids()
+        if not speakers:
+            return None
+        return await engine.synthesize("おはよう、今日はいい天気だね。", Voice(min(speakers), 1.1, "aivis"))
+
+    speech = asyncio.run(synthesize())
+    if speech is None:
+        pytest.skip(f"AivisSpeech Engine に接続できません（{config.aivisspeech_url}）")
+    with wave.open(io.BytesIO(speech.wav)) as w:
+        actual = w.getnframes() / w.getframerate()
+    assert abs(speech.duration_s - actual) < 0.01
+    vowels = [v for _, v in speech.mouth_cues]
+    assert "pau" in vowels[1:-1] and {"a", "i", "o"} <= set(vowels)
+    assert speech.beats

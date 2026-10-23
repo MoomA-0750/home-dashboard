@@ -95,7 +95,13 @@ export const STATE_POSES: Record<string, Pose> = {
     sway: { amount: 1.5, speed: 0.12 },
   },
   speaking: {
-    bones: { ...REST_POSE.bones, chest: [0, 2, 0], head: [0, 3, -3], leftLowerArm: [0, -30, 0], rightLowerArm: [0, 23, 0] },
+    bones: {
+      ...REST_POSE.bones,
+      chest: [0, 2, 0],
+      head: [0, 3, -3],
+      leftLowerArm: [0, -30, 0],
+      rightLowerArm: [0, 23, 0],
+    },
     ears: { lift: 6 },
     tail: { wag: 10, speed: 0.6, lift: 4 },
     sway: { amount: 1.2, speed: 0.25 },

@@ -2,6 +2,7 @@ import * as THREE from "three";
 import type { VRM, VRMHumanBoneName } from "@pixiv/three-vrm";
 import type { VoiceState } from "../lib/useVoiceAssistant";
 import { beatPulse, fractalNoise, SecondOrder } from "./dynamics";
+import { analyzeFace, widenLookAt, type FaceProfile } from "./face";
 import { FINGER_BONE_NAMES, handBones } from "./hands";
 import { MOTIONS, REST_POSE, STATE_POSES, type BonePose, type Pose } from "./motions";
 import { clampToLimits, NECK_SHARE, shoulderFollow, SPINE_TWIST_SHARE, stancePose } from "./posture";
@@ -44,7 +45,11 @@ type Vec3 = [number, number, number];
 
 const VOWEL_EXPRESSIONS: Record<string, string> = { a: "aa", i: "ih", u: "ou", e: "ee", o: "oh" };
 const MOUTH_EXPRESSIONS = Object.values(VOWEL_EXPRESSIONS);
-const BLINK_DURATION_S = 0.16;
+// まばたきは閉じる方が速く、開く方がゆっくり（閉じ 約80ms・開き 約200ms）
+const BLINK_CLOSE_S = 0.08;
+const BLINK_OPEN_S = 0.2;
+// 表情に口を開ける形が入っていても、話している口の動きはこれだけは残す（0 にすると表情の間ずっと口が止まる）
+const MOUTH_FLOOR = 0.35;
 const DEFAULT_HOLD_S = 2.5;
 const RESTROKE_AFTER_S = 4;
 const VIA_REST_S = 0.25;
@@ -137,6 +142,9 @@ export class AvatarAnimator {
   private readonly hipsRest = new THREE.Vector3();
   private nextBlinkAt = 1.5;
   private blinkStartedAt = -1;
+  // 話す区切り（文の頭）でまばたきするための、前の文（身振りの lastSpeechId とは別に数える）
+  private lastBlinkSpeechId: number | null = null;
+  private readonly face: FaceProfile;
 
   /**
    * 身振りの段階・時間差・ときどきの動きに使う時計（1コマの経過秒の和）。描画の遅い端末で1コマが上限で切られても、
@@ -168,7 +176,11 @@ export class AvatarAnimator {
   private nextTwitchAt = { left: 3, right: 5 };
   private readonly earLag = new SecondOrder(1.5, 0.3, 0);
   private lastHeadYaw = 0;
-  private readonly tail = { wag: new SecondOrder(0.8, 1, 0), speed: new SecondOrder(0.8, 1, 0), lift: new SecondOrder(1, 0.7, 0) };
+  private readonly tail = {
+    wag: new SecondOrder(0.8, 1, 0),
+    speed: new SecondOrder(0.8, 1, 0),
+    lift: new SecondOrder(1, 0.7, 0),
+  };
   private tailPhase = 0;
 
   private speechEnergy = 0;
@@ -183,6 +195,8 @@ export class AvatarAnimator {
   ) {
     const rest = vrm.humanoid.normalizedRestPose.hips?.position;
     if (rest) this.hipsRest.fromArray(rest);
+    this.face = analyzeFace(vrm);
+    widenLookAt(vrm);
   }
 
   private bone(name: VRMHumanBoneName): BoneState {
@@ -421,7 +435,9 @@ export class AvatarAnimator {
 
   private approach(name: string, target: number, rate: number, delta: number) {
     const current = this.weights.get(name) ?? 0;
-    const next = current + (target - current) * Math.min(1, delta * rate);
+    let next = current + (target - current) * Math.min(1, delta * rate);
+    // 指数で近づけるだけだと 0 にならず、目を閉じる表情がいつまでもわずかに残る
+    if (target === 0 && next < 0.002) next = 0;
     this.weights.set(name, next);
     this.vrm.expressionManager?.setValue(name, next);
   }
@@ -430,31 +446,49 @@ export class AvatarAnimator {
     const manager = this.vrm.expressionManager;
     if (!manager) return;
 
-    if (t >= this.nextBlinkAt) {
-      this.blinkStartedAt = t;
-      // ときどき2回続けてまばたきする
-      this.nextBlinkAt = Math.random() < 0.15 ? t + 0.3 : t + 2 + Math.random() * 4;
-    }
-    const blinkPhase = (t - this.blinkStartedAt) / BLINK_DURATION_S;
-    manager.setValue("blink", blinkPhase >= 0 && blinkPhase <= 1 ? Math.sin(blinkPhase * Math.PI) : 0);
-
-    for (const name of MOUTH_EXPRESSIONS) {
-      this.approach(name, inputs.vowel && VOWEL_EXPRESSIONS[inputs.vowel] === name ? 0.75 : 0, 22, delta);
-    }
-
-    // 返答で（表情名）の指定があればそれを、無ければ状態に応じた控えめな表情にする（joy 系は目を閉じるモデルが多い）
-    const targets = inputs.expression ?? {
-      happy: inputs.state === "speaking" || inputs.state === "idle" ? 0.2 : 0,
-      sad: inputs.state === "error" ? 0.5 : 0,
-    };
+    // 返答で（表情名）の指定があればそれを、無ければ素の顔にする（常に笑顔を足すと、目を閉じる笑顔のモデルは
+    // 目が細いまま・まばたきもしなくなる）
+    const targets = inputs.expression ?? (inputs.state === "error" ? { sad: 0.5 } : {});
     const resolvedTargets = new Map<string, number>();
     for (const [name, weight] of Object.entries(targets)) {
       const resolved = this.resolveName(name);
       if (!resolved) continue;
-      resolvedTargets.set(resolved, weight);
+      resolvedTargets.set(resolved, Math.min(1, Math.max(0, weight)));
       this.touchedExpressions.add(resolved);
     }
-    for (const name of this.touchedExpressions) this.approach(name, resolvedTargets.get(name) ?? 0, 6, delta);
+    // 出だしは速く、戻りはゆっくり
+    for (const name of this.touchedExpressions) {
+      const target = resolvedTargets.get(name) ?? 0;
+      this.approach(name, target, target > (this.weights.get(name) ?? 0) ? 9 : 3, delta);
+    }
+
+    // いまの表情が、どれだけ目を閉じ・口を開けているか（face.ts で測った値）
+    let eyeClosed = 0;
+    let mouthOpen = 0;
+    for (const name of this.touchedExpressions) {
+      const weight = this.weights.get(name) ?? 0;
+      eyeClosed += weight * (this.face.eyeClose.get(name) ?? 0);
+      mouthOpen += weight * (this.face.mouthOpen.get(name) ?? 0);
+    }
+
+    // まばたき: 2〜6秒おき（ときどき2回続ける）と、話す文の頭。表情で閉じている分だけ浅くする（閉じ過ぎない）
+    const speechId = inputs.speech?.id ?? null;
+    if (speechId !== null && speechId !== this.lastBlinkSpeechId && Math.random() < 0.6) this.nextBlinkAt = t;
+    this.lastBlinkSpeechId = speechId;
+    if (t >= this.nextBlinkAt) {
+      this.blinkStartedAt = t;
+      this.nextBlinkAt = Math.random() < 0.15 ? t + 0.35 : t + 2 + Math.random() * 4;
+    }
+    const since = t - this.blinkStartedAt;
+    const blink =
+      since < 0 ? 0 : since < BLINK_CLOSE_S ? since / BLINK_CLOSE_S : Math.max(0, 1 - (since - BLINK_CLOSE_S) / BLINK_OPEN_S);
+    manager.setValue("blink", blink * Math.max(0, 1 - eyeClosed));
+
+    // 口: 表情が口を開けていれば、その分だけ話す口を小さく（足し算で開き過ぎない）。ただし止めはしない
+    const mouthScale = Math.max(MOUTH_FLOOR, 1 - mouthOpen);
+    for (const name of MOUTH_EXPRESSIONS) {
+      this.approach(name, inputs.vowel && VOWEL_EXPRESSIONS[inputs.vowel] === name ? 0.75 * mouthScale : 0, 22, delta);
+    }
   }
 
   /** 耳と尻尾を動かす。vrm.update() で人型の骨が反映された後に呼ぶ */

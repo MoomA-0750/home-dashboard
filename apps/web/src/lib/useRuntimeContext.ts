@@ -1,11 +1,13 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { WidgetRuntimeContext } from "@home-dashboard/widget-sdk";
+import { CLIENT_ID } from "./browserVoice";
 
 const API_BASE_URL = ""; // 同一オリジン配信（server が web の build 成果物も配信する）想定
 
 function buildWsUrl(): string {
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-  return `${protocol}//${window.location.host}/ws`;
+  // タブのIDを名乗っておくと、音声アシスタントの返答の声をこのタブにだけ届けてもらえる
+  return `${protocol}//${window.location.host}/ws?clientId=${CLIENT_ID}`;
 }
 
 /** 現在時刻(1分毎更新)とWebSocket接続を保持し、全ウィジェットに渡すランタイムコンテキストを構築する */
@@ -55,5 +57,7 @@ export function useRuntimeContext(): WidgetRuntimeContext {
     };
   }, []);
 
-  return { apiBaseUrl: API_BASE_URL, socket: socketRef.current, now };
+  // 描き直すたびに新しい入れ物を作ると、ctx を見ている画面（Mail・Calendar など）が取得をやり直すので、変わったときだけ作る
+  const socket = socketRef.current;
+  return useMemo(() => ({ apiBaseUrl: API_BASE_URL, socket, now }), [socket, now]);
 }

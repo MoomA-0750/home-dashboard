@@ -121,7 +121,12 @@ export function prepareRig(vrm: VRM, overrides: RigOverrides = {}): AvatarRig {
 const euler = new THREE.Euler();
 
 /** 人型の骨を、VRM 1.0 の向き（モデルが +Z を向き、左手が +X）で書いた角度（度）で回す */
-export function setHumanoidRotation(vrm: VRM, rig: AvatarRig, name: VRMHumanBoneName, degrees: [number, number, number]) {
+export function setHumanoidRotation(
+  vrm: VRM,
+  rig: AvatarRig,
+  name: VRMHumanBoneName,
+  degrees: [number, number, number],
+) {
   const node = vrm.humanoid.getNormalizedBoneNode(name);
   if (!node) return;
   const [x, y, z] = degrees.map((d) => THREE.MathUtils.degToRad(d));
@@ -156,7 +161,13 @@ export function bendChain(chain: Chain, rotations: (index: number) => [THREE.Vec
 const tmpQuaternion = new THREE.Quaternion();
 
 /** 人型の骨から見た向き（VRM 1.0 の向きで書いた軸を、いまのワールド空間の向きにしたもの） */
-export function humanoidAxis(vrm: VRM, rig: AvatarRig, name: VRMHumanBoneName, local: THREE.Vector3, out: THREE.Vector3) {
+export function humanoidAxis(
+  vrm: VRM,
+  rig: AvatarRig,
+  name: VRMHumanBoneName,
+  local: THREE.Vector3,
+  out: THREE.Vector3,
+) {
   const node = vrm.humanoid.getNormalizedBoneNode(name);
   out.set(local.x * rig.facing, local.y, local.z * rig.facing);
   if (!node) return out;

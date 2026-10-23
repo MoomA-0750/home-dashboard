@@ -1,6 +1,7 @@
-import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rename, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { config } from "./config.js";
+import { ServiceError } from "./serviceError.js";
 
 /**
  * 音声アシスタントのキャラクター（ウェイクワードごとに呼び分ける）。
@@ -20,11 +21,28 @@ import { config } from "./config.js";
  */
 
 export const PERSONA_ID = /^[a-z0-9][a-z0-9_-]{0,31}$/;
-export const PERSONA_FILES = { meta: "persona.json", prompt: "prompt.md", avatar: "avatar.vrm" } as const;
+// icon.png はチャットに出すアイコン（無ければ名前の頭文字を出す）。設定画面でVRMから作るか、画像を選んで置く
+export const PERSONA_FILES = {
+  meta: "persona.json",
+  prompt: "prompt.md",
+  avatar: "avatar.vrm",
+  icon: "icon.png",
+} as const;
+
+/** 声の合成エンジン。voicevox（既定）か aivis（AivisSpeech） */
+export const VOICE_ENGINES = ["voicevox", "aivis"] as const;
+export type VoiceEngine = (typeof VOICE_ENGINES)[number];
+
+export interface VoiceSpec {
+  /** 合成エンジンの話者（スタイル）ID */
+  speaker?: number;
+  speed?: number;
+  engine?: VoiceEngine;
+}
 
 export interface ExpressionSpec {
   avatar?: Record<string, number>;
-  voice?: { speaker?: number; speed?: number };
+  voice?: VoiceSpec;
   keywords?: string[];
   /** 体の身振りの名前（apps/web/src/avatar/motions.ts） */
   motion?: string;
@@ -43,7 +61,7 @@ export interface PersonaFile {
   /** 画面に出す呼び名。省略時は表示名（ウェイクワードが表示名と違う読みのときに書く） */
   wakeLabel?: string;
   decoys?: string[];
-  voice?: { speaker?: number; speed?: number };
+  voice?: VoiceSpec;
   expressions?: Record<string, ExpressionSpec>;
   rig?: RigSpec;
 }
@@ -52,6 +70,8 @@ export interface CommonFile {
   wakePrefix?: string;
   commonDecoys?: string[];
   order?: string[];
+  /** 切ってあるキャラクターの id。ウェイクワードに反応せず、画面の話し相手にも出ない（設定画面のトグルで変える） */
+  disabled?: string[];
 }
 
 export interface PersonaInfo {
@@ -60,9 +80,14 @@ export interface PersonaInfo {
   /** 表示用のウェイクワード（例: 「ねえプラム」）。Vosk の表記（「甘夏」）や別表記ではなく、名前で出す */
   wakePhrase: string;
   avatarPath: string | null;
+  iconPath: string | null;
+  /** アイコンを置き換えたときに画面のキャッシュを使わせないための値（更新時刻） */
+  iconVersion: number | null;
   hasPrompt: boolean;
   /** 設定ファイルが無いときの「Claude」。書き出し・削除はできない */
   builtIn: boolean;
+  /** 入っているか（common.json の disabled に無いか） */
+  enabled: boolean;
   meta: PersonaFile | null;
 }
 
@@ -90,7 +115,10 @@ export async function readCommon(): Promise<CommonFile> {
 
 export async function writeCommon(common: CommonFile): Promise<void> {
   await mkdir(config.voice.personasDir, { recursive: true });
-  await writeFile(commonPath(), `${JSON.stringify(common, null, 2)}\n`, "utf-8");
+  // 音声エージェントが5秒ごとに読んでいるので、書きかけを読まれないよう別名に書いてから置き換える
+  const tmp = `${commonPath()}.tmp`;
+  await writeFile(tmp, `${JSON.stringify(common, null, 2)}\n`, "utf-8");
+  await rename(tmp, commonPath());
 }
 
 const fallbackPersonas = async (): Promise<PersonaInfo[]> => [
@@ -99,8 +127,11 @@ const fallbackPersonas = async (): Promise<PersonaInfo[]> => [
     name: "Claude",
     wakePhrase: "ねえクロード",
     avatarPath: (await exists(config.voice.avatarPath)) ? config.voice.avatarPath : null,
+    iconPath: null,
+    iconVersion: null,
     hasPrompt: false,
     builtIn: true,
+    enabled: true,
     meta: null,
   },
 ];
@@ -124,30 +155,53 @@ export async function readPersonas(): Promise<PersonaInfo[]> {
       continue; // persona.json の無いディレクトリや壊れたものは、エージェントと同じく飛ばす
     }
     const avatarPath = join(dir, PERSONA_FILES.avatar);
+    const iconPath = join(dir, PERSONA_FILES.icon);
+    const icon = await stat(iconPath).catch(() => null);
     personas.push({
       id,
       name: meta.name,
       wakePhrase: `${prefix}${meta.wakeLabel ?? meta.name}`.replace(/\s+/g, ""),
       avatarPath: (await exists(avatarPath)) ? avatarPath : null,
+      iconPath: icon?.isFile() ? iconPath : null,
+      iconVersion: icon?.isFile() ? Math.floor(icon.mtimeMs) : null,
       hasPrompt: await exists(join(dir, PERSONA_FILES.prompt)),
       builtIn: false,
+      enabled: !(common.disabled ?? []).includes(id),
       meta,
     });
   }
   if (personas.length === 0) return fallbackPersonas();
+  // 全員を切ってあるときは（エージェントと同じく）全員を入っている扱いにする（誰も呼べなくならないように）
+  if (personas.every((persona) => !persona.enabled)) for (const persona of personas) persona.enabled = true;
   const order = common.order ?? [];
   const rank = (id: string) => (order.includes(id) ? order.indexOf(id) : order.length);
   return personas.sort((a, b) => rank(a.id) - rank(b.id) || a.id.localeCompare(b.id));
 }
 
+/** 画面のマイクボタン・文字入力で応答するキャラクター。切ってあるキャラクターは選ばない */
 export async function readDefaultPersonaId(personas: PersonaInfo[]): Promise<string> {
+  const enabled = personas.filter((persona) => persona.enabled);
   try {
     const saved = JSON.parse(await readFile(settingsPath, "utf-8")) as { defaultPersonaId?: string };
-    if (personas.some((persona) => persona.id === saved.defaultPersonaId)) return saved.defaultPersonaId!;
+    if (enabled.some((persona) => persona.id === saved.defaultPersonaId)) return saved.defaultPersonaId!;
   } catch {
     // 未保存・壊れている場合は先頭のキャラクター
   }
-  return personas[0].id;
+  return (enabled[0] ?? personas[0]).id;
+}
+
+/** キャラクターを入／切する。最後の1人は切れない（誰も呼べなくなるため） */
+export async function setPersonaEnabled(personaId: string, enabled: boolean): Promise<void> {
+  const personas = await readPersonas();
+  const target = personas.find((persona) => persona.id === personaId);
+  if (!target || target.builtIn) throw new ServiceError(404, "そのキャラクターは見つかりません", "Character not found");
+  if (!enabled && personas.filter((persona) => persona.enabled && persona.id !== personaId).length === 0)
+    throw new ServiceError(409, "最後の1人は切れません", "The last character cannot be turned off");
+  const common = await readCommon();
+  const disabled = new Set(common.disabled ?? []);
+  if (enabled) disabled.delete(personaId);
+  else disabled.add(personaId);
+  await writeCommon({ ...common, disabled: [...disabled].sort() });
 }
 
 export async function writeDefaultPersonaId(personaId: string): Promise<void> {

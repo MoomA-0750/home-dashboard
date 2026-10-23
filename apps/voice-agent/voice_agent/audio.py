@@ -20,9 +20,13 @@ class MicrophoneError(RuntimeError):
 
 async def microphone(cmd: list[str]) -> AsyncIterator[bytes]:
     """録音コマンドの標準出力（16kHz mono s16le）を100msごとに返す"""
-    proc = await asyncio.create_subprocess_exec(
-        *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, stdin=asyncio.subprocess.DEVNULL
-    )
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, stdin=asyncio.subprocess.DEVNULL
+        )
+    except OSError as err:
+        # 録音コマンドが無い・実行できないときも、マイクが無いときと同じく待って試し直す（エージェントごと落とさない）
+        raise MicrophoneError(f"録音コマンドを起動できません: {' '.join(cmd)} {err}") from None
     assert proc.stdout is not None and proc.stderr is not None
     try:
         while True:
@@ -30,7 +34,9 @@ async def microphone(cmd: list[str]) -> AsyncIterator[bytes]:
                 yield await proc.stdout.readexactly(CHUNK_BYTES)
             except asyncio.IncompleteReadError:
                 stderr = (await proc.stderr.read()).decode(errors="replace").strip()
-                raise MicrophoneError(f"録音コマンドが終了しました: {' '.join(cmd)} {stderr}") from None
+                # arecord は失敗すると設定の表を何十行も出すので、理由の1行目だけを残す
+                reason = stderr.splitlines()[0] if stderr else ""
+                raise MicrophoneError(f"録音コマンドが終了しました: {' '.join(cmd)} {reason}") from None
     finally:
         if proc.returncode is None:
             proc.kill()
@@ -72,6 +78,11 @@ class Player:
 
 def pcm_to_float(pcm: bytes) -> np.ndarray:
     return np.frombuffer(pcm, dtype=np.int16).astype(np.float32) / 32768.0
+
+
+def wav_duration_s(wav: bytes) -> float:
+    with wave.open(io.BytesIO(wav), "rb") as w:
+        return w.getnframes() / w.getframerate()
 
 
 def _to_wav(samples: np.ndarray, rate: int) -> bytes:

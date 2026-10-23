@@ -6,14 +6,14 @@ from dataclasses import dataclass, field
 
 import httpx
 
-from .audio import Player
-from .personas import Expression
+from .audio import Player, wav_duration_s
+from .personas import ENGINE_NAMES, Expression
 
 log = logging.getLogger(__name__)
 
 _SENTENCE_END = re.compile(r"[。！？!?\n]+")
 _CLAUSE_END = re.compile(r"[、，,]")
-# これより長くなった文は読点でも区切って先に合成に回す。CPUだけのVOICEVOXは合成が実時間と同程度に
+# これより長くなった文は読点でも区切って先に合成に回す。CPUだけのVOICEVOX・AivisSpeechは合成が実時間と同程度に
 # かかるので、1文丸ごと待つと声が出るまで何秒も空く
 MIN_CLAUSE_CHARS = 12
 _MARKDOWN = re.compile(r"[*_#`>|]+|^\s*[-・]\s+", re.M)
@@ -177,6 +177,8 @@ def mouth_cues(query: dict) -> tuple[list[tuple[float, str]], float]:
 class Voice:
     speaker: int
     speed: float
+    # 合成に使うエンジン（personas.ENGINE_NAMES のキー）
+    engine: str = "voicevox"
 
 
 # これより近いビートはまとめる（細かすぎるうなずきは落ち着きがなく見える）
@@ -217,9 +219,48 @@ def speech_beats(query: dict) -> list[tuple[float, float]]:
     return beats
 
 
+# 拍の長さを見積もるときの重み。読点などの間（pau）は普通の拍より長く、促音（cl）は短い
+_MORA_WEIGHTS = {"pau": 2.0, "cl": 0.6}
+_CONSONANT_SHARE = 0.35
+
+
+def estimate_lengths(query: dict, duration_s: float) -> dict:
+    """
+    音素ごとの長さを返さないエンジン（AivisSpeech は audio_query の長さ・高さがすべて 0）のために、合成した音声の
+    実際の長さを拍に配って、VOICEVOX と同じ形の audio_query を作る（口パク・身振りの計算をそのまま使えるように）。
+    拍ごとの長さは実際とずれるが、文の始まりと終わりは音声と揃う
+    """
+    speed = query.get("speedScale") or 1.0
+    pre, post = query["prePhonemeLength"], query["postPhonemeLength"]
+    moras = [m for phrase in query["accent_phrases"] for m in [*phrase["moras"], phrase.get("pause_mora")] if m]
+    weights = [_MORA_WEIGHTS.get(m["vowel"], 1.0) for m in moras]
+    body = max(duration_s * speed - pre - post, 0.0)
+    unit = body / sum(weights) if weights else 0.0
+    estimated = {**query, "accent_phrases": []}
+    for phrase in query["accent_phrases"]:
+        filled = {**phrase, "moras": [_fill(m, unit) for m in phrase["moras"]]}
+        if phrase.get("pause_mora"):
+            filled["pause_mora"] = _fill(phrase["pause_mora"], unit)
+        estimated["accent_phrases"].append(filled)
+    return estimated
+
+
+def _fill(mora: dict, unit: float) -> dict:
+    length = unit * _MORA_WEIGHTS.get(mora["vowel"], 1.0)
+    consonant = length * _CONSONANT_SHARE if mora.get("consonant") else 0.0
+    voiced = mora["vowel"] in ("a", "i", "u", "e", "o")
+    # 高さは分からないので、声のある拍を同じ高さにする（身振りの強さはどれも同じになる）
+    return {**mora, "consonant_length": consonant, "vowel_length": length - consonant, "pitch": 1.0 if voiced else 0.0}
+
+
 class VoiceVox:
-    def __init__(self, base_url: str) -> None:
+    """VOICEVOX Engine と、同じ API を持つエンジン（AivisSpeech Engine）"""
+
+    def __init__(self, base_url: str, estimate_timing: bool = False) -> None:
         self._client = httpx.AsyncClient(base_url=base_url, timeout=60)
+        self.base_url = base_url
+        # 音素ごとの長さを返さないエンジンか（AivisSpeech）
+        self._estimate_timing = estimate_timing
 
     async def synthesize(self, text: str, voice: Voice) -> Speech:
         res = await self._client.post("/audio_query", params={"text": text, "speaker": voice.speaker})
@@ -228,11 +269,13 @@ class VoiceVox:
         query["speedScale"] = voice.speed
         res = await self._client.post("/synthesis", params={"speaker": voice.speaker}, json=query)
         res.raise_for_status()
+        if self._estimate_timing:
+            query = estimate_lengths(query, wav_duration_s(res.content))
         cues, duration = mouth_cues(query)
         return Speech(res.content, cues, duration, beats=speech_beats(query))
 
     async def speaker_ids(self) -> set[int] | None:
-        """使える話者（スタイル）のID。VOICEVOX Engine につながらなければ None（確かめない）"""
+        """使える話者（スタイル）のID。エンジンにつながらなければ None（確かめない）"""
         try:
             res = await self._client.get("/speakers")
             res.raise_for_status()
@@ -246,6 +289,22 @@ class VoiceVox:
         return res.json()
 
 
+class Synthesizer:
+    """Voice.engine で合成エンジンを選ぶ"""
+
+    def __init__(self, engines: dict[str, VoiceVox]) -> None:
+        self.engines = engines
+
+    async def synthesize(self, text: str, voice: Voice) -> Speech:
+        engine = self.engines.get(voice.engine)
+        if engine is None:
+            raise httpx.HTTPError(f"合成エンジン {voice.engine} がありません")
+        return await engine.synthesize(text, voice)
+
+    async def speaker_ids(self) -> dict[str, set[int] | None]:
+        return {name: await engine.speaker_ids() for name, engine in self.engines.items()}
+
+
 _END = object()
 
 
@@ -256,7 +315,7 @@ class SpeechQueue:
     """
 
     def __init__(
-        self, tts: VoiceVox, voice: Voice, player: Player, on_play: Callable[[Speech, bool], Awaitable[None]]
+        self, tts: Synthesizer, voice: Voice, player: Player, on_play: Callable[[Speech, bool], Awaitable[None]]
     ) -> None:
         """on_play(speech, first) は各文の再生を始める直前に呼ばれる"""
         self._tts = tts
@@ -287,14 +346,23 @@ class SpeechQueue:
             voice = Voice(
                 speaker=expression.speaker if expression and expression.speaker is not None else self._voice.speaker,
                 speed=expression.speed if expression and expression.speed is not None else self._voice.speed,
+                engine=expression.engine if expression and expression.engine else self._voice.engine,
             )
-            try:
-                speech = await self._tts.synthesize(piece.text, voice)
+            speech = await self._synthesize(piece.text, voice)
+            # 表情の声（スタイル）が無いときは、黙るよりキャラクターのふだんの声で読む（エンジンを替えて表情の声を直し忘れたときなど）
+            if speech is None and voice != self._voice:
+                speech = await self._synthesize(piece.text, self._voice)
+            if speech is not None:
                 speech.expression = expression
                 await self._audio.put(speech)
-            except httpx.HTTPError as err:
-                log.error("VOICEVOXでの音声合成に失敗しました: %s", err)
         await self._audio.put(_END)
+
+    async def _synthesize(self, text: str, voice: Voice) -> Speech | None:
+        try:
+            return await self._tts.synthesize(text, voice)
+        except httpx.HTTPError as err:
+            log.error("%sでの音声合成に失敗しました（話者ID %s）: %s", ENGINE_NAMES.get(voice.engine, voice.engine), voice.speaker, err)
+            return None
 
     async def _play_loop(self) -> None:
         first = True

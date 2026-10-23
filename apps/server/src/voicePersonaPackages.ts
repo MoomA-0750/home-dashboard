@@ -13,23 +13,34 @@ import {
   writeCommon,
   type PersonaFile,
   type PersonaInfo,
+  VOICE_ENGINES,
+  type VoiceEngine,
 } from "./voicePersonas.js";
 
 /**
  * キャラクターのパッケージ（ZIP）のインポート・書き出し・削除。
  *
- * パッケージは 1人分のディレクトリをそのままZIPにしたもの（persona.json・prompt.md・avatar.vrm。直下でも、
- * 1階層のフォルダの中でもよい）。ZIPの中のパスは書き込み先に使わず、決まった3つのファイル名だけを取り出す
+ * パッケージは 1人分のディレクトリをそのままZIPにしたもの（persona.json・prompt.md・avatar.vrm・icon.png。直下でも、
+ * 1階層のフォルダの中でもよい）。ZIPの中のパスは書き込み先に使わず、決まった4つのファイル名だけを取り出す
  * （「../」などを含むパスで config/ の外へ書かれないように）。
  *
  * このダッシュボードはLANに認証なしで公開される前提なので、誰でもキャラクターを追加できる。
  * ただしキャラクターのプロンプトで Claude Code のツールや権限は変わらないので、既存の /api/* でできる以上のことはできない。
  */
 
+// アイコンは画面で 256px 四方に縮めてから送ってもらう（大きな写真をそのまま置かれても重くならないように）
+export const MAX_ICON_BYTES = 512 * 1024;
+const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+
+function isPng(bytes: Uint8Array): boolean {
+  return bytes.length > PNG_SIGNATURE.length && PNG_SIGNATURE.every((b, i) => bytes[i] === b);
+}
+
 const MAX_SIZES = {
   [PERSONA_FILES.meta]: 200 * 1024,
   [PERSONA_FILES.prompt]: 200 * 1024,
   [PERSONA_FILES.avatar]: 120 * 1024 * 1024,
+  [PERSONA_FILES.icon]: MAX_ICON_BYTES,
 };
 
 type Loose = Record<string, unknown>;
@@ -56,12 +67,19 @@ function voice(value: unknown, field: string): PersonaFile["voice"] {
   const v = value as Loose;
   if (typeof v !== "object" || v === null) fail(`${field} はオブジェクトにしてください`);
   if (v.speaker !== undefined && !(Number.isInteger(v.speaker) && (v.speaker as number) >= 0)) {
-    fail(`${field}.speaker は VOICEVOX の話者ID（0以上の整数）にしてください`);
+    fail(`${field}.speaker は話者ID（0以上の整数）にしてください`);
   }
   if (v.speed !== undefined && !(typeof v.speed === "number" && v.speed >= 0.5 && v.speed <= 2)) {
     fail(`${field}.speed は 0.5〜2 の数にしてください`);
   }
-  return { speaker: v.speaker as number | undefined, speed: v.speed as number | undefined };
+  if (v.engine !== undefined && !VOICE_ENGINES.includes(v.engine as VoiceEngine)) {
+    fail(`${field}.engine は ${VOICE_ENGINES.join(" / ")} のどれかにしてください`);
+  }
+  return {
+    speaker: v.speaker as number | undefined,
+    speed: v.speed as number | undefined,
+    ...(v.engine !== undefined ? { engine: v.engine as VoiceEngine } : {}),
+  };
 }
 
 /** persona.json の形を確かめる（エージェントが読めない設定を置かないように） */
@@ -78,7 +96,10 @@ export function parsePersonaFile(raw: string): PersonaFile {
   if (typeof data.name !== "string" || !data.name.trim() || data.name.length > 32) {
     fail("persona.json の name（表示名）を32文字までで書いてください");
   }
-  if (data.wakeLabel !== undefined && (typeof data.wakeLabel !== "string" || !data.wakeLabel.trim() || data.wakeLabel.length > 32)) {
+  if (
+    data.wakeLabel !== undefined &&
+    (typeof data.wakeLabel !== "string" || !data.wakeLabel.trim() || data.wakeLabel.length > 32)
+  ) {
     fail("persona.json の wakeLabel（画面に出す呼び名）は32文字までの文字列にしてください");
   }
   const expressions: PersonaFile["expressions"] = {};
@@ -116,7 +137,10 @@ export function parsePersonaFile(raw: string): PersonaFile {
       ears:
         r.ears === undefined
           ? undefined
-          : { left: strings(ears.left, "rig.ears.left", { max: 10, maxLength: 64 }), right: strings(ears.right, "rig.ears.right", { max: 10, maxLength: 64 }) },
+          : {
+              left: strings(ears.left, "rig.ears.left", { max: 10, maxLength: 64 }),
+              right: strings(ears.right, "rig.ears.right", { max: 10, maxLength: 64 }),
+            },
       tail: r.tail === undefined ? undefined : strings(r.tail, "rig.tail", { max: 10, maxLength: 64 }),
     };
   }
@@ -162,9 +186,13 @@ export function vrmExpressionNames(json: string): Set<string> | null {
   const extensions = (gltf.extensions ?? {}) as Loose;
   const names = new Set<string>();
   const vrm1 = extensions.VRMC_vrm as { expressions?: { preset?: Loose; custom?: Loose } } | undefined;
-  const vrm0 = extensions.VRM as { blendShapeMaster?: { blendShapeGroups?: { presetName?: string; name?: string }[] } } | undefined;
+  const vrm0 = extensions.VRM as
+    { blendShapeMaster?: { blendShapeGroups?: { presetName?: string; name?: string }[] } } | undefined;
   if (vrm1) {
-    for (const name of [...Object.keys(vrm1.expressions?.preset ?? {}), ...Object.keys(vrm1.expressions?.custom ?? {})]) {
+    for (const name of [
+      ...Object.keys(vrm1.expressions?.preset ?? {}),
+      ...Object.keys(vrm1.expressions?.custom ?? {}),
+    ]) {
       names.add(name.toLowerCase());
     }
   } else if (vrm0) {
@@ -220,11 +248,15 @@ export function expressionWarnings(meta: PersonaFile, names: Set<string> | null,
 /** 一覧に出す、サーバーで確かめられる警告（表情の割り当て） */
 export async function personaWarnings(persona: PersonaInfo): Promise<string[]> {
   if (!persona.meta) return [];
-  const names = persona.avatarPath ? vrmExpressionNames((await readGlbJson(persona.avatarPath).catch(() => null)) ?? "") : null;
+  const names = persona.avatarPath
+    ? vrmExpressionNames((await readGlbJson(persona.avatarPath).catch(() => null)) ?? "")
+    : null;
   return expressionWarnings(persona.meta, names, persona.avatarPath !== null);
 }
 
-function extractPackage(zip: Uint8Array): Partial<Record<(typeof PERSONA_FILES)[keyof typeof PERSONA_FILES], Uint8Array>> {
+function extractPackage(
+  zip: Uint8Array,
+): Partial<Record<(typeof PERSONA_FILES)[keyof typeof PERSONA_FILES], Uint8Array>> {
   const wanted = new Set<string>(Object.values(PERSONA_FILES));
   let folder: string | null = null;
   let entries;
@@ -235,7 +267,8 @@ function extractPackage(zip: Uint8Array): Partial<Record<(typeof PERSONA_FILES)[
         const base = parts.at(-1) ?? "";
         if (parts.length > 2 || !wanted.has(base) || file.name.startsWith("__MACOSX")) return false;
         const dir = parts.length === 2 ? parts[0] : "";
-        if (folder !== null && folder !== dir) fail("ZIPにキャラクターが2人以上入っています（1人ずつインポートしてください）");
+        if (folder !== null && folder !== dir)
+          fail("ZIPにキャラクターが2人以上入っています（1人ずつインポートしてください）");
         folder = dir;
         // 展開する前に大きさを見る（圧縮率の高いZIPで展開後に膨れ上がるのを防ぐ）
         if (file.originalSize > MAX_SIZES[base as keyof typeof MAX_SIZES]) fail(`${base} が大きすぎます`);
@@ -267,11 +300,13 @@ export async function importPersonaPackage(zip: Uint8Array, { replace = false } 
   const avatar = files[PERSONA_FILES.avatar];
   const avatarJson = avatar ? glbJson(avatar) : null;
   if (avatar && !avatarJson) fail("avatar.vrm がVRM（GLB）ファイルではありません");
+  const icon = files[PERSONA_FILES.icon];
+  if (icon && !isPng(icon)) fail("icon.png がPNG画像ではありません");
 
   const target = personaDir(meta.id);
   const existing = (await readPersonas()).find((persona) => persona.id === meta.id && !persona.builtIn);
   if (existing && !replace) {
-    throw new ServiceError(409, `「${existing.name}」（${meta.id}）はすでにあります。上書きしますか？`);
+    throw new ServiceError(409, `「${existing.name}」（${meta.id}）はすでにあります。上書きしますか？`, `"${existing.name}" (${meta.id}) already exists. Replace it?`);
   }
 
   // 書きかけのディレクトリをエージェントに読まれないよう、別名で書いてから差し替える
@@ -283,6 +318,7 @@ export async function importPersonaPackage(zip: Uint8Array, { replace = false } 
     const prompt = files[PERSONA_FILES.prompt];
     if (prompt) await writeFile(join(staging, PERSONA_FILES.prompt), prompt);
     if (avatar) await writeFile(join(staging, PERSONA_FILES.avatar), avatar);
+    if (icon) await writeFile(join(staging, PERSONA_FILES.icon), icon);
     if (existing) await rm(target, { recursive: true, force: true });
     await rename(staging, target);
   } catch (err) {
@@ -304,19 +340,38 @@ export async function importPersonaPackage(zip: Uint8Array, { replace = false } 
 
 export async function exportPersonaPackage(id: string): Promise<{ name: string; zip: Uint8Array }> {
   const persona = (await readPersonas()).find((p) => p.id === id && !p.builtIn);
-  if (!persona) throw new ServiceError(404, "キャラクターが見つかりません");
+  if (!persona) throw new ServiceError(404, "キャラクターが見つかりません", "Character not found");
   const dir = personaDir(id);
   const files: Zippable = { [PERSONA_FILES.meta]: await readFile(join(dir, PERSONA_FILES.meta)) };
   if (persona.hasPrompt) files[PERSONA_FILES.prompt] = await readFile(join(dir, PERSONA_FILES.prompt));
   // VRMは大きく、圧縮してもあまり縮まないので無圧縮で入れる
   if (persona.avatarPath) files[PERSONA_FILES.avatar] = [await readFile(persona.avatarPath), { level: 0 }];
+  if (persona.iconPath) files[PERSONA_FILES.icon] = [await readFile(persona.iconPath), { level: 0 }];
   return { name: persona.name, zip: zipSync({ [id]: files }) };
 }
 
 export async function deletePersona(id: string): Promise<void> {
   const persona = (await readPersonas()).find((p) => p.id === id && !p.builtIn);
-  if (!persona) throw new ServiceError(404, "キャラクターが見つかりません");
+  if (!persona) throw new ServiceError(404, "キャラクターが見つかりません", "Character not found");
   await rm(personaDir(id), { recursive: true, force: true });
   const common = await readCommon();
   if (common.order?.includes(id)) await writeCommon({ ...common, order: common.order.filter((o) => o !== id) });
+}
+
+/** チャットに出すアイコンを置き換える（PNG）。書きかけを読まれないよう別名で書いてから差し替える */
+export async function writePersonaIcon(id: string, png: Uint8Array): Promise<void> {
+  const persona = (await readPersonas()).find((p) => p.id === id && !p.builtIn);
+  if (!persona) throw new ServiceError(404, "キャラクターが見つかりません", "Character not found");
+  if (!isPng(png)) fail("アイコンはPNG画像にしてください");
+  if (png.length > MAX_ICON_BYTES) fail("アイコンが大きすぎます（512KBまで）");
+  const path = join(personaDir(id), PERSONA_FILES.icon);
+  const tmp = `${path}.${randomUUID()}.tmp`;
+  await writeFile(tmp, png);
+  await rename(tmp, path);
+}
+
+export async function deletePersonaIcon(id: string): Promise<void> {
+  const persona = (await readPersonas()).find((p) => p.id === id && !p.builtIn);
+  if (!persona) throw new ServiceError(404, "キャラクターが見つかりません", "Character not found");
+  await rm(join(personaDir(id), PERSONA_FILES.icon), { force: true });
 }

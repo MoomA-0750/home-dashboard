@@ -1,22 +1,29 @@
 import argparse
 import asyncio
+import base64
+import binascii
 import contextlib
 import enum
 import logging
+import re
 import shutil
 import time
 import uuid
+from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import datetime
 
 import httpx
+import numpy as np
 from vosk import Model
 
-from .audio import CHIME_DURATION_S, MISS_CHIME, WAKE_CHIME, MicrophoneError, Player, microphone
-from .claude import ClaudeConversation, ClaudeError
+from .audio import CHIME_DURATION_S, MISS_CHIME, SAMPLE_RATE, SAMPLE_WIDTH, WAKE_CHIME, MicrophoneError, Player, microphone
+from .claude import ClaudeConversation, ClaudeError, attachment_block
 from .config import Config, load_config
-from .personas import Persona, check_personas, load_personas, load_vocabulary, personas_signature
-from .relay import Relay
-from .speech import Directions, Piece, SentenceSplitter, Speech, SpeechQueue, Voice, VoiceVox
+from .mcp import McpCatalog, McpSelection, scan
+from .personas import ENGINE_NAMES, Persona, check_personas, load_personas, load_vocabulary, personas_signature
+from .relay import Relay, RemotePlayer
+from .speech import Directions, Piece, SentenceSplitter, Speech, SpeechQueue, Synthesizer, Voice, VoiceVox
 from .stt import Transcriber
 from .vad import VoiceActivity
 from .wake import SpeechRecognizer, Utterance, Word
@@ -27,6 +34,97 @@ log = logging.getLogger("voice_agent")
 FOLLOW_UP_GRACE_S = 0.4
 # キャラクター設定のファイルを手で直したときに気づくまでの間隔
 PERSONAS_POLL_S = 5
+# 起動してから、道具の設定が届かなくても Claude Code を起動しておくまでの秒
+CLAUDE_WARM_DELAY_S = 30
+# マイクが無いときの再試行の間隔（最短・最長の秒）
+MIC_RETRY_MIN_S = 5
+MIC_RETRY_MAX_S = 300
+# ブラウザで録った声を受け付ける長さの上限（画面側も同じ長さで録音を打ち切る）
+BROWSER_AUDIO_MAX_S = 30
+# 返答が流れてくる間に、画面へ状態を送る間隔の下限
+RESPONSE_PUBLISH_S = 0.1
+# ホストのマイクで聞いた声（ブラウザで録った声と区別する。続けて話す・チャイムはホストのマイクのときだけ）
+HOST_MIC_SOURCES = ("wake", "follow-up", "button")
+# 画面のチャットが選んだ会話のID（Claude Code の会話のIDと同じ UUID）
+CONVERSATION_ID = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
+
+
+def conversation_from(message: dict) -> str | None:
+    value = message.get("conversationId")
+    return value if isinstance(value, str) and CONVERSATION_ID.match(value) else None
+
+
+def account_from(message: dict) -> str | None:
+    """画面から話しかけた人のアカウントのID（サーバーが付けてくる）"""
+    value = message.get("accountId")
+    return value if isinstance(value, str) and value else None
+
+
+def owner_from(message: dict) -> str | None:
+    """話しかけた会話の持ち主（サーバーが付けてくる。家族みんなの会話は None）"""
+    value = message.get("owner")
+    return value if isinstance(value, str) and value else None
+
+
+@dataclass
+class ServerGuard:
+    """
+    道具を使ってよいかを、ダッシュボードのサーバー（/api/voice/guard）に決めてもらう（claude.ToolGuard）。
+    話しかけ1回ごとに作り、誰がどこから何と言ったかを添える（了承の「はい」は、聞き返したのとは別の話しかけでだけ受ける）
+    """
+
+    http: httpx.AsyncClient
+    conversation_id: Callable[[], str | None]
+    ask_id: str
+    source: str
+    account_id: str | None
+    utterance: str
+    attachments: bool
+
+    async def check(self, tool: str, tool_input: dict) -> dict:
+        res = await self.http.post(
+            "/api/voice/guard",
+            json={
+                "conversationId": self.conversation_id(),
+                "turnId": self.ask_id,
+                "source": self.source,
+                "accountId": self.account_id,
+                "utterance": self.utterance,
+                "attachments": self.attachments,
+                "tool": tool,
+                "input": tool_input,
+            },
+        )
+        res.raise_for_status()
+        return res.json()
+
+    async def wait(self, request_id: str) -> dict:
+        # サーバーは1回に最長50秒待って、まだなら pending を返す
+        res = await self.http.get(f"/api/voice/guard/requests/{request_id}/wait", timeout=70)
+        res.raise_for_status()
+        return res.json()
+
+
+@dataclass(frozen=True)
+class Reply:
+    """
+    返答の声をどこで鳴らすか。host はホストのスピーカー、browser は話しかけてきたブラウザ（client_id）、
+    none は読み上げず文字だけ。画面から話しかけたときは、その端末の設定で選ばれる
+    """
+
+    speech: str = "host"
+    client_id: str | None = None
+
+    @classmethod
+    def from_message(cls, message: dict) -> "Reply":
+        reply = message.get("reply") if isinstance(message.get("reply"), dict) else {}
+        speech = reply.get("speech")
+        client_id = reply.get("clientId") if isinstance(reply.get("clientId"), str) else None
+        if speech == "browser" and client_id:
+            return cls("browser", client_id)
+        if speech == "none":
+            return cls("none")
+        return cls()
 
 
 class Mode(enum.Enum):
@@ -56,21 +154,43 @@ class Assistant:
         self._reload_requested = False
         self._vocabulary: set[str] | None = None
         self.player = Player(config.output_cmd)
-        self.http = httpx.AsyncClient(base_url=config.server_url, timeout=10)
+        # ダッシュボードの API はログインが要る。エージェントは VOICE_AGENT_TOKEN を添えて読む
+        auth = {"Authorization": f"Bearer {config.agent_token}"} if config.agent_token else {}
+        self.http = httpx.AsyncClient(base_url=config.server_url, timeout=10, headers=auth)
         self.claude = ClaudeConversation(config, self.personas, self._fetch_history)
-        self.tts = VoiceVox(config.voicevox_url)
-        self.relay = Relay(config.server_url, config.agent_token, self.snapshot, self.handle_command, self.personas_info)
+        self.tts = Synthesizer(
+            {
+                "voicevox": VoiceVox(config.voicevox_url),
+                "aivis": VoiceVox(config.aivisspeech_url, estimate_timing=True),
+            }
+        )
+        self.relay = Relay(config.server_url, config.agent_token, self.snapshot, self.handle_command, self.hello)
+        # Claude に使わせるコネクター・MCPサーバー（設定画面で選んだものがサーバーから届く）と、使えるものの一覧
+        self.mcp_selection = McpSelection()
+        self.mcp_catalog = McpCatalog()
+        self._mcp_scanning = False
+        self._mcp_task: asyncio.Task | None = None
 
         self.state = "idle"
         self.turn_id: str | None = None
         self.transcript = ""
+        # チャットで添えられたファイル（記録に残す id・名前・種類）
+        self.attachments: list[dict] = []
         self.response = ""
         self.error: str | None = None
         # ウェイクワード無しで続けて話せる時間帯か（返答の直後）
         self.follow_up = False
-        # いま応答しているキャラクターと、どこから話しかけられたか（wake / follow-up / button / text）
+        # いま応答しているキャラクターと、どこから話しかけられたか（wake / follow-up / button / text / browser-mic）
         self.persona: Persona = self.personas.personas[0]
         self.source = "wake"
+        # いまのやり取りの会話（Claude Code の会話のID）。画面のチャットは自分の会話のやり取りだけを表示する
+        self.conversation_id: str | None = None
+        # 画面から話しかけた人（ログインしているアカウント）。ホストのマイクでは誰か分からないので None
+        self.account_id: str | None = None
+        # 話しかけた会話の持ち主。自分の画面の会話はその人だけに見せる（家族みんなの会話は None）
+        self.owner: str | None = None
+        # 最後に答えた先（画面で了承が押されたとき、続きを同じところへ返す）
+        self._last_reply = Reply()
 
         self.mode = Mode.IDLE
         self.turn_task: asyncio.Task | None = None
@@ -78,6 +198,8 @@ class Assistant:
         self.transcriber: Transcriber
         self.vad = VoiceActivity()
         self._reset_requested = False
+        # ホストのマイクで録音できているか（無いあいだは、画面のマイクボタンを受けない）
+        self.mic_available = True
         # 次の音声チャンクを処理する前に聞き取りを始める（画面のマイクボタン・返答後の続けて話す）
         self._listen_request: dict | None = None
         self._listen_timeout = 0.0
@@ -100,6 +222,8 @@ class Assistant:
             "followUp": self.follow_up,
             "personaId": self.persona.id,
             "personaName": self.persona.name,
+            "conversationId": self.conversation_id,
+            "owner": self.owner,
             "personaWarnings": self.persona_warnings,
         }
 
@@ -127,16 +251,58 @@ class Assistant:
         self.transcriber = await loop.run_in_executor(
             None, Transcriber, c.whisper_model, c.whisper_compute_type, self.personas.names
         )
-        try:
-            log.info("VOICEVOX Engine %s", await self.tts.check())
-        except Exception as err:  # 起動順の都合で後から立ち上がることもあるので、ここでは止めない
-            log.warning("VOICEVOX Engine に接続できません（%s）: %s", c.voicevox_url, err)
+        used = {p.engine for p in self.personas.personas}
+        for name, engine in self.tts.engines.items():
+            try:
+                log.info("%s Engine %s", ENGINE_NAMES[name], await engine.check())
+            except Exception as err:  # 起動順の都合で後から立ち上がることもあるので、ここでは止めない
+                # 誰も使っていないエンジンが無いのは問題ないので、使っているものだけ知らせる
+                (log.warning if name in used else log.info)(
+                    "%s Engine に接続できません（%s）: %s", ENGINE_NAMES[name], engine.base_url, err
+                )
 
-        await self.claude.start()
+        # Claude Code は、サーバーから使う道具（MCP）の設定が届いてから起動する（先に起動すると、届いた時点で
+        # 起動し直しになり、起動が2回になる）。届かないとき（サーバーが止まっているなど）も、少し待って起動しておく
+        asyncio.create_task(self._warm_claude())
         await self._check_personas()
+        # 一覧は数秒かかるので待たずに進める（選んだものはサーバーから届いた時点で反映する）
+        asyncio.create_task(self._scan_mcp())
         wake_phrases = ["".join(phrase) for p in self.personas.personas for phrase in p.wake_phrases]
         log.info("%s で待機します", "・".join(f"「{w}」" for w in wake_phrases))
         await asyncio.gather(self.relay.run(), self._listen_loop(), self._watch_personas())
+
+    async def _warm_claude(self) -> None:
+        await asyncio.sleep(CLAUDE_WARM_DELAY_S)
+        try:
+            await self.claude.start()
+        except Exception:
+            log.exception("Claude Code を起動できませんでした（最初の質問のときにもう一度試します）")
+
+    def hello(self) -> list[dict]:
+        return [self.personas_info(), self.mcp_catalog.to_message()]
+
+    async def _scan_mcp(self) -> None:
+        """このホストの Claude Code で使えるコネクター・MCPサーバーを調べ直し、画面に知らせる"""
+        if self._mcp_scanning:
+            return
+        self._mcp_scanning = True
+        try:
+            catalog = await scan(self.config.claude_bin, self.config.claude_cwd)
+            if catalog.error:
+                log.warning("MCPサーバーの一覧が取れませんでした: %s", catalog.error)
+                # 前に取れた一覧は残す（一時的に失敗しただけで、選んだものを外さない）
+                catalog.servers = self.mcp_catalog.servers
+            self.mcp_catalog = catalog
+            await self.relay.send(catalog.to_message())
+            await self._apply_mcp()
+        finally:
+            self._mcp_scanning = False
+
+    async def _apply_mcp(self) -> None:
+        if await self.claude.replace_mcp(self.mcp_selection, self.mcp_catalog):
+            enabled = [n for n in self.mcp_selection.enabled if self.mcp_catalog.get(n)]
+            enabled += [c.name for c in self.mcp_selection.custom]
+            log.info("Claude が使うMCPサーバーを切り替えました: %s", "・".join(enabled) or "（ダッシュボードのみ）")
 
     def personas_info(self) -> dict:
         """
@@ -194,9 +360,16 @@ class Assistant:
 
     async def _listen_loop(self) -> None:
         loop = asyncio.get_running_loop()
+        # マイクが無いあいだの再試行の間隔。失敗が続くほど延ばし（最長5分）、同じ失敗はログに出し続けない
+        retry_s = MIC_RETRY_MIN_S
+        failures = 0
         while True:
             try:
                 async for chunk in microphone(self.config.input_cmd):
+                    if failures:
+                        log.info("マイクで録音できるようになりました（%d回失敗した後）", failures)
+                        failures, retry_s = 0, MIC_RETRY_MIN_S
+                        self.mic_available = True
                     # 応答や聞き取りの途中で文法やキャラクターを差し替えないよう、待機中になってから読み直す
                     if self._reload_requested and self.mode is Mode.IDLE and self._listen_request is None:
                         await self._reload_personas()
@@ -225,8 +398,20 @@ class Assistant:
                     elif self.mode is Mode.LISTENING:
                         await self._on_listening_audio(voice)
             except MicrophoneError as err:
-                log.error("%s（5秒後に再試行）", err)
-                await asyncio.sleep(5)
+                failures += 1
+                self.mic_available = False
+                if failures == 1:
+                    log.error("%s（%d秒後に再試行。続くあいだは間隔を延ばし、ログは間隔が変わるときだけ出す）", err, retry_s)
+                elif retry_s < MIC_RETRY_MAX_S:
+                    log.warning("まだマイクで録音できません（%d回目。次は%d秒後）", failures, retry_s)
+                waited = 0.0
+                while waited < retry_s:
+                    # マイクが無くても画面からは話しかけられるので、キャラクターの変更はここでも反映する
+                    if self._reload_requested and self.mode is Mode.IDLE:
+                        await self._reload_personas()
+                    await asyncio.sleep(MIC_RETRY_MIN_S)
+                    waited += MIC_RETRY_MIN_S
+                retry_s = min(retry_s * 2, MIC_RETRY_MAX_S)
 
     def _process_chunk(self, chunk: bytes) -> tuple[Utterance | None, bool]:
         utterance = self.recognizer.feed(chunk)
@@ -260,6 +445,8 @@ class Assistant:
         c = self.config
         self.persona = persona
         self.source = source
+        self.account_id = None
+        self.owner = None
         self.mode = Mode.LISTENING
         self._wake_start = wake_start
         self._listen_start = start
@@ -306,12 +493,31 @@ class Assistant:
         self._reset_requested = True
         await self.update(state="idle", follow_up=False)
 
-    def _start_turn(self, *, audio: bytes | None = None, text: str | None = None) -> None:
+    def _start_turn(
+        self,
+        *,
+        audio: bytes | None = None,
+        text: str | None = None,
+        reply: Reply = Reply(),
+        conversation_id: str | None = None,
+        attachments: list[dict] | None = None,
+    ) -> None:
+        """conversation_id は画面のチャットで選んだ会話（無ければ今の会話で答える）。attachments はチャットに添えたファイル"""
         self.mode = Mode.BUSY
-        self.turn_task = asyncio.create_task(self._run_turn(audio, text, persona=self.persona, follow_up=self.follow_up))
+        self.attachments = attachments or []
+        self._last_reply = reply
+        self.turn_task = asyncio.create_task(
+            self._run_turn(
+                audio, text, persona=self.persona, follow_up=self.follow_up, reply=reply, conversation_id=conversation_id
+            )
+        )
 
-    async def _fetch_history(self) -> list[dict]:
-        res = await self.http.get("/api/voice/history", params={"limit": self.config.history_turns})
+    async def _fetch_history(self, owner: str | None) -> list[dict]:
+        """新しい会話に添える記録。家族みんなの会話と、持ち主がいればその人の会話だけ"""
+        params: dict[str, str | int] = {"limit": self.config.history_turns}
+        if owner:
+            params["owner"] = owner
+        res = await self.http.get("/api/voice/history", params=params)
         res.raise_for_status()
         return res.json()["records"]
 
@@ -324,8 +530,16 @@ class Assistant:
                     "id": self.turn_id,
                     "at": datetime.now().astimezone().isoformat(timespec="seconds"),
                     "conversationId": self.claude.session_id,
+                    # 誰の会話か（サーバーは、持ち主の画面にだけ見せる）
+                    "owner": self.claude.owner,
+                    # ゲストモードの間は、サーバーが記録に残さない
+                    "guest": self.claude.guest,
                     "persona": {"id": persona.id, "name": persona.name},
-                    "input": {"source": self.source, "text": self.transcript},
+                    "input": {
+                        "source": self.source,
+                        "text": self.transcript,
+                        **({"attachments": self.attachments} if self.attachments else {}),
+                    },
                     "output": {
                         "text": self.response.strip(),
                         "segments": [
@@ -338,13 +552,38 @@ class Assistant:
             }
         )
 
-    async def _run_turn(self, audio: bytes | None, text: str | None, *, persona: Persona, follow_up: bool) -> None:
+    async def _load_attachments(self) -> list[dict]:
+        """チャットに添えられたファイルをサーバーから取ってきて、Claude に見せるブロックにする"""
+        blocks = []
+        for item in self.attachments:
+            try:
+                res = await self.http.get(f"/api/voice/attachments/{item['id']}", timeout=30)
+                res.raise_for_status()
+            except httpx.HTTPError as err:
+                raise ClaudeError(f"添えられたファイル（{item.get('name')}）を読めませんでした: {err}") from None
+            blocks.append(attachment_block(item.get("kind", "text"), item.get("name", "file"), item.get("type", ""), res.content))
+        return blocks
+
+    async def _run_turn(
+        self,
+        audio: bytes | None,
+        text: str | None,
+        *,
+        persona: Persona,
+        follow_up: bool,
+        reply: Reply,
+        conversation_id: str | None = None,
+    ) -> None:
         loop = asyncio.get_running_loop()
         speech: SpeechQueue | None = None
         listen_again = False
+        host_mic = audio is not None and self.source in HOST_MIC_SOURCES
         try:
             if audio is not None:
-                await self.update(state="transcribing", follow_up=False)
+                if not host_mic:
+                    # ブラウザで録った声は、聞き始めを経ずにここから始まるので、新しいやり取りにする
+                    await self.update(turn_id=uuid.uuid4().hex[:8], transcript="", response="", error=None)
+                await self.update(state="transcribing", follow_up=False, conversation_id=conversation_id)
                 text = await loop.run_in_executor(None, self.transcriber.transcribe, audio)
                 log.info("書き起こし: %r", text)
                 if not text and follow_up:
@@ -353,11 +592,11 @@ class Assistant:
                     return
                 if not text:
                     await self.update(state="error", error="聞き取れませんでした")
-                    if self.config.chime:
+                    if self.config.chime and host_mic:
                         await self.player.play(MISS_CHIME)
                     return
             else:
-                await self.update(turn_id=uuid.uuid4().hex[:8], error=None, follow_up=False)
+                await self.update(turn_id=uuid.uuid4().hex[:8], error=None, follow_up=False, conversation_id=conversation_id)
 
             await self.update(state="thinking", transcript=text, response="")
             self._segments = []
@@ -383,39 +622,67 @@ class Assistant:
                     }
                 )
 
-            speech = SpeechQueue(self.tts, Voice(persona.speaker, persona.speed), self.player, on_play)
+            if reply.speech == "browser" and reply.client_id:
+                player: Player | RemotePlayer = RemotePlayer(self.relay, reply.client_id, self.turn_id)
+            else:
+                player = self.player
+            # 文字だけで返すときは読み上げない（画面のアバターも口を動かさない）
+            if reply.speech != "none":
+                speech = SpeechQueue(self.tts, Voice(persona.speaker, persona.speed, persona.engine), player, on_play)
             # 返答の（表情名）は表情と声のトーンの指定。画面にも読み上げにも出さない
             directions = Directions(persona.expressions, hide_descriptions=self.personas.has_characters)
             splitter = SentenceSplitter(directions)
             raw_response = ""
             assert text is not None
+            blocks = await self._load_attachments()
             asked_at = time.monotonic()
             first_delta_s: float | None = None
+            # 画面へ送る返答は間引く（差分ごとに状態をまるごと送ると、長い返答ほど送る量と整形が膨らむ）
+            last_published = 0.0
             # 中止されたときに Claude 側の後始末（読みかけの応答を捨てる）が確実に走るよう、明示的に閉じる
-            async with contextlib.aclosing(self.claude.ask(text, persona)) as stream:
+            guard = ServerGuard(
+                self.http,
+                lambda: self.claude.session_id,
+                ask_id=uuid.uuid4().hex,
+                source=self.source,
+                account_id=self.account_id,
+                utterance=text,
+                attachments=bool(blocks),
+            )
+            stream_ask = self.claude.ask(text, persona, conversation_id, blocks, guard, owner=self.owner)
+            async with contextlib.aclosing(stream_ask) as stream:
                 async for delta in stream:
                     if first_delta_s is None and delta.strip():
                         first_delta_s = time.monotonic() - asked_at
+                        # ウェイクワードで話しかけたときは、答え始めるまでどの会話か（間が空いて新しくなったか）が決まらない
+                        await self.update(conversation_id=self.claude.session_id)
                     raw_response += delta
-                    await self.update(response=directions.visible(raw_response))
+                    now = time.monotonic()
+                    if now - last_published >= RESPONSE_PUBLISH_S:
+                        last_published = now
+                        await self.update(response=directions.visible(raw_response))
                     for piece in splitter.feed(delta):
                         self._segments.append(piece)
-                        speech.say(piece)
+                        if speech:
+                            speech.say(piece)
+            await self.update(response=directions.visible(raw_response))
             for piece in splitter.flush():
                 self._segments.append(piece)
-                speech.say(piece)
+                if speech:
+                    speech.say(piece)
             log.info(
                 "返答（最初の文字まで%.1f秒、全体%.1f秒）: %r",
                 first_delta_s or 0,
                 time.monotonic() - asked_at,
                 raw_response.strip(),
             )
-            await speech.finish()
+            if speech:
+                await speech.finish()
             self.response = self.response.strip()
             await self._record_turn(persona, "answered")
-            # 声で話しかけられたときだけ、ウェイクワード無しで続けて話せるようにする
-            # （画面から文字で聞いた人が、続けて声で話すことはまず無い）
-            if audio is not None and self.config.follow_up_s > 0:
+            # ホストのマイクに声で話しかけられたときだけ、ウェイクワード無しで続けて話せるようにする
+            # （画面から文字で聞いた人が続けて声で話すことはまず無く、ブラウザで話した人はホストのマイクの前にいるとは限らない）
+            if host_mic and self.config.follow_up_s > 0:
                 listen_again = True
             else:
                 await self.update(state="idle")
@@ -443,20 +710,81 @@ class Assistant:
     async def handle_command(self, message: dict) -> None:
         """画面側からの操作（サーバー経由）"""
         kind = message.get("type")
-        if kind == "ask" and isinstance(message.get("text"), str) and message["text"].strip():
+        if kind == "ask" and isinstance(message.get("text"), str) and (message["text"].strip() or message.get("attachments")):
+            await self._cancel_turn()
+            text = message["text"].strip()
+            attachments = [
+                {key: str(a.get(key, "")) for key in ("id", "name", "type", "kind")}
+                for a in message.get("attachments") or []
+                if isinstance(a, dict) and isinstance(a.get("id"), str)
+            ][:5]
+            # 「@カリン」と書けば、選んでいるキャラクターに関わらずそのキャラクターが答える
+            self.persona = self.personas.mentioned(text) or self.personas.get(message.get("personaId"))
+            self.source = "text"
+            self.account_id = account_from(message)
+            self.owner = owner_from(message)
+            self._start_turn(
+                text=text,
+                reply=Reply.from_message(message),
+                conversation_id=conversation_from(message),
+                attachments=attachments,
+            )
+        elif kind == "ask-audio" and isinstance(message.get("audio"), str):
+            # ブラウザのマイクで録った声（16kHz mono s16le を base64 にしたもの）
+            try:
+                audio = base64.b64decode(message["audio"], validate=True)
+            except binascii.Error:
+                log.warning("ブラウザから届いた音声を読めませんでした")
+                return
+            if not audio or len(audio) > BROWSER_AUDIO_MAX_S * SAMPLE_RATE * SAMPLE_WIDTH:
+                log.warning("ブラウザから届いた音声の長さが範囲外です（%dバイト）", len(audio))
+                return
+            audio = audio[: len(audio) - len(audio) % SAMPLE_WIDTH]
+            # 書き起こしが空になったときに、端末のマイクの音が入っていたかを見分けられるようにしておく
+            peak = int(np.abs(np.frombuffer(audio, np.int16).astype(np.int32)).max()) / 32768
+            log.info("ブラウザから声が届きました（%.1f秒、最大音量 %.3f）", len(audio) / SAMPLE_WIDTH / SAMPLE_RATE, peak)
             await self._cancel_turn()
             self.persona = self.personas.get(message.get("personaId"))
-            self.source = "text"
-            self._start_turn(text=message["text"].strip())
+            self.source = "browser-mic"
+            self.account_id = account_from(message)
+            self.owner = owner_from(message)
+            self.follow_up = False
+            self._start_turn(audio=audio, reply=Reply.from_message(message), conversation_id=conversation_from(message))
         elif kind == "cancel":
             await self._cancel_turn()
             await self.update(state="idle", follow_up=False)
+        elif kind == "privacy":
+            # ゲストモードの入／切。記録の残らない新しい会話に切り替える
+            asyncio.create_task(self.claude.set_guest(message.get("guest") is True))
+        elif kind == "guard-confirmed":
+            # 聞き返した操作を、画面で了承された。声で「はい」と答えたのと同じに、続きをさせる
+            if message.get("conversationId") != self.claude.session_id or self.mode != Mode.IDLE:
+                return
+            self.source = "text"
+            # 同じ会話の続きなので、持ち主も、家の人の情報を出してよい相手もその会話のまま
+            self.owner = self.claude.owner
+            self.account_id = self.claude.owner
+            self._start_turn(
+                text="はい（画面で了承しました）",
+                reply=self._last_reply,
+                conversation_id=self.claude.session_id,
+            )
+        elif kind == "mcp-settings":
+            # 設定画面で選んだコネクター・MCPサーバー。つなぐたびと、変えたときに届く
+            self.mcp_selection = McpSelection.from_message(message)
+            self._mcp_task = asyncio.create_task(self._apply_mcp())
+        elif kind == "mcp-scan":
+            asyncio.create_task(self._scan_mcp())
         elif kind == "reload-personas":
             # 設定画面でキャラクターをインポート・削除した
             self._reload_requested = True
         elif kind == "listen":
             # 画面のマイクボタン。ウェイクワード無しで聞き始める（読み上げ中なら止めて聞く）
             await self._cancel_turn()
+            if not self.mic_available:
+                # 聞き始めの頼みを残すと、マイクが戻るまでキャラクターの読み直しも止まるので、受けずに知らせる
+                await self.update(state="error", error="このホストのマイクで録音できません（マイクがつながっているか確かめてください）")
+                return
             self._listen_request = {"persona_id": message.get("personaId"), "source": "button"}
 
     async def _cancel_turn(self) -> None:

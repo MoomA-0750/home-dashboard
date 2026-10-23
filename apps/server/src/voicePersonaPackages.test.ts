@@ -9,9 +9,15 @@ import { unzipSync, zipSync, type Zippable } from "fflate";
 const root = await mkdtemp(join(tmpdir(), "voice-personas-"));
 process.env.VOICE_PERSONAS_DIR = join(root, "voice-personas");
 process.env.DATA_DIR = join(root, "data");
-const { importPersonaPackage, exportPersonaPackage, deletePersona, parsePersonaFile, vrmExpressionNames } = await import(
-  "./voicePersonaPackages.js"
-);
+const {
+  importPersonaPackage,
+  exportPersonaPackage,
+  deletePersona,
+  deletePersonaIcon,
+  parsePersonaFile,
+  vrmExpressionNames,
+  writePersonaIcon,
+} = await import("./voicePersonaPackages.js");
 const { readCommon, readPersonas } = await import("./voicePersonas.js");
 const { ServiceError } = await import("./serviceError.js");
 
@@ -220,5 +226,26 @@ describe("インポート・書き出し・削除", () => {
     await importPersonaPackage(zip);
     assert.equal(await readFile(join(process.env.VOICE_PERSONAS_DIR!, "sora", "prompt.md"), "utf-8"), "やさしい");
     await rejects(deletePersona("nobody"), 404, /見つかりません/);
+  });
+
+  test("アイコンはPNGだけを置け、書き出したZIPにも入り、消せる", async () => {
+    await importPersonaPackage(
+      packageZip({ "persona.json": encode(JSON.stringify(persona({ id: "mio", name: "ミオ" }))) }),
+    );
+    const png = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3]);
+    await rejects(writePersonaIcon("mio", encode("<svg/>")), 400, /PNG/);
+    await rejects(writePersonaIcon("nobody", png), 404, /見つかりません/);
+    await writePersonaIcon("mio", png);
+    const mio = (await readPersonas()).find((p) => p.id === "mio")!;
+    assert.ok(mio.iconPath && mio.iconVersion);
+
+    const { zip } = await exportPersonaPackage("mio");
+    assert.deepEqual([...unzipSync(zip)["mio/icon.png"]], [...png]);
+    await deletePersona("mio");
+    await importPersonaPackage(zip);
+    assert.deepEqual([...(await readFile(join(process.env.VOICE_PERSONAS_DIR!, "mio", "icon.png")))], [...png]);
+
+    await deletePersonaIcon("mio");
+    assert.equal((await readPersonas()).find((p) => p.id === "mio")!.iconPath, null);
   });
 });

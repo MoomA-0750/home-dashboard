@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { defineMessages, motionMs } from "@home-dashboard/widget-sdk";
 import { ACTIVE_VOICE_STATES, type VoicePersona, type VoiceSnapshot, type VoiceState } from "../lib/useVoiceAssistant";
 import { Icon } from "./Icon";
 
@@ -9,13 +10,38 @@ const VoiceAvatar = lazy(() => import("./VoiceAvatar"));
 const RESPONSE_LINGER_MS = 15_000;
 const ERROR_LINGER_MS = 6_000;
 
-const STATUS_LABELS: Record<VoiceState, string> = {
-  idle: "",
-  listening: "聞いています",
-  transcribing: "聞き取っています",
-  thinking: "考えています",
-  speaking: "",
-  error: "うまくいきませんでした",
+const messages = defineMessages({
+  ja: {
+    listening: "聞いています",
+    transcribing: "聞き取っています",
+    thinking: "考えています",
+    error: "うまくいきませんでした",
+    speakNow: "どうぞ、話しかけてください",
+    goOn: "続けてどうぞ",
+    voiceAssistant: "音声アシスタント",
+    cancel: "中止",
+    close: "閉じる",
+  },
+  en: {
+    listening: "Listening",
+    transcribing: "Transcribing",
+    thinking: "Thinking",
+    error: "Something went wrong",
+    speakNow: "Go ahead, I'm listening",
+    goOn: "Go on",
+    voiceAssistant: "Voice assistant",
+    cancel: "Cancel",
+    close: "Close",
+  },
+});
+
+const STATUS_LABELS: Record<VoiceState, "listening" | "transcribing" | "thinking" | "error" | null> = {
+  idle: null,
+  listening: "listening",
+  transcribing: "transcribing",
+  thinking: "thinking",
+  speaking: null,
+  error: "error",
 };
 
 interface VoiceOverlayProps {
@@ -42,6 +68,10 @@ function VoiceOrb({ state, badge = false }: { state: VoiceState; badge?: boolean
  */
 export function VoiceOverlay({ snapshot, avatarUrl, avatarRig, socket, onCancel }: VoiceOverlayProps) {
   const [visible, setVisible] = useState(false);
+  // 余韻のあと・タップで閉じるときは、薄くなってから消す（自分で開け閉めするので、消える動きを付けられる）
+  const [closing, setClosing] = useState(false);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const t = messages.useT();
   // 読み込みに失敗したアバター（キャラクターごとに別なので、URLで覚える）
   const [failedAvatarUrl, setFailedAvatarUrl] = useState<string | null>(null);
   const wasActiveRef = useRef(false);
@@ -51,8 +81,20 @@ export function VoiceOverlay({ snapshot, avatarUrl, avatarRig, socket, onCancel 
   const active = ACTIVE_VOICE_STATES.includes(state);
   const hasResponse = Boolean(snapshot?.response);
 
+  const close = () => {
+    clearTimeout(closeTimerRef.current);
+    setClosing(true);
+    closeTimerRef.current = setTimeout(() => {
+      setVisible(false);
+      setClosing(false);
+    }, motionMs("base"));
+  };
+  useEffect(() => () => clearTimeout(closeTimerRef.current), []);
+
   useEffect(() => {
     if (active) {
+      clearTimeout(closeTimerRef.current);
+      setClosing(false);
       wasActiveRef.current = true;
       setVisible(true);
       return;
@@ -65,7 +107,7 @@ export function VoiceOverlay({ snapshot, avatarUrl, avatarRig, socket, onCancel 
       return;
     }
     wasActiveRef.current = false;
-    const timer = setTimeout(() => setVisible(false), lingerMs);
+    const timer = setTimeout(close, lingerMs);
     return () => clearTimeout(timer);
   }, [active, state, hasResponse, snapshot?.turnId]);
 
@@ -77,23 +119,28 @@ export function VoiceOverlay({ snapshot, avatarUrl, avatarRig, socket, onCancel 
 
   if (!visible || !snapshot) return null;
 
-  const prompt =
-    state === "listening" && !snapshot.transcript ? "どうぞ、話しかけてください" : snapshot.transcript;
+  const prompt = state === "listening" && !snapshot.transcript ? t("speakNow") : snapshot.transcript;
   const personaName = snapshot.personaName ?? "Claude";
   const status =
     state === "listening" && snapshot.followUp
-      ? "続けてどうぞ"
+      ? t("goOn")
       : state === "idle" || state === "speaking"
         ? personaName
-        : STATUS_LABELS[state];
+        : STATUS_LABELS[state]
+          ? t(STATUS_LABELS[state]!)
+          : "";
 
   return (
-    <div className="voice-overlay" data-state={state} onClick={() => !active && setVisible(false)}>
+    <div
+      className={`voice-overlay${closing ? " voice-overlay--closing" : ""}`}
+      data-state={state}
+      onClick={() => !active && close()}
+    >
       <section
         className="voice-panel"
         role="status"
         aria-live="polite"
-        aria-label="音声アシスタント"
+        aria-label={t("voiceAssistant")}
         onClick={(event) => event.stopPropagation()}
       >
         {avatarUrl && avatarUrl !== failedAvatarUrl ? (
@@ -119,16 +166,17 @@ export function VoiceOverlay({ snapshot, avatarUrl, avatarRig, socket, onCancel 
           <p className="voice-panel__status">{status}</p>
           {prompt && <p className="voice-panel__transcript">{prompt}</p>}
           {state === "error" && snapshot.error && <p className="voice-panel__error">{snapshot.error}</p>}
-          {snapshot.response && (
+          {/* 返答の途中の文は改行から始まることがあるので、前後の改行を落として出す（上に余白が出ないように） */}
+          {snapshot.response?.trim() && (
             <p ref={responseRef} className="voice-panel__response">
-              {snapshot.response}
+              {snapshot.response.trim()}
             </p>
           )}
         </div>
         <button
           type="button"
           className="voice-panel__close"
-          aria-label={active ? "中止" : "閉じる"}
+          aria-label={active ? t("cancel") : t("close")}
           onClick={() => {
             if (active) onCancel();
             setVisible(false);

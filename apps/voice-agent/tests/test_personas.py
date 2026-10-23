@@ -22,6 +22,18 @@ def config_for(root: Path):
     return dataclasses.replace(load_config(), personas_dir=root)
 
 
+def test_skips_disabled_personas(tmp_path):
+    # 設定画面で切ったキャラクターは読み込まない（ウェイクワードに反応しない）
+    (tmp_path / "common.json").write_text(json.dumps({"disabled": ["b"]}), encoding="utf-8")
+    write_persona(tmp_path, "a")
+    write_persona(tmp_path, "b")
+    assert [p.id for p in load_personas(config_for(tmp_path)).personas] == ["a"]
+
+    # 全員を切ってあるときは、誰も呼べなくならないよう全員を読む
+    (tmp_path / "common.json").write_text(json.dumps({"disabled": ["a", "b"]}), encoding="utf-8")
+    assert [p.id for p in load_personas(config_for(tmp_path)).personas] == ["a", "b"]
+
+
 def test_falls_back_to_plain_claude_without_personas(tmp_path):
     personas = load_personas(config_for(tmp_path / "missing"))
     assert [p.id for p in personas.personas] == ["claude"]
@@ -70,14 +82,35 @@ def test_check_personas_reports_unreachable_wake_words_and_voices(tmp_path):
     write_persona(tmp_path, "a", prompt="p", wakeWords=["プラム", "ぷらむ"], decoys=["プラモ", "ぷらも"])
     personas = load_personas(config_for(tmp_path))
     vocabulary = {"ねえ", "プラム", "プラモ", "ですね", "あのね", "寝る", "ね"}
-    warnings = check_personas(personas, vocabulary, speakers={69, 70})
+    warnings = check_personas(personas, vocabulary, speakers={"voicevox": {69, 70}})
     assert warnings == {
         "a": [
             "ウェイクワード「ねえぷらむ」の「ぷらむ」が音声認識の語彙に無いため、呼んでも反応しません",
             "おとり単語「ぷらも」が語彙に無いため、効いていません",
         ]
     }
-    assert check_personas(personas, None, {1}) == {"a": ["VOICEVOX に話者ID 70 がありません"]}
+    assert check_personas(personas, None, {"voicevox": {1}}) == {"a": ["VOICEVOX に話者ID 70 がありません"]}
+    # つながらなかったエンジンの話者は確かめない
+    assert check_personas(personas, None, {"voicevox": None}) == {}
+
+
+def test_voice_engine_per_persona_and_expression(tmp_path):
+    """voice.engine で合成エンジンを選び、表情の声は書かなければキャラクターのエンジンを使う"""
+    write_persona(
+        tmp_path,
+        "a",
+        prompt="p",
+        voice={"speaker": 888753760, "engine": "aivis"},
+        expressions={"ささやき": {"avatar": {"relaxed": 1}, "voice": {"speaker": 888753763}}},
+    )
+    write_persona(tmp_path, "b", prompt="p", voice={"speaker": 70, "engine": "mystery"})
+    personas = load_personas(config_for(tmp_path))
+    # 知らないエンジンを書いたキャラクターは読まない（ほかのキャラクターは呼べる）
+    assert [p.id for p in personas.personas] == ["a"]
+    a = personas.get("a")
+    assert a.engine == "aivis" and a.expressions["ささやき"].engine is None
+    warnings = check_personas(personas, None, {"voicevox": {70}, "aivis": {888753760}})
+    assert warnings == {"a": ["AivisSpeech に話者ID 888753763 がありません"]}
 
 
 def test_expression_motion_is_explicit_or_inferred(tmp_path):
@@ -97,3 +130,17 @@ def test_expression_motion_is_explicit_or_inferred(tmp_path):
     assert expressions["てれ"].motion == "sad"
     assert expressions["無表情"].motion is None
     assert expressions["にっこり"].motion == "happy"
+
+
+def test_mention_picks_the_called_character(tmp_path):
+    """文字で「@カリン」と書いたら、そのキャラクターが答える（全角の＠・ウェイクワードの表記・IDでも）"""
+    write_persona(tmp_path, "plum", prompt="p", name="プラム", wakeWords=["プラム"])
+    write_persona(tmp_path, "karin", prompt="p", name="カリン", wakeWords=["カリン", "花梨"])
+    personas = load_personas(config_for(tmp_path))
+    assert personas.mentioned("@カリン 今日の予定は？").id == "karin"
+    assert personas.mentioned("ねえ＠花梨、どう思う？").id == "karin"
+    assert personas.mentioned("@Karin help").id == "karin"
+    # いちばん前の呼びかけを使う
+    assert personas.mentioned("@プラム と @カリン はどっちが好き？").id == "plum"
+    assert personas.mentioned("カリンにも聞いて") is None
+    assert personas.mentioned("メールは a@example.com") is None

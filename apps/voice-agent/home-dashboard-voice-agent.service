@@ -19,7 +19,12 @@ ExecStart=%h/Documents/git-cloned/home-dashboard/apps/voice-agent/.venv/bin/pyth
 Environment=VOICE_CLAUDE_BIN=%h/.local/bin/claude
 Environment=PYTHONUNBUFFERED=1
 Restart=on-failure
+# 落ちるたびに間隔を伸ばす（10秒から10分まで）。モデルが無いなど、起こし直しても直らないときに、モデルの読み込みを繰り返さない
 RestartSec=10
+RestartSteps=6
+RestartMaxDelaySec=600
+# ほかの処理（ダッシュボードのサーバー・ブラウザ）より少し譲る
+Nice=5
 
 [Install]
 WantedBy=default.target

@@ -1,5 +1,17 @@
 import { useEffect, useState } from "react";
-import type { WidgetRuntimeContext } from "@home-dashboard/widget-sdk";
+import { defineMessages, type WidgetRuntimeContext } from "@home-dashboard/widget-sdk";
+import { CLIENT_ID, type ReplySpeech } from "./browserVoice";
+
+const messages = defineMessages({
+  ja: {
+    toggleFailed: "キャラクターを切り替えられませんでした（{status}）",
+    agentDown: "音声エージェントが起動していません",
+  },
+  en: {
+    toggleFailed: "Couldn't turn the character on or off ({status})",
+    agentDown: "The voice agent isn't running",
+  },
+});
 
 /** 音声アシスタント（apps/voice-agent）の状態。サーバーの /api/voice/state と WebSocket の "voice" メッセージで届く */
 export type VoiceState = "idle" | "listening" | "transcribing" | "thinking" | "speaking" | "error";
@@ -18,6 +30,8 @@ export interface VoiceSnapshot {
   /** いま応答しているキャラクター */
   personaId: string | null;
   personaName: string | null;
+  /** いまのやり取りの会話（Claude Code の会話のID） */
+  conversationId: string | null;
 }
 
 export const ACTIVE_VOICE_STATES: VoiceState[] = ["listening", "transcribing", "thinking", "speaking"];
@@ -88,9 +102,13 @@ export interface VoicePersona {
   /** 表示用のウェイクワード（例: 「ねえプラム」） */
   wakePhrase: string;
   hasAvatar: boolean;
+  /** チャットに出すアイコンの版（置き換えると変わる）。無ければ null で、名前の頭文字を出す */
+  iconVersion: number | null;
   hasPrompt: boolean;
   /** 設定ファイルが無いときの「Claude」。書き出し・削除はできない */
   builtIn: boolean;
+  /** 入っているか。切ったキャラクターはウェイクワードに反応せず、話し相手にも出ない */
+  enabled: boolean;
   /** 呼べない・表情が変わらないなどの問題（ウェイクワードが音声認識の語彙に無い、VRMに無い表情名 など） */
   warnings: string[];
   /** 耳・尻尾の骨の名前の指定（persona.json の rig） */
@@ -146,7 +164,11 @@ export function useVoicePersonas(ctx: WidgetRuntimeContext): VoicePersonas | nul
   return personas;
 }
 
-export function avatarUrlFor(apiBaseUrl: string, personas: VoicePersonas | null, personaId: string | null): string | null {
+export function avatarUrlFor(
+  apiBaseUrl: string,
+  personas: VoicePersonas | null,
+  personaId: string | null,
+): string | null {
   const persona = personas?.personas.find((p) => p.id === personaId);
   return persona?.hasAvatar ? `${apiBaseUrl}/api/voice/avatars/${encodeURIComponent(persona.id)}` : null;
 }
@@ -191,7 +213,18 @@ export async function setDefaultPersona(apiBaseUrl: string, personaId: string): 
   if (!res.ok) throw new Error(`voice settings error: ${res.status}`);
 }
 
-export type VoiceTurnSource = "wake" | "follow-up" | "button" | "text";
+/** キャラクターを入／切する（最後の1人は切れない） */
+export async function setPersonaEnabled(apiBaseUrl: string, personaId: string, enabled: boolean): Promise<void> {
+  const res = await fetch(`${apiBaseUrl}/api/voice/personas/${encodeURIComponent(personaId)}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ enabled }),
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body.error ?? messages.t("toggleFailed", { status: res.status }));
+}
+
+export type VoiceTurnSource = "wake" | "follow-up" | "button" | "text" | "browser-mic";
 
 /** 誰に・どこから・何と話しかけられ、どの表情で何と答えたかの記録（サーバーの data/voice-history.jsonl） */
 export interface VoiceTurnRecord {
@@ -200,51 +233,93 @@ export interface VoiceTurnRecord {
   /** Claude Code の会話のID。同じ値のやり取りは同じ会話の中で続けて話したもの */
   conversationId: string | null;
   persona: { id: string; name: string };
-  input: { source: VoiceTurnSource; text: string };
+  input: { source: VoiceTurnSource; text: string; attachments?: VoiceAttachmentRef[] };
   output: { text: string; segments: { expression: string | null; text: string }[] };
   status: "answered" | "cancelled" | "error";
 }
 
-/** 直近のやり取りの記録。enabled の間だけ取得し、新しい記録が届いたら先頭に足す */
-export function useVoiceHistory(ctx: WidgetRuntimeContext, enabled: boolean, limit = 10): VoiceTurnRecord[] {
-  const [records, setRecords] = useState<VoiceTurnRecord[]>([]);
-
-  useEffect(() => {
-    if (!enabled) return;
-    let cancelled = false;
-    fetchJson<{ records: VoiceTurnRecord[] }>(`${ctx.apiBaseUrl}/api/voice/history?limit=${limit}`).then((data) => {
-      if (!cancelled && data) setRecords([...data.records].reverse());
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [ctx.apiBaseUrl, ctx.socket, enabled, limit]);
-
-  useEffect(() => {
-    if (!enabled || !ctx.socket) return;
-    const socket = ctx.socket;
-    const onMessage = (event: MessageEvent) => {
-      try {
-        const message = JSON.parse(event.data);
-        if (message.type === "voice-history") setRecords((prev) => [message.record, ...prev].slice(0, limit));
-      } catch {
-        // ignore malformed messages
-      }
-    };
-    socket.addEventListener("message", onMessage);
-    return () => socket.removeEventListener("message", onMessage);
-  }, [ctx.socket, enabled, limit]);
-
-  return records;
+/** チャットに添えたファイル（中身は /api/voice/attachments/:id） */
+export interface VoiceAttachmentRef {
+  id: string;
+  name: string;
+  type: string;
 }
 
-export async function askVoiceAssistant(apiBaseUrl: string, text: string): Promise<void> {
+export const voiceAttachmentUrl = (apiBaseUrl: string, id: string) =>
+  `${apiBaseUrl}/api/voice/attachments/${encodeURIComponent(id)}`;
+
+// Claude は長い辺が 1568px を超える画像を縮めて読むので、送る前にそこまで縮める（大きな写真でも速く・上限内で送れる）
+const IMAGE_MAX_EDGE = 1568;
+const IMAGE_SHRINK_BYTES = 4 * 1024 * 1024;
+
+async function shrinkImage(file: File): Promise<Blob> {
+  if (!/^image\/(jpeg|png|webp)$/.test(file.type)) return file;
+  let bitmap: ImageBitmap;
+  try {
+    bitmap = await createImageBitmap(file);
+  } catch {
+    return file;
+  }
+  const scale = Math.min(1, IMAGE_MAX_EDGE / Math.max(bitmap.width, bitmap.height));
+  if (scale === 1 && file.size <= IMAGE_SHRINK_BYTES) {
+    bitmap.close();
+    return file;
+  }
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(bitmap.width * scale);
+  canvas.height = Math.round(bitmap.height * scale);
+  canvas.getContext("2d")?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close();
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.88));
+  return blob ?? file;
+}
+
+/** チャットに添えるファイルを1つ置き、話しかけるときに渡す id を返す（画像は送る前に縮める） */
+export async function uploadVoiceAttachment(apiBaseUrl: string, file: File): Promise<VoiceAttachmentRef> {
+  const res = await fetch(`${apiBaseUrl}/api/voice/attachments?name=${encodeURIComponent(file.name)}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/octet-stream" },
+    body: await shrinkImage(file),
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body.error ?? `voice API error: ${res.status}`);
+  return body.attachment as VoiceAttachmentRef;
+}
+
+function voiceApiError(status: number): Error {
+  return new Error(status === 503 ? messages.t("agentDown") : `voice API error: ${status}`);
+}
+
+/** 話しかける相手と会話（チャットから）。省くと既定のキャラクターが、ウェイクワードと同じ今の会話で答える */
+export interface VoiceAskTarget {
+  personaId?: string | null;
+  conversationId?: string | null;
+}
+
+/** 文字で話しかける。speech を省くと、返答はこれまでどおりホストのスピーカーで読み上げる。attachmentIds は uploadVoiceAttachment で置いたもの */
+export async function askVoiceAssistant(
+  apiBaseUrl: string,
+  text: string,
+  speech?: ReplySpeech,
+  target: VoiceAskTarget = {},
+  attachmentIds: string[] = [],
+): Promise<void> {
   const res = await fetch(`${apiBaseUrl}/api/voice/ask`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text }),
+    body: JSON.stringify({
+      text,
+      ...(speech ? { speech, clientId: CLIENT_ID } : {}),
+      ...(target.personaId ? { personaId: target.personaId } : {}),
+      ...(target.conversationId ? { conversationId: target.conversationId } : {}),
+      ...(attachmentIds.length ? { attachments: attachmentIds } : {}),
+    }),
   });
-  if (!res.ok) throw new Error(res.status === 503 ? "音声エージェントが起動していません" : `voice API error: ${res.status}`);
+  if (!res.ok) {
+    // 添えたファイルが見つからないときなどは、サーバーの理由をそのまま出す
+    const body = await res.json().catch(() => ({}));
+    throw res.status !== 503 && typeof body.error === "string" ? new Error(body.error) : voiceApiError(res.status);
+  }
 }
 
 export async function listenVoiceAssistant(apiBaseUrl: string): Promise<void> {
