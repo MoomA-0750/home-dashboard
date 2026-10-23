@@ -1,0 +1,268 @@
+/* カレンダー。色・角丸・余白は本体の部品に任せ、ここには並べ方だけを書く */
+
+/* カレンダーの色の点 */
+.calendar-dot {
+  flex: 0 0 auto;
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 50%;
+  background: var(--text-secondary);
+}
+
+.calendar-widget {
+  justify-content: flex-start;
+  gap: 0.6rem;
+}
+
+.calendar-widget__day {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.calendar-widget__label {
+  font-size: var(--font-note);
+  color: var(--text-secondary);
+}
+
+.calendar-widget__event {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+  font-size: 1rem;
+}
+
+.calendar-widget__time {
+  flex: 0 0 auto;
+  min-width: 4.5rem;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.calendar-widget__title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  /* 省略で切るときは上下を詰めない（詰めた分だけ字の上下が欠ける） */
+  text-box-trim: none;
+}
+
+.calendar-widget__empty {
+  color: var(--text-secondary);
+}
+
+.calendar-detail__day {
+  margin: 1rem 0 0.5rem;
+  font-size: var(--font-label);
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.calendar-editor {
+  margin-bottom: 1.5rem;
+}
+
+.calendar-editor__fields {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+/* 始まり・終わりの日付と時刻は、広い画面では横に並べる */
+.calendar-editor__when {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 0 0.75rem;
+}
+
+/* 月のカレンダー（MonthGrid）。7列の表。今日・選んだ日の色は本体のトークンで、ここは並べ方と大きさ */
+.calendar-month {
+  margin-bottom: 1rem;
+}
+
+.month-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.month-grid__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.month-grid__title {
+  font-size: var(--font-title);
+  font-weight: 600;
+}
+
+.month-grid__nav {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.month-grid__arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.month-grid__arrow:hover {
+  background: rgba(var(--tint-rgb), 0.1);
+}
+
+.month-grid__days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.15rem;
+}
+
+.month-grid__weekday {
+  padding-bottom: 0.25rem;
+  font-size: var(--font-caption);
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.month-grid__day {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  min-height: 44px;
+  border: none;
+  border-radius: var(--inner-radius);
+  background: none;
+  color: var(--text-primary);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
+button.month-grid__day {
+  cursor: pointer;
+}
+
+button.month-grid__day:hover {
+  background: rgba(var(--tint-rgb), 0.08);
+}
+
+.month-grid__day--outside {
+  color: var(--text-secondary);
+  opacity: 0.55;
+}
+
+.month-grid__day--sunday .month-grid__number {
+  color: var(--danger);
+}
+
+.month-grid__day--saturday .month-grid__number {
+  color: rgb(var(--accent-soft-rgb));
+}
+
+/* 今日は数字を丸で囲む。選んだ日は明るい塗り（本体の「選んでいる項目」と同じ） */
+.month-grid__day--today .month-grid__number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.9em;
+  height: 1.9em;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1.5px rgb(var(--accent-rgb));
+  font-weight: 700;
+}
+
+.month-grid__day--selected {
+  background: rgba(var(--tint-rgb), 0.94);
+  color: rgb(var(--ink-rgb));
+}
+
+.month-grid__day--selected .month-grid__number {
+  color: inherit;
+}
+
+.month-grid__mark {
+  width: 0.35rem;
+  height: 0.35rem;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.8;
+}
+
+/* ウィジェットの中の小さな表 */
+.month-grid--compact {
+  gap: 0.3rem;
+}
+
+.month-grid--compact .month-grid__title {
+  font-size: var(--font-label);
+}
+
+.month-grid--compact .month-grid__day {
+  min-height: 0;
+  padding: 0.1rem 0;
+  font-size: var(--font-note);
+}
+
+.month-grid--compact .month-grid__weekday {
+  font-size: var(--font-micro);
+  padding-bottom: 0;
+}
+
+/* アカウントがまだ無いときの設定への入口。印だけ注意の色にし、狭い画面では折り返す */
+.calendar-setup-row {
+  margin-bottom: 0.75rem;
+}
+
+.calendar-setup {
+  max-width: 100%;
+  white-space: normal;
+  text-align: left;
+}
+
+.calendar-setup .fluent-icon {
+  flex-shrink: 0;
+  color: var(--accent-warn);
+}
+
+/* 小さな表では行の高さを揃え、今日の丸で行が伸びないようにする */
+.month-grid--compact .month-grid__days {
+  grid-auto-rows: 1fr;
+  row-gap: 0.1rem;
+}
+
+.month-grid--compact .month-grid__day--today .month-grid__number {
+  min-width: 1.6em;
+  height: 1.6em;
+}
+
+/* 左の欄のカレンダーの一覧（アカウントごと）。いちばん上の見出しは欄の上端にそろえる */
+.calendar-list:first-child .ui-section-title {
+  margin-top: 0;
+}
+
+.calendar-list .ui-list-item__title {
+  min-width: 0;
+}
+
+.calendar-list .ui-list-item__name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-box-trim: none;
+}

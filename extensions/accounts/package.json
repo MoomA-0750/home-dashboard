@@ -1,0 +1,32 @@
+{
+  "name": "@home-dashboard/ext-accounts",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    "./calendar/types": "./src/calendar/types.ts",
+    "./mail/types": "./src/mail/types.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@home-dashboard/extension-sdk": "workspace:*",
+    "@home-dashboard/widget-sdk": "workspace:*",
+    "ical.js": "2.2.1",
+    "imapflow": "1.6.6",
+    "mailparser": "3.9.33",
+    "nodemailer": "10.0.13",
+    "tsdav": "2.3.4"
+  },
+  "peerDependencies": {
+    "react": "^18.3.0"
+  },
+  "devDependencies": {
+    "@types/mailparser": "3.4.6",
+    "@types/node": "^22.10.10",
+    "@types/react": "^18.3.18",
+    "typescript": "^5.7.3",
+    "zod": "^4.6.5"
+  }
+}

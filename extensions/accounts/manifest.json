@@ -1,0 +1,187 @@
+{
+  "id": "accounts",
+  "name": "カレンダー・メール",
+  "version": "2.2.0",
+  "description": "Calendar・Mail の画面、予定とメールのウィジェット、音声アシスタントの予定とメール。Google・iCloud・Microsoft・一般のアカウントを、設定の「アカウント → インターネットアカウント」でログインした人ごとに足す（家で共有するにしたものは家族と音声アシスタントにも見える）",
+  "apiVersion": 1,
+  "features": [
+    {
+      "id": "calendar",
+      "name": "カレンダーの出どころ",
+      "description": "インターネットアカウントのほかに、予定のウィジェット・カレンダーの画面・音声アシスタントに出すカレンダー"
+    },
+    {
+      "id": "mail",
+      "name": "メールの出どころ",
+      "description": "インターネットアカウントのほかに、メールのウィジェット・メールの画面・音声アシスタントに出す受信箱"
+    }
+  ],
+  "settingsNote": "アカウントは設定の「アカウント → インターネットアカウント」で、それぞれが自分のものを足します。ここは管理者が一度だけ決める、Google・Microsoft のボタンでログインするための設定です（iCloud と一般のアカウントには要りません）。使うものの区画だけ埋めれば足ります。戻り先の URL の頭は、Google・Microsoft のどちらにも要ります。",
+  "settings": [
+    {
+      "key": "redirectBase",
+      "label": "戻り先の URL の頭（このダッシュボードを開いている https の URL）",
+      "kind": "url",
+      "env": "ACCOUNTS_REDIRECT_BASE",
+      "placeholder": "https://general-console.tailnet-name.ts.net:10448"
+    },
+    {
+      "key": "googleClientId",
+      "label": "Google のクライアント ID",
+      "kind": "text",
+      "env": "GOOGLE_CLIENT_ID"
+    },
+    {
+      "key": "googleClientSecret",
+      "label": "Google のクライアント シークレット",
+      "kind": "secret",
+      "env": "GOOGLE_CLIENT_SECRET"
+    },
+    {
+      "key": "microsoftClientId",
+      "label": "Microsoft のアプリケーション (クライアント) ID",
+      "kind": "text",
+      "env": "MICROSOFT_CLIENT_ID"
+    },
+    {
+      "key": "microsoftClientSecret",
+      "label": "Microsoft のクライアント シークレット",
+      "kind": "secret",
+      "env": "MICROSOFT_CLIENT_SECRET"
+    },
+    {
+      "key": "microsoftTenant",
+      "label": "Microsoft のテナント（個人と職場の両方なら common）",
+      "kind": "text",
+      "env": "MICROSOFT_TENANT",
+      "default": "common"
+    },
+    {
+      "key": "timeZone",
+      "label": "音声アシスタントに伝える時刻のタイムゾーン",
+      "kind": "text",
+      "default": "Asia/Tokyo"
+    }
+  ],
+  "settingsGroups": [
+    {
+      "id": "google",
+      "title": "Google",
+      "note": "Google Cloud で作る「OAuth クライアント」の ID とシークレット。Google のカレンダーとメール（Gmail）を、ボタンでログインして足せるようにします。",
+      "fields": [
+        "googleClientId",
+        "googleClientSecret"
+      ],
+      "steps": [
+        "Google Cloud でプロジェクトを作る（無料）",
+        "「API とサービス → ライブラリ」で Google Calendar API と Gmail API を有効にする",
+        "「Google Auth Platform（OAuth 同意画面）」でユーザーの種類を「外部」にし、アプリ名とメールを入れる",
+        "「データアクセス」に https://www.googleapis.com/auth/calendar・https://www.googleapis.com/auth/gmail.modify・https://www.googleapis.com/auth/gmail.send を足す",
+        "「対象」で公開ステータスを「本番環境」にする（「テスト」のままだと、ログインが7日で切れる）。ログインのときに「確認されていないアプリ」と出たら「詳細 → 移動」で進む",
+        "「クライアント → クライアントを作成」で種類を「ウェブ アプリケーション」にし、承認済みのリダイレクト URI に {redirectBase}/auth/accounts/google/callback を入れる",
+        "できたクライアント ID とシークレットを下に入れて保存する"
+      ],
+      "links": [
+        {
+          "label": "Google Cloud を開く",
+          "href": "https://console.cloud.google.com/auth/clients"
+        }
+      ]
+    },
+    {
+      "id": "microsoft",
+      "title": "Microsoft（Outlook.com・Microsoft 365）",
+      "note": "Microsoft Entra で登録するアプリの ID とシークレット。Outlook のカレンダーとメールを、ボタンでログインして足せるようにします。",
+      "fields": [
+        "microsoftClientId",
+        "microsoftClientSecret",
+        "microsoftTenant"
+      ],
+      "steps": [
+        "Microsoft Entra の「アプリの登録 → 新規登録」を開く",
+        "サポートされるアカウントの種類を「任意の組織ディレクトリ内のアカウントと個人の Microsoft アカウント」にし、リダイレクト URI（Web）に {redirectBase}/auth/accounts/microsoft/callback を入れる",
+        "「証明書とシークレット」で新しいクライアント シークレットを作る（期限が来たら作り直して入れ替える）",
+        "「API のアクセス許可」で Microsoft Graph の委任されたアクセス許可 Calendars.ReadWrite・Mail.ReadWrite・Mail.Send・User.Read・offline_access を足す",
+        "アプリケーション（クライアント）ID とシークレットを下に入れて保存する（テナントは個人と職場の両方なら common のまま）"
+      ],
+      "links": [
+        {
+          "label": "Microsoft Entra を開く",
+          "href": "https://entra.microsoft.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade"
+        }
+      ]
+    }
+  ],
+  "locales": {
+    "en": {
+      "name": "Calendar & Mail",
+      "description": "Calendar and Mail screens, events and mail widgets, and calendar and mail for the voice assistant. Each signed-in person adds their own Google, iCloud, Microsoft, or other accounts in Settings → Accounts → Internet Accounts (accounts set to share with the household are also visible to family and the voice assistant).",
+      "settingsNote": "Everyone adds their own accounts in Settings → Accounts → Internet Accounts. These are the settings an admin sets once so people can sign in with the Google and Microsoft buttons (not needed for iCloud or other accounts). Fill in only the panels you use. The redirect URL base is needed for both Google and Microsoft.",
+      "settings": {
+        "redirectBase": {
+          "label": "Redirect URL base (the https URL you open this dashboard at)"
+        },
+        "googleClientId": {
+          "label": "Google client ID"
+        },
+        "googleClientSecret": {
+          "label": "Google client secret"
+        },
+        "microsoftClientId": {
+          "label": "Microsoft application (client) ID"
+        },
+        "microsoftClientSecret": {
+          "label": "Microsoft client secret"
+        },
+        "microsoftTenant": {
+          "label": "Microsoft tenant (common for both personal and work accounts)"
+        },
+        "timeZone": {
+          "label": "Time zone for times told to the voice assistant"
+        }
+      },
+      "settingsGroups": {
+        "google": {
+          "title": "Google",
+          "note": "The ID and secret of an OAuth client you create in Google Cloud. Lets people add Google Calendar and Gmail by signing in with a button.",
+          "steps": [
+            "Create a project in Google Cloud (free)",
+            "Under APIs & Services → Library, enable the Google Calendar API and the Gmail API",
+            "In Google Auth Platform (OAuth consent screen), choose External as the user type and enter an app name and email",
+            "Under Data access, add https://www.googleapis.com/auth/calendar, https://www.googleapis.com/auth/gmail.modify and https://www.googleapis.com/auth/gmail.send",
+            "Under Audience, set the publishing status to In production (in Testing, sign-ins expire after 7 days). If sign-in says the app isn't verified, continue with Advanced → Go to",
+            "Under Clients → Create client, choose Web application and add {redirectBase}/auth/accounts/google/callback as an authorized redirect URI",
+            "Enter the client ID and secret below and save"
+          ],
+          "links": [
+            "Open Google Cloud"
+          ]
+        },
+        "microsoft": {
+          "title": "Microsoft (Outlook.com, Microsoft 365)",
+          "note": "The ID and secret of an app you register in Microsoft Entra. Lets people add Outlook calendars and mail by signing in with a button.",
+          "steps": [
+            "Open App registrations → New registration in Microsoft Entra",
+            "Choose accounts in any organizational directory and personal Microsoft accounts, and add {redirectBase}/auth/accounts/microsoft/callback as a Web redirect URI",
+            "Create a new client secret under Certificates & secrets (replace it when it expires)",
+            "Under API permissions, add the Microsoft Graph delegated permissions Calendars.ReadWrite, Mail.ReadWrite, Mail.Send, User.Read and offline_access",
+            "Enter the application (client) ID and secret below and save (leave the tenant as common for both personal and work accounts)"
+          ],
+          "links": [
+            "Open Microsoft Entra"
+          ]
+        }
+      },
+      "features": {
+        "calendar": {
+          "name": "Calendar sources",
+          "description": "Calendars besides Internet Accounts to show in the events widget, Calendar screen, and voice assistant"
+        },
+        "mail": {
+          "name": "Mail sources",
+          "description": "Inboxes besides Internet Accounts to show in the mail widget, Mail screen, and voice assistant"
+        }
+      }
+    }
+  }
+}
