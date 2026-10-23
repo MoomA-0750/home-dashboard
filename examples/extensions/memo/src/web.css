@@ -1,0 +1,26 @@
+/* 伝言メモ。拡張機能のクラス名は、ほかとぶつからないよう拡張機能の名前で始める */
+
+.memo-widget {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.35rem;
+  text-align: left;
+}
+
+.memo-widget__title {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.memo-widget__text {
+  font-size: 1.1rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  /* 省略で切るときは上下を詰めない（詰めた分だけ字の上下が欠ける） */
+  text-box-trim: none;
+}

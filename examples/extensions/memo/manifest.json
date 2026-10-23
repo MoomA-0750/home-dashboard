@@ -1,0 +1,8 @@
+{
+  "id": "memo",
+  "name": "伝言メモ",
+  "version": "1.1.0",
+  "description": "家族への伝言を1つ置いておくウィジェット。音声アシスタントに「メモして」と頼むこともできる（拡張機能の作り方の見本）",
+  "apiVersion": 1,
+  "settings": [{ "key": "title", "label": "ウィジェットの見出し", "kind": "text", "default": "伝言メモ" }]
+}

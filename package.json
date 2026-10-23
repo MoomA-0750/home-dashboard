@@ -9,14 +9,24 @@
   "scripts": {
     "dev:web": "pnpm --filter @home-dashboard/web dev",
     "dev:server": "pnpm --filter @home-dashboard/server dev",
-    "build": "pnpm -r build",
+    "build": "pnpm build:extensions && pnpm -r build",
     "build:web": "pnpm --filter @home-dashboard/web build",
     "build:server": "pnpm --filter @home-dashboard/server build",
     "typecheck": "pnpm -r typecheck",
-    "lint": "pnpm -r lint"
+    "lint": "pnpm -r lint",
+    "build:extensions": "node --import tsx scripts/build-extension.mjs --all",
+    "build:extension": "node --import tsx scripts/build-extension.mjs",
+    "new:extension": "node scripts/new-extension.mjs",
+    "publish:extensions": "node scripts/publish-extensions.mjs",
+    "dev:extensions": "node --import tsx scripts/build-extension.mjs --all --watch"
   },
   "packageManager": "pnpm@11.18.0",
   "devDependencies": {
-    "playwright-core": "^1.56.0"
+    "playwright-core": "^1.56.0",
+    "esbuild": "^0.25.12",
+    "fflate": "^0.8.3",
+    "tsx": "^4.19.2",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0"
   }
 }

@@ -2,5 +2,10 @@ packages:
   - "apps/*"
   - "packages/*"
   - "packages/widgets/*"
+  - "extensions/*"
+  - "examples/extensions/*"
 allowBuilds:
+  # homelab の SSH（ssh2）の速くするためのネイティブ部品。無くても JavaScript だけで動くので組み立てない
+  cpu-features: false
   esbuild: true
+  ssh2: false

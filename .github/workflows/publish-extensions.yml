@@ -1,0 +1,40 @@
+# 拡張機能を組み立てて、公開用の枝（dist-extensions）に置く。
+# ダッシュボードの設定画面でこのリポジトリを登録しておくと、ここに置いたものを入れたり更新したりできる。
+# 中身を変えたのに manifest.json の version を上げていない拡張機能があると、置かずに失敗する。
+name: 拡張機能を公開する
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "extensions/**"
+      - "packages/widget-sdk/**"
+      - "packages/extension-sdk/**"
+      - "scripts/build-extension.mjs"
+      - "scripts/publish-extensions.mjs"
+      - "pnpm-lock.yaml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish-extensions
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: 組み立てて置く
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          pnpm publish:extensions --push

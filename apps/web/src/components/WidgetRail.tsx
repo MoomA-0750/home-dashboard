@@ -1,8 +1,29 @@
+import { memo, useEffect, useRef } from "react";
 import GridLayout, { WidthProvider, type Layout } from "react-grid-layout";
-import type { WidgetInstance, WidgetRegistry, WidgetRuntimeContext } from "@home-dashboard/widget-sdk";
+import {
+  defineMessages,
+  motionMs,
+  scrollBehavior,
+  type WidgetInstance,
+  type WidgetRegistry,
+  type WidgetRuntimeContext,
+} from "@home-dashboard/widget-sdk";
 import { WidgetHost } from "./WidgetHost";
 
 const ResponsiveGridLayout = WidthProvider(GridLayout);
+
+const messages = defineMessages({
+  ja: {
+    widgets: "ウィジェット",
+    emptyEditing: "下の「ウィジェットを追加」から追加できます。",
+    empty: "サイドバーの「設定」からウィジェットを追加できます。",
+  },
+  en: {
+    widgets: "Widgets",
+    emptyEditing: "Add one with “Add widget” below.",
+    empty: "You can add widgets from Settings in the sidebar.",
+  },
+});
 
 /**
  * 設計図のウィジェット基本サイズ（650x200px）とカード間隔（30px）。
@@ -19,11 +40,46 @@ interface WidgetRailProps {
   registry: WidgetRegistry;
   ctx: WidgetRuntimeContext;
   editMode: boolean;
+  /** 追加した直後など、見える位置までスクロールして目立たせたいウィジェット */
+  revealInstanceId: string | null;
+  onRevealed: () => void;
   onLayoutChange: (instances: WidgetInstance[]) => void;
+  onMove: (instanceId: string, direction: -1 | 1) => void;
   onRemove: (instanceId: string) => void;
+  onConfigChange: (instanceId: string, config: Record<string, unknown>) => void;
 }
 
-export function WidgetRail({ instances, registry, ctx, editMode, onLayoutChange, onRemove }: WidgetRailProps) {
+// 渡すものが変わらなければ描き直さない（App は音声の状態などで頻繁に描き直る）
+export const WidgetRail = memo(function WidgetRail({
+  instances,
+  registry,
+  ctx,
+  editMode,
+  revealInstanceId,
+  onRevealed,
+  onLayoutChange,
+  onMove,
+  onRemove,
+  onConfigChange,
+}: WidgetRailProps) {
+  const railRef = useRef<HTMLElement>(null);
+  const t = messages.useT();
+  const order = [...instances].sort((a, b) => a.y - b.y).map((instance) => instance.instanceId);
+
+  // 追加したウィジェットはレールの末尾に入り、画面の外で見えないので、そこまでスクロールして光らせる
+  useEffect(() => {
+    if (!revealInstanceId) return;
+    const timer = setTimeout(() => {
+      const element = railRef.current?.querySelector<HTMLElement>(`[data-instance-id="${revealInstanceId}"]`);
+      if (element) {
+        element.scrollIntoView({ behavior: scrollBehavior(), block: "center" });
+        element.classList.add("widget-host--revealed");
+        setTimeout(() => element.classList.remove("widget-host--revealed"), motionMs("reveal"));
+      }
+      onRevealed();
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [revealInstanceId, onRevealed]);
   const layout: Layout[] = instances.map((instance) => {
     const def = registry.get(instance.widgetId);
     return {
@@ -49,16 +105,18 @@ export function WidgetRail({ instances, registry, ctx, editMode, onLayoutChange,
 
   if (instances.length === 0) {
     return (
-      <aside className="widget-rail" aria-label="ウィジェット">
+      <aside className="widget-rail" aria-label={t("widgets")}>
         <div className="widget-stack">
-          <p className="widget-rail__empty">サイドバーの Settings からウィジェットを追加できます。</p>
+          <p className="widget-rail__empty">
+            {editMode ? t("emptyEditing") : t("empty")}
+          </p>
         </div>
       </aside>
     );
   }
 
   return (
-    <aside className="widget-rail" aria-label="ウィジェット">
+    <aside ref={railRef} className={`widget-rail${editMode ? " widget-rail--editing" : ""}`} aria-label={t("widgets")}>
       <div className="widget-stack">
         <ResponsiveGridLayout
           className="canvas-grid"
@@ -69,16 +127,28 @@ export function WidgetRail({ instances, registry, ctx, editMode, onLayoutChange,
           containerPadding={[0, 0]}
           isDraggable={editMode}
           isResizable={editMode}
+          // カード全体をつかめるようにすると、タッチ端末で列をスクロールできなくなるので、つまみだけで動かす
+          draggableHandle=".widget-host__drag"
           onLayoutChange={handleLayoutChange}
           compactType="vertical"
         >
           {instances.map((instance) => (
-            <div key={instance.instanceId}>
-              <WidgetHost instance={instance} registry={registry} ctx={ctx} editMode={editMode} onRemove={onRemove} />
+            <div key={instance.instanceId} data-instance-id={instance.instanceId}>
+              <WidgetHost
+                instance={instance}
+                registry={registry}
+                ctx={ctx}
+                editMode={editMode}
+                canMoveUp={order.indexOf(instance.instanceId) > 0}
+                canMoveDown={order.indexOf(instance.instanceId) < order.length - 1}
+                onMove={onMove}
+                onRemove={onRemove}
+                onConfigChange={onConfigChange}
+              />
             </div>
           ))}
         </ResponsiveGridLayout>
       </div>
     </aside>
   );
-}
+});

@@ -1,4 +1,5 @@
 import type { DashboardLayout, WidgetInstance } from "@home-dashboard/widget-sdk";
+import { CLIENT_ID } from "../lib/browserVoice";
 
 /**
  * レイアウトデータのバージョン。
@@ -20,10 +21,28 @@ function migrateHeight(instance: WidgetInstance): WidgetInstance {
   return { ...instance, h: rows };
 }
 
+/**
+ * 名前の変わったウィジェット。Spotify の拡張機能にあった「Spotifyメディア」は、音楽アプリを選べる本体の「メディア」になった
+ * （置いてあったものは、そのまま置き換える）
+ */
+const RENAMED_WIDGETS: Record<string, string> = { "spotify-media": "media" };
+
+/** 無くしたウィジェット。室温・湿度は、家電操作のウィジェットの左に出すようになった（置いてあったものは外す） */
+const REMOVED_WIDGETS = ["ha-climate"];
+
+function renameWidgets(instances: WidgetInstance[]): WidgetInstance[] {
+  return instances
+    .filter((instance) => !REMOVED_WIDGETS.includes(instance.widgetId))
+    .map((instance) =>
+      RENAMED_WIDGETS[instance.widgetId] ? { ...instance, widgetId: RENAMED_WIDGETS[instance.widgetId] } : instance,
+    );
+}
+
 export async function fetchLayout(apiBaseUrl: string): Promise<DashboardLayout> {
   const res = await fetch(`${apiBaseUrl}/api/layout`);
   if (!res.ok) throw new Error(`layout API error: ${res.status}`);
-  const layout: DashboardLayout = await res.json();
+  const raw: DashboardLayout = await res.json();
+  const layout = { ...raw, instances: renameWidgets(raw.instances) };
 
   if ((layout.version ?? 1) >= LAYOUT_VERSION) return layout;
   return { ...layout, version: LAYOUT_VERSION, instances: layout.instances.map(migrateHeight) };
@@ -32,7 +51,8 @@ export async function fetchLayout(apiBaseUrl: string): Promise<DashboardLayout> 
 export async function saveLayout(apiBaseUrl: string, layout: DashboardLayout): Promise<void> {
   const res = await fetch(`${apiBaseUrl}/api/layout`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    // 自分の保存の知らせを読み直さないよう、どのタブの保存かを名乗る
+    headers: { "Content-Type": "application/json", "X-Client-Id": CLIENT_ID },
     body: JSON.stringify({ ...layout, version: LAYOUT_VERSION }),
   });
   if (!res.ok) throw new Error(`layout save error: ${res.status}`);

@@ -1,0 +1,22 @@
+{
+  "name": "@home-dashboard/ext-example-memo",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@home-dashboard/extension-sdk": "workspace:*",
+    "@home-dashboard/widget-sdk": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^18.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.10",
+    "@types/react": "^18.3.18",
+    "typescript": "^5.7.3",
+    "zod": "^4.6.5"
+  }
+}

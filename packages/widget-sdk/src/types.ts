@@ -1,3 +1,4 @@
+import type { LocalizedText } from "./i18n";
 import type { ComponentType } from "react";
 
 /** ウィジェットのグリッド上でのサイズ（単位はキャンバス側のグリッドセル数） */
@@ -33,6 +34,15 @@ export interface WidgetDetailProps<TConfig = Record<string, unknown>> extends Wi
   closeDetail: () => void;
 }
 
+/** ウィジェットの設定（編集中に歯車から開く）に渡すもの */
+export interface WidgetSettingsProps<TConfig = Record<string, unknown>> {
+  /** 今の設定（defaultConfig に保存済みの値を重ねたもの） */
+  config: TConfig;
+  ctx: WidgetRuntimeContext;
+  /** 設定を変える。すぐ保存され、ほかの端末にも伝わる */
+  onChange: (config: TConfig) => void;
+}
+
 /**
  * 1つのウィジェット「アプリ」の定義。
  * packages/widgets/* 配下に1ウィジェット1パッケージで実装し、ここに定義したオブジェクトを
@@ -42,8 +52,8 @@ export interface WidgetDefinition<TConfig = Record<string, unknown>> {
   /** ウィジェット種別を一意に識別するID（例: "clock", "weather"） */
   id: string;
   /** キャンバスの追加メニュー等に出す表示名 */
-  name: string;
-  description?: string;
+  name: LocalizedText;
+  description?: LocalizedText;
   /** キャンバスに新規追加したときの初期サイズ */
   defaultSize: WidgetSize;
   minSize?: WidgetSize;
@@ -53,6 +63,8 @@ export interface WidgetDefinition<TConfig = Record<string, unknown>> {
   Component: ComponentType<WidgetProps<TConfig>>;
   /** クリック等で開く詳細ビュー（省略時はComponentのみで完結するウィジェットとして扱う） */
   DetailComponent?: ComponentType<WidgetDetailProps<TConfig>>;
+  /** ウィジェットごとの設定（編集中に歯車から開く。省略時は設定なし） */
+  SettingsComponent?: ComponentType<WidgetSettingsProps<TConfig>>;
 }
 
 /** キャンバス上の1配置（レイアウト情報＋インスタンス設定）。サーバー側の永続化データと対応する */
