@@ -1,0 +1,119 @@
+/* iMessage（Chat 画面のチャットアプリ）。枠・一覧・吹き出し・入力欄は本体の部品（ScreenFrame・List・widget-sdk の Chat）のもので、
+   ここでは iMessage にしか無いもの（画像・録音・リンク・返信の引用・リアクション・添えるファイル）だけを足す */
+
+/* 1通の中身（画像・録音・吹き出し・リアクション）を縦に並べる */
+.imsg-message {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  min-width: 0;
+  max-width: 85%;
+}
+
+.imsg-message--mine {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.ui-chat__from .imsg-message {
+  max-width: 100%;
+}
+
+.imsg-message .ui-chat__bubble {
+  max-width: 100%;
+}
+
+.imsg-image {
+  display: block;
+  max-width: min(100%, 320px);
+  overflow: hidden;
+  border-radius: 1.1rem;
+  border: 1px solid var(--glass-border);
+}
+
+.imsg-image img {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  max-height: 320px;
+}
+
+.imsg-image--sticker {
+  border: none;
+  border-radius: 0;
+}
+
+.imsg-image--sticker img {
+  max-width: 120px;
+  max-height: 120px;
+}
+
+.imsg-audio {
+  width: 300px;
+  max-width: 100%;
+}
+
+.imsg-file {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border);
+  font-size: var(--font-note);
+  color: var(--text-secondary);
+}
+
+.imsg-file .fluent-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+/* 返信先の引用。吹き出しの中の上に、薄く1〜2行 */
+.imsg-quote {
+  display: -webkit-box;
+  margin-bottom: 0.3rem;
+  padding-left: 0.6rem;
+  overflow: hidden;
+  border-left: 2px solid var(--line);
+  font-size: var(--font-note);
+  line-height: 1.5;
+  color: var(--text-secondary);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.imsg-link {
+  display: flex;
+  flex-direction: column;
+  margin-top: 0.4rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: 0.7rem;
+  background: rgba(127, 127, 127, 0.12);
+  color: inherit;
+  text-decoration: none;
+  line-height: 1.4;
+}
+
+.imsg-link__site {
+  font-size: var(--font-caption);
+  color: var(--text-secondary);
+}
+
+.imsg-link__title {
+  font-size: var(--font-label);
+  font-weight: 600;
+}
+
+.imsg-reactions {
+  font-size: var(--font-note);
+  line-height: 1.4;
+}
+
+/* 本体は span の上下の余白を削っている（ベースラインをそろえるため）。縦に重ねる文はそのままだと重なるので戻す */
+.imsg-link span,
+.imsg-quote,
+.imsg-reactions {
+  text-box-trim: none;
+}

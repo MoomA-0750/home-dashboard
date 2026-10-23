@@ -1,0 +1,70 @@
+{
+  "id": "spotify",
+  "name": "Spotify",
+  "version": "1.2.1",
+  "description": "Spotify の再生中の曲と操作・キュー・プレイリスト・おすすめを、Media（画面・ウィジェット・音声アシスタントの音楽の操作）へ渡す",
+  "apiVersion": 1,
+  "provides": [
+    "music"
+  ],
+  "settingsNote": "Spotify Developer Dashboard でアプリを作り、Redirect URI に下の値と同じものを登録します。Spotify は https か 127.0.0.1 しか許さないので、別の機械からはポートを転送して開きます（README 参照）。認可すると Refresh Token は自動で保存されます。",
+  "settingsLinks": [
+    {
+      "label": "Spotify で認可する",
+      "href": "/auth/spotify/login"
+    }
+  ],
+  "settings": [
+    {
+      "key": "clientId",
+      "label": "Client ID",
+      "kind": "text",
+      "env": "SPOTIFY_CLIENT_ID"
+    },
+    {
+      "key": "clientSecret",
+      "label": "Client Secret",
+      "kind": "secret",
+      "env": "SPOTIFY_CLIENT_SECRET"
+    },
+    {
+      "key": "redirectUri",
+      "label": "Redirect URI",
+      "kind": "url",
+      "env": "SPOTIFY_REDIRECT_URI",
+      "default": "http://127.0.0.1:8787/auth/spotify/callback",
+      "placeholder": "http://127.0.0.1:8787/auth/spotify/callback"
+    },
+    {
+      "key": "refreshToken",
+      "label": "Refresh Token",
+      "kind": "secret",
+      "env": "SPOTIFY_REFRESH_TOKEN"
+    }
+  ],
+  "locales": {
+    "en": {
+      "name": "Spotify",
+      "description": "Sends Spotify's now playing, controls, queue, playlists, and suggestions to Media (the screen, widget, and the voice assistant's music controls)",
+      "settingsNote": "Create an app in the Spotify Developer Dashboard and register the same value as below as its Redirect URI. Spotify only allows https or 127.0.0.1, so from another machine, forward the port and open it there (see the README). Once you authorize, the Refresh Token is saved automatically.",
+      "settingsLinks": [
+        "Authorize with Spotify"
+      ],
+      "settings": {
+        "clientId": {
+          "label": "Client ID"
+        },
+        "clientSecret": {
+          "label": "Client Secret"
+        },
+        "redirectUri": {
+          "label": "Redirect URI",
+          "placeholder": "http://127.0.0.1:8787/auth/spotify/callback"
+        },
+        "refreshToken": {
+          "label": "Refresh Token"
+        }
+      }
+    }
+  }
+}

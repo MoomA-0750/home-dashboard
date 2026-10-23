@@ -1,0 +1,37 @@
+{
+  "id": "claude",
+  "name": "Claude",
+  "version": "1.2.0",
+  "description": "Claude Code の使用量（トークン数・5時間ブロック）と、5時間・週の利用制限（statusLine から）",
+  "apiVersion": 1,
+  "settingsNote": "利用制限は、~/.claude/statusline.sh から scripts/claude-limits-report.sh に値を渡すと届きます。スクリプトには下の合言葉と同じ値を持たせます（README 参照）。",
+  "settings": [
+    {
+      "key": "projectsDir",
+      "label": "Claude Code のセッションログの置き場",
+      "kind": "text",
+      "env": "CLAUDE_PROJECTS_DIR",
+      "default": "~/.claude/projects"
+    },
+    {
+      "key": "reportToken",
+      "label": "利用制限を送るスクリプトの合言葉",
+      "kind": "secret",
+      "env": "CLAUDE_LIMITS_TOKEN"
+    }
+  ],
+  "locales": {
+    "en": {
+      "description": "Claude Code usage (tokens, 5-hour blocks) and the 5-hour and weekly usage limits (from statusLine)",
+      "settingsNote": "Usage limits arrive when ~/.claude/statusline.sh passes values to scripts/claude-limits-report.sh. Give the script the same token as below (see the README).",
+      "settings": {
+        "projectsDir": {
+          "label": "Claude Code session log folder"
+        },
+        "reportToken": {
+          "label": "Token for the usage-limit report script"
+        }
+      }
+    }
+  }
+}

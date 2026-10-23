@@ -1,0 +1,27 @@
+{
+  "id": "git-repos",
+  "name": "git リポジトリ",
+  "version": "1.1.2",
+  "description": "決めたフォルダの直下の git リポジトリの、未コミット・未 push を出す",
+  "apiVersion": 1,
+  "settings": [
+    {
+      "key": "reposDir",
+      "label": "リポジトリを探すフォルダ",
+      "kind": "text",
+      "env": "GIT_REPOS_DIR",
+      "default": "~/Documents/git-cloned"
+    }
+  ],
+  "locales": {
+    "en": {
+      "name": "Git repositories",
+      "description": "Shows uncommitted and unpushed work in the git repositories directly under a chosen folder",
+      "settings": {
+        "reposDir": {
+          "label": "Folder to look for repositories in"
+        }
+      }
+    }
+  }
+}

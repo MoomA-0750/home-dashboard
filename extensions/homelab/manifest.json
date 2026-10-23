@@ -1,0 +1,12 @@
+{
+  "id": "homelab",
+  "name": "homelab",
+  "version": "2.2.2",
+  "description": "登録した機械の CPU・メモリ・ディスク・連続稼働時間を出す。この機械・SSH でつなぐ機械・node_exporter を入れた機械・Proxmox VE・応答の確認だけ、から選んで登録する",
+  "apiVersion": 1,
+  "locales": {
+    "en": {
+      "description": "Shows CPU, memory, disk and uptime of the machines you register. Choose from this machine, a machine reached over SSH, one running node_exporter, Proxmox VE, or a reachability check only"
+    }
+  }
+}

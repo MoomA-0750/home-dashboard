@@ -1,0 +1,241 @@
+/* --- 天気ウィジェット --- */
+
+.widget-weather {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.widget-weather__icon {
+  width: 2rem;
+  height: 2rem;
+}
+
+.widget-weather__temp {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.widget-weather__condition {
+  color: var(--text-secondary);
+}
+
+.widget-weather-detail__current {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.widget-weather-detail__chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.4rem;
+  height: 8rem;
+}
+
+.widget-weather-detail__bar-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+  gap: 0.25rem;
+}
+
+.widget-weather-detail__bar {
+  width: 0.75rem;
+  min-height: 2px;
+  border-radius: 0.25rem 0.25rem 0 0;
+  background: linear-gradient(#88daf8, rgba(105, 190, 237, 0.34));
+}
+
+.widget-weather-detail__bar-label {
+  font-size: var(--font-micro);
+  color: var(--text-secondary);
+}
+
+/* --- Weather 画面。入れ物・一覧・値のタイルは本体の部品に任せ、ここには並べ方と天気だけの目盛りを書く --- */
+
+/* 見出しを付けないので、区画の間はタイルの間と同じにする */
+.weather-section {
+  margin-bottom: 14px;
+}
+
+/* 今の天気と1時間ごと。広い画面では横に並べ、高さをそろえる */
+.weather-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0 clamp(24px, 3vw, 48px);
+}
+
+/* 1時間ごとの中身の幅で、枠が画面の外へ広がらないように */
+.weather-top > .screen__section,
+.weather-top .ui-group {
+  min-width: 0;
+}
+
+@media (min-width: 1100px) {
+  .weather-top {
+    grid-template-columns: minmax(20rem, 1fr) minmax(0, 2.4fr);
+  }
+
+  .weather-top > .screen__section {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .weather-top .ui-group {
+    flex: 1;
+    display: flex;
+    align-items: center;
+  }
+}
+
+.weather-now {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.weather-now__icon {
+  width: 3rem;
+  height: 3rem;
+}
+
+.weather-now__text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+  color: var(--text-secondary);
+  font-size: var(--font-label);
+  line-height: 1.4;
+}
+
+.weather-now__text strong {
+  color: var(--text-primary);
+  font-size: var(--font-title);
+  line-height: 1.3;
+}
+
+/* 1時間ごと（横に流す） */
+.weather-hourly {
+  display: flex;
+  gap: 0.25rem;
+  width: 100%;
+  margin: 0;
+  /* 横に流す入れ物は上下もはみ出しを切るので、字の上下が欠けないだけ余白を取る */
+  padding: 0.4rem 0;
+  list-style: none;
+  overflow-x: auto;
+  scrollbar-width: none;
+  /* 横に流せることが分かるよう、端で薄くする（途中で切れた字をそのまま見せない） */
+  mask-image: linear-gradient(90deg, #000 calc(100% - 3rem), transparent);
+  scroll-snap-type: x proximity;
+}
+
+.weather-hourly::-webkit-scrollbar {
+  display: none;
+}
+
+.weather-hourly__hour {
+  display: grid;
+  grid-template-rows: auto 1.8rem 1rem auto;
+  justify-items: center;
+  align-items: center;
+  flex: 1 0 3.4rem;
+  gap: 0.25rem;
+  line-height: 1.3;
+  scroll-snap-align: start;
+  font-variant-numeric: tabular-nums;
+}
+
+.weather-hourly__time {
+  color: var(--text-secondary);
+  font-size: var(--font-note);
+}
+
+.weather-hourly__icon {
+  width: 1.6rem;
+  height: 1.6rem;
+}
+
+.weather-hourly__temp {
+  font-weight: 600;
+}
+
+.weather-rain {
+  color: #7dd3fc;
+  font-size: var(--font-caption);
+}
+
+/* 10日間の行の、最低〜最高の帯 */
+.weather-daily__icon {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.weather-range {
+  display: grid;
+  grid-template-columns: 2.2rem minmax(5rem, 9rem) 2.2rem;
+  align-items: center;
+  gap: 0.6rem;
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.weather-range__min {
+  text-align: right;
+  color: var(--text-secondary);
+}
+
+.weather-range__bar,
+.weather-meter {
+  position: relative;
+  height: 0.3rem;
+  border-radius: 999px;
+  background: var(--line);
+}
+
+.weather-range__fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 999px;
+}
+
+.weather-dot {
+  position: absolute;
+  top: 50%;
+  width: 0.55rem;
+  height: 0.55rem;
+  border: 2px solid rgba(0, 0, 0, 0.45);
+  border-radius: 50%;
+  background: #fff;
+  transform: translate(-50%, -50%);
+}
+
+.weather-wind {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.weather-wind__arrow {
+  display: inline-flex;
+}
+
+/* スマホの幅では帯を短くして、天気の説明を切らない */
+@media (max-width: 480px) {
+  .weather-range {
+    grid-template-columns: 1.8rem minmax(2.5rem, 4rem) 1.8rem;
+    gap: 0.4rem;
+  }
+}
+
+/* 場所を追加・管理（小窓） */
+.weather-places__add {
+  color: var(--text-secondary);
+  font-size: var(--font-label);
+}

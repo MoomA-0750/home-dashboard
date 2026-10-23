@@ -1,0 +1,26 @@
+{
+  "id": "tailscale",
+  "name": "Tailscale",
+  "version": "1.1.0",
+  "description": "tailscaled の状態（つながっている機械・exit node）を読み取りだけで出す",
+  "apiVersion": 1,
+  "settings": [
+    {
+      "key": "socketPath",
+      "label": "tailscaled のソケット",
+      "kind": "text",
+      "env": "TAILSCALE_SOCKET",
+      "default": "/var/run/tailscale/tailscaled.sock"
+    }
+  ],
+  "locales": {
+    "en": {
+      "description": "Shows tailscaled status (connected machines, exit node), read-only",
+      "settings": {
+        "socketPath": {
+          "label": "tailscaled socket"
+        }
+      }
+    }
+  }
+}
