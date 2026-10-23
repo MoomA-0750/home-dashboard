@@ -28,3 +28,9 @@ __pycache__/
 # 拡張機能のビルド道具が作る ZIP（scripts/build-extension.mjs --zip）
 extensions/*/*.zip
 examples/extensions/*/*.zip
+
+# 移行の道具（scripts/migrate.mjs）が作る・残すもの
+.migrate-import-*/
+*.before-import-*
+*.hdmigrate
+home-dashboard-*.tar.gz

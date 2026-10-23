@@ -18,6 +18,7 @@
     "build:extension": "node --import tsx scripts/build-extension.mjs",
     "new:extension": "node scripts/new-extension.mjs",
     "publish:extensions": "node scripts/publish-extensions.mjs",
+    "migrate": "node scripts/migrate.mjs",
     "dev:extensions": "node --import tsx scripts/build-extension.mjs --all --watch"
   },
   "packageManager": "pnpm@11.18.0",

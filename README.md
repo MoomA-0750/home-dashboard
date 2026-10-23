@@ -127,6 +127,9 @@ docker compose up -d --build
 `data/`・`config/` はホスト側にボリュームマウントされるので、レイアウトやホスト一覧はコンテナを
 再作成しても保持される。
 
+別の機械へ移すときは `pnpm migrate export --stop` → 移した先で `pnpm migrate import <ファイル>` → `pnpm migrate check`
+（何がどこにあるかと手順は [docs/migration.md](docs/migration.md)）。
+
 > 注: この開発環境にはDockerデーモンがなく、実際の `docker build`/`docker compose up` の
 > 動作確認はできていない。初回はデプロイ先（`gco`）で `docker compose up -d --build` を実行し、
 > 問題があれば都度修正する想定。

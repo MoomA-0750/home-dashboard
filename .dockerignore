@@ -13,3 +13,9 @@ apps/voice-agent
 # VRM（再配布禁止のモデル）・キャラクター・家の機械の一覧など、この家だけのものを焼き込まないため。
 # 「!」で見本だけ戻す書き方はしない（Docker が data/ など全部のフォルダを覗きに行き、読めないフォルダで止まる）
 config
+
+# 移行の道具（scripts/migrate.mjs）が作る・残すもの
+.migrate-import-*
+*.before-import-*
+*.hdmigrate
+home-dashboard-*.tar.gz
