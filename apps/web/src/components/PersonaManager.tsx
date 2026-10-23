@@ -11,7 +11,7 @@ import { ToggleSwitch } from "./ExtensionSettings";
 import { Icon } from "./Icon";
 import { PersonaIcon } from "./PersonaIcon";
 import { PersonaPreview } from "./PersonaPreview";
-import { defineMessages } from "@home-dashboard/widget-sdk";
+import { Badge, defineMessages } from "@home-dashboard/widget-sdk";
 
 const messages = defineMessages({
   ja: {
@@ -280,10 +280,10 @@ export function PersonaManager({
             />
           </div>
           <div className="persona-manager__tags">
-            {opened.id === personas.defaultPersonaId && <span>{t("tagDefault")}</span>}
-            {opened.hasAvatar && <span>{t("tagAvatar")}</span>}
-            {opened.hasPrompt ? <span>{t("tagPrompt")}</span> : <span>{t("tagPlain")}</span>}
-            {!opened.enabled && <span>{t("tagOff")}</span>}
+            {opened.id === personas.defaultPersonaId && <Badge>{t("tagDefault")}</Badge>}
+            {opened.hasAvatar && <Badge>{t("tagAvatar")}</Badge>}
+            {opened.hasPrompt ? <Badge>{t("tagPrompt")}</Badge> : <Badge>{t("tagPlain")}</Badge>}
+            {!opened.enabled && <Badge>{t("tagOff")}</Badge>}
           </div>
           {[...opened.warnings, ...motionWarnings(opened, t)].map((warning) => (
             <p key={warning} className="persona-manager__warning">

@@ -4,6 +4,7 @@ import {
   defineMessages,
   textFor,
   useLocale,
+  usePresence,
   type WidgetInstance,
   type WidgetProps,
   type WidgetRegistry,
@@ -60,6 +61,10 @@ export const WidgetHost = memo(function WidgetHost({
 }: WidgetHostProps) {
   const [detailOpen, setDetailOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // 閉じるとき・編集を終えるときも、薄くなってから消す
+  const detail = usePresence(detailOpen);
+  const settings = usePresence(settingsOpen);
+  const editTools = usePresence(editMode);
   const definition = registry.get(instance.widgetId);
   const size: WidgetSize = { w: instance.w, h: instance.h };
 
@@ -75,8 +80,8 @@ export const WidgetHost = memo(function WidgetHost({
 
   return (
     <div className={`widget-host${editMode ? " widget-host--editing" : ""}`}>
-      {editMode && (
-        <div className="widget-host__edit">
+      {editTools.shown && (
+        <div className={`widget-host__edit${editTools.closing ? " is-closing" : ""}`}>
           <span className="widget-host__drag" aria-hidden="true" title={t("dragToReorder")}>
             <span className="widget-host__grip" />
           </span>
@@ -136,9 +141,9 @@ export const WidgetHost = memo(function WidgetHost({
         画面全体ではなくウィジェットの矩形を基準に配置され、パネルが見切れる。
       */}
       {DetailComponent &&
-        detailOpen &&
+        detail.shown &&
         createPortal(
-          <div className="widget-detail-overlay" onClick={() => setDetailOpen(false)}>
+          <div className={`widget-detail-overlay${detail.closing ? " is-closing" : ""}`} onClick={() => setDetailOpen(false)}>
             <div className="widget-detail-panel" onClick={(e) => e.stopPropagation()}>
               <button
                 type="button"
@@ -163,9 +168,9 @@ export const WidgetHost = memo(function WidgetHost({
           document.body,
         )}
       {SettingsComponent &&
-        settingsOpen &&
+        settings.shown &&
         createPortal(
-          <div className="widget-detail-overlay" onClick={() => setSettingsOpen(false)}>
+          <div className={`widget-detail-overlay${settings.closing ? " is-closing" : ""}`} onClick={() => setSettingsOpen(false)}>
             <div
               className="widget-detail-panel widget-settings"
               role="dialog"

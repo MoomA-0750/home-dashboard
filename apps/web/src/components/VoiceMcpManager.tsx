@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react";
 import type { McpCatalogServer, McpSettingsInput, VoiceMcpControl } from "../lib/voiceMcp";
 import { ToggleSwitch } from "./ExtensionSettings";
 import { Icon } from "./Icon";
-import { defineMessages, formatClock, formatDate, useLocale, type Locale } from "@home-dashboard/widget-sdk";
+import { Badge, defineMessages, formatClock, formatDate, useLocale, type Locale } from "@home-dashboard/widget-sdk";
 
 const messages = defineMessages({
   ja: {
@@ -138,7 +138,7 @@ export function VoiceMcpManager({ mcp }: { mcp: VoiceMcpControl }) {
     return (
       <li key={server.name} className={`voice-mcp__item${server.available ? "" : " voice-mcp__item--disabled"}`}>
         <span className="voice-mcp__name">{label}</span>
-        {status && <span className="voice-mcp__badge">{status}</span>}
+        {status && <Badge tone="warn">{status}</Badge>}
         <ToggleSwitch
           checked={state.enabled.includes(server.name)}
           disabled={busy || !server.available}
@@ -204,7 +204,7 @@ export function VoiceMcpManager({ mcp }: { mcp: VoiceMcpControl }) {
           {state.custom.map((server) => (
             <li key={server.name} className="voice-mcp__item">
               <span className="voice-mcp__name">{server.name}</span>
-              {server.hasToken && <span className="voice-mcp__badge voice-mcp__badge--plain">{t("hasToken")}</span>}
+              {server.hasToken && <Badge>{t("hasToken")}</Badge>}
               <button
                 type="button"
                 className="voice-mcp__remove"

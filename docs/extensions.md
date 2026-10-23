@@ -163,16 +163,19 @@ export default defineWebExtension({
 | `WidgetHint` | ウィジェットの中の補足の一行。`tone="error"` で注意の色 |
 | `DetailFrame` | ウィジェットを押して開く詳しい画面の中身と見出し |
 | `ScreenFrame`・`ScreenSection`・`ScreenNotice` | サイドバーの画面の枠・区切りと見出し・知らせ |
-| `StatTile`・`StatGrid` | 値のタイル（アイコン付きの名前と大きな値。Home Control のセンサー・Weather と同じ形）と、その並べ方 |
+| `ui-glass`（クラス） | 自前の入れ物をガラスにする。5つ1組（縁・地・光沢・影・ぼかし）を CSS に書き写さず、要素にこれを付ける |
+| `StatTile`（`onClick`・`tone`: warm・hot）・`StatGrid` | 値のタイル（アイコン付きの名前と大きな値。Home Control のセンサー・Weather と同じ形）と、その並べ方 |
 | `Dialog` | 画面の上に重ねて出す小窓（場所の追加など。背景・Esc・× で閉じる） |
 | `PillMenu` | 画面の右上で選ぶもの（Media の音楽アプリ・Home Control の部屋など） |
 | `Button`（`variant`: `primary`・`danger`、`icon`）・`ButtonLink`・`ButtonRow` | ボタン。どれも丸い端の同じ高さ。`primary` はその場でいちばん押すもの（保存など）、`danger` は消すのを確かめるもの |
+| `IconButton`（`icon`・`label`） | アイコンだけのボタン（閉じるなど）。44px の丸 |
+| `ProgressBar`（`value` 0〜1・`label`） | 進み具合・使っている量のバー。色は CSS の `--progress-color` |
 | `Group` | 入れ物（区画）。中に入力欄やボタンを並べる |
 | `List`（`boxed`）・`ListItem`（`title`・`detail`・`badge`・`leading`・`trailing`・`onClick`・`off`・`selected`・`chevron`・`error`） | 一覧。ふだんは角の丸い行が並ぶ形（選んで開く・切り替えるもの）。`boxed` を付けると1つのガラスの入れ物に入れて線で区切る（天気の日ごと・予定のように、並べて読み比べるもの）。押せる行は右に矢印が出る。入／切は `trailing` に `ToggleSwitch` |
 | `ToggleSwitch` | 入／切 |
 | `Slider`（`value`・`min`・`max`・`step`・`onInput`・`onCommit`） | 量を変えるバー（再生位置・明るさ・強さ）。動かしている間は `onInput`、離したときに `onCommit` を一度だけ呼ぶ |
 | `Field`（`label`・`hint`）・`Check` | 入力欄・選ぶ欄に名前を付ける（中に `<input>`・`<select>`・`<textarea>` を置く）・チェックボックス |
-| `SectionTitle`・`Note`・`Notice`・`Message`（`tone`）・`Badge` | 区画の見出し・説明の文・目立たせる知らせ・操作の結果・小さな印 |
+| `SectionTitle`・`Note`・`Notice`・`Message`（`tone`）・`Badge`（`tone`: on・warn・dim） | 区画の見出し・説明の文・目立たせる知らせ・操作の結果・小さな印 |
 | `BackButton`・`CodeBlock` | 一覧から開いた詳しい画面の戻る・そのまま写して使う文字（コマンド・鍵） |
 | `Icon` | 本体のアイコン（`name`）か、自分の SVG（`src`） |
 

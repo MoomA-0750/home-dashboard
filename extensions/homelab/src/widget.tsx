@@ -6,6 +6,9 @@ import {
   usePolling,
   type WidgetDetailProps,
   type WidgetProps,
+  ProgressBar,
+  DetailFrame,
+  WidgetCard,
 } from "@home-dashboard/widget-sdk";
 import { TYPE_LABELS } from "./HostSettings";
 
@@ -146,9 +149,7 @@ function UsageBars({ resources }: { resources: Resources }) {
       {usages(resources, t).map((u) => (
         <div key={u.label} className={`homelab-usage${levelOf(u.value)}`} title={u.detail}>
           <span className="homelab-usage__label">{u.label}</span>
-          <span className="homelab-usage__bar" aria-hidden="true">
-            <span className="homelab-usage__fill" style={{ width: `${(u.value ?? 0) * 100}%` }} />
-          </span>
+          <ProgressBar value={u.value ?? 0} />
           <span className="homelab-usage__value">{percent(u.value)}</span>
         </div>
       ))}
@@ -169,7 +170,7 @@ function HomelabStatusView({ ctx, config, openDetail }: WidgetProps<HomelabStatu
   if (hosts.length === 1 && hosts[0].resources) {
     const host = hosts[0];
     return (
-      <button type="button" className="widget-card widget-homelab widget-homelab--single" onClick={openDetail}>
+      <WidgetCard className="widget-homelab widget-homelab--single" onClick={openDetail}>
         <span className="homelab-node__head">
           <Dot online={host.online} />
           <span className="homelab-node__name">{host.name}</span>
@@ -183,18 +184,13 @@ function HomelabStatusView({ ctx, config, openDetail }: WidgetProps<HomelabStatu
             {t("guests", { running: host.guests.running, total: host.guests.total })}
           </span>
         )}
-      </button>
+      </WidgetCard>
     );
   }
 
   // 何台もあるときは、1台1行で割合を並べる
   return (
-    <button
-      type="button"
-      className="widget-card widget-homelab widget-homelab--list"
-      onClick={openDetail}
-      aria-label={t("openDetail")}
-    >
+    <WidgetCard className="widget-homelab widget-homelab--list" onClick={openDetail} label={t("openDetail")}>
       <span className="homelab-list">
         <span className="homelab-list__head" aria-hidden="true">
           <span />
@@ -226,7 +222,7 @@ function HomelabStatusView({ ctx, config, openDetail }: WidgetProps<HomelabStatu
           </span>
         ))}
       </span>
-    </button>
+    </WidgetCard>
   );
 }
 
@@ -236,8 +232,7 @@ function HomelabStatusDetail({ ctx, config }: WidgetDetailProps<HomelabStatusCon
   const { data } = usePolling(() => fetchStatus(ctx.apiBaseUrl), config.pollIntervalMs);
 
   return (
-    <div className="widget-detail widget-homelab-detail">
-      <h2>{t("title")}</h2>
+    <DetailFrame title={t("title")} className="widget-homelab-detail">
       {data && data.hosts.length === 0 && <p className="homelab-detail__facts">{t("noHosts")}</p>}
       {data?.hosts.map((host) => {
         const r = host.resources;
@@ -270,7 +265,7 @@ function HomelabStatusDetail({ ctx, config }: WidgetDetailProps<HomelabStatusCon
         );
       })}
       {data && data.hosts.length > 0 && <p className="homelab-detail__note">{t("editHint")}</p>}
-    </div>
+    </DetailFrame>
   );
 }
 

@@ -19,12 +19,12 @@
 
 .widget-tailscale__count {
   font-size: 2rem;
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1.1;
 }
 
 .widget-tailscale__total {
-  font-size: 1rem;
+  font-size: var(--font-body);
   font-weight: 400;
   color: var(--text-secondary);
 }
@@ -68,19 +68,6 @@
   display: flex;
   gap: 0.3rem;
   align-items: center;
-}
-
-.widget-tailscale-detail__badge {
-  font-size: var(--font-micro);
-  padding: 0.05rem 0.4rem;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
-  white-space: nowrap;
-}
-
-.widget-tailscale-detail__badge--dim {
-  color: var(--text-secondary);
-  background: rgba(255, 255, 255, 0.06);
 }
 
 .widget-tailscale-detail__name {

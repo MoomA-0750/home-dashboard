@@ -32,7 +32,7 @@
   align-items: center;
   gap: 0.6rem;
   min-width: 0;
-  font-size: 1rem;
+  font-size: var(--font-body);
 }
 
 .calendar-widget__time {
@@ -188,8 +188,8 @@ button.month-grid__day:hover {
 }
 
 .month-grid__day--selected {
-  background: rgba(var(--tint-rgb), 0.94);
-  color: rgb(var(--ink-rgb));
+  background: var(--fill);
+  color: var(--on-fill);
 }
 
 .month-grid__day--selected .month-grid__number {

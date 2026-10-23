@@ -19,7 +19,7 @@
 }
 
 .widget-limits__title {
-  font-size: var(--font-caption);
+  font-size: var(--font-note);
   color: var(--text-secondary);
 }
 
@@ -69,7 +69,7 @@
 
 .widget-limits__percent {
   font-size: 2rem;
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1;
   color: var(--limit-color);
 }
@@ -81,23 +81,13 @@
 }
 
 .widget-limits__bar {
-  height: 0.45rem;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.14);
-  overflow: hidden;
-}
-
-.widget-limits__bar-fill {
-  display: block;
-  height: 100%;
-  border-radius: 999px;
-  background: var(--limit-color);
+  --progress-color: var(--limit-color);
 }
 
 .widget-limits__sub {
   overflow: hidden;
   color: var(--text-secondary);
-  font-size: 0.72rem;
+  font-size: var(--font-micro);
   white-space: nowrap;
   text-overflow: ellipsis;
   /* 省略で切るときは上下を詰めない（詰めた分だけ字の上下が欠ける） */
@@ -125,7 +115,7 @@
 
 .widget-usage__value {
   font-size: 2rem;
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1.1;
 }
 
@@ -139,20 +129,6 @@
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
-}
-
-.widget-usage__bar {
-  height: 0.35rem;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.14);
-  overflow: hidden;
-}
-
-.widget-usage__bar-fill {
-  display: block;
-  height: 100%;
-  border-radius: 999px;
-  background: var(--accent-ok);
 }
 
 .widget-usage-detail section {

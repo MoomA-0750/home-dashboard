@@ -11,6 +11,7 @@ import {
   type IconName,
   type LocalizedText,
   type ScreenProps,
+  StatTile,
 } from "@home-dashboard/widget-sdk";
 import { SensorDetail } from "./SensorDetail";
 import { localizeState } from "./units";
@@ -341,25 +342,20 @@ export function HomeControlScreen({ ctx }: ScreenProps) {
                       };
                       // 押すと、センサーごとの値と推移を出す詳細を開く
                       return (
-                        <button
-                          type="button"
+                        <StatTile
                           key={merged.key}
-                          className={`home-sensor home-sensor--${merged.level}`}
-                          aria-label={t("sensorAria", {
+                          className="home-sensor"
+                          icon={meta.icon}
+                          label={meta.label}
+                          value={formatMergedValue(merged)}
+                          unit={merged.unit ?? undefined}
+                          tone={merged.level === "ok" ? undefined : merged.level}
+                          ariaLabel={t("sensorAria", {
                             label: sensorTitle(area, meta.label, t),
                             value: `${formatMergedValue(merged)}${merged.unit ?? ""}`,
                           })}
                           onClick={() => setDetail({ area, merged })}
-                        >
-                          <span className="home-sensor__label">
-                            <Icon name={meta.icon} />
-                            {meta.label}
-                          </span>
-                          <span className="home-sensor__value">
-                            {formatMergedValue(merged)}
-                            <small>{merged.unit}</small>
-                          </span>
-                        </button>
+                        />
                       );
                     })}
                   </div>
@@ -482,7 +478,7 @@ function LockCard({
 
   return (
     <div
-      className={`home-lock${unlocked ? " home-lock--unlocked" : ""}${lock.state === "jammed" ? " home-lock--jammed" : ""}`}
+      className={`ui-glass home-lock${unlocked ? " home-lock--unlocked" : ""}${lock.state === "jammed" ? " home-lock--jammed" : ""}`}
     >
       <div className="home-lock__status">
         <Icon name={unlocked ? "lock-open" : "lock-closed"} className="home-lock__icon" />
@@ -535,7 +531,7 @@ function ClimateCard({
   const modes = climate.hvacModes.filter((mode) => mode !== "off");
 
   return (
-    <div className={`home-climate${off ? " home-climate--off" : ""}`}>
+    <div className={`ui-glass home-climate${off ? " home-climate--off" : ""}`}>
       <div className="home-climate__head">
         <span className="home-climate__name">
           {climate.name}
@@ -620,7 +616,7 @@ function ToggleTile({
   const icon: IconName = toggle.domain === "light" ? "lightbulb" : toggle.domain === "fan" ? "arrow-sync" : "plug";
 
   return (
-    <div className={`home-toggle${on ? " home-toggle--on" : ""}`}>
+    <div className={`ui-glass home-toggle${on ? " home-toggle--on" : ""}`}>
       <button
         type="button"
         className="home-toggle__button"

@@ -9,6 +9,8 @@ import {
   type Locale,
   type LocalizedText,
   type WidgetProps,
+  ProgressBar,
+  WidgetCard,
 } from "@home-dashboard/widget-sdk";
 
 const messages = defineMessages({
@@ -135,16 +137,7 @@ function LimitRow({ window, now }: { window: LimitWindow; now: Date }) {
           {!reset && <small>%</small>}
         </span>
       </div>
-      <div
-        className="widget-limits__bar"
-        role="meter"
-        aria-label={t("usageOf", { label })}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={percent}
-      >
-        <span className="widget-limits__bar-fill" style={{ width: `${percent}%` }} />
-      </div>
+      <ProgressBar value={percent / 100} label={t("usageOf", { label })} className="widget-limits__bar" />
       <span className="widget-limits__sub">
         {reset
           ? t("resetDone")
@@ -165,14 +158,14 @@ function ClaudeLimitsView({ ctx, config }: WidgetProps<ClaudeLimitsConfig>) {
   const now = ctx.now;
 
   if (loading && !data) {
-    return <div className="widget-card widget-limits">{t("loading")}</div>;
+    return <WidgetCard className="widget-limits">{t("loading")}</WidgetCard>;
   }
   if (!data || data.windows.length === 0) {
     return (
-      <div className="widget-card widget-limits widget-limits--empty">
+      <WidgetCard className="widget-limits widget-limits--empty">
         <span className="widget-limits__title">{t("title")}</span>
         <span className="widget-limits__sub">{error ? t("unreachable") : t("noValues")}</span>
-      </div>
+      </WidgetCard>
     );
   }
 
@@ -185,7 +178,7 @@ function ClaudeLimitsView({ ctx, config }: WidgetProps<ClaudeLimitsConfig>) {
   const staleMs = now.getTime() - latest;
 
   return (
-    <div className="widget-card widget-limits">
+    <WidgetCard className="widget-limits">
       <div className="widget-limits__title-row">
         <span className="widget-limits__title">{t("title")}</span>
         {staleMs > STALE_AFTER_MS && (
@@ -197,7 +190,7 @@ function ClaudeLimitsView({ ctx, config }: WidgetProps<ClaudeLimitsConfig>) {
           <LimitRow key={window.kind} window={window} now={now} />
         ))}
       </div>
-    </div>
+    </WidgetCard>
   );
 }
 

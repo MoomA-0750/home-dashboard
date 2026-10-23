@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { defineMessages, textFor, useLocale, type WidgetRegistry } from "@home-dashboard/widget-sdk";
+import { Badge, defineMessages, textFor, useLocale, type WidgetRegistry } from "@home-dashboard/widget-sdk";
 import { Icon } from "./Icon";
 
 const messages = defineMessages({
@@ -22,6 +22,8 @@ const messages = defineMessages({
 });
 
 interface WidgetEditBarProps {
+  /** 消える動きの間 */
+  closing?: boolean;
   onAdd: () => void;
   onDone: () => void;
 }
@@ -30,10 +32,10 @@ interface WidgetEditBarProps {
  * 編集モードの間、画面の下に出す操作帯。
  * 設定パネルはウィジェットの列の右側を覆ってしまうので、編集中の操作はパネルではなくここに置く。
  */
-export function WidgetEditBar({ onAdd, onDone }: WidgetEditBarProps) {
+export function WidgetEditBar({ closing = false, onAdd, onDone }: WidgetEditBarProps) {
   const t = messages.useT();
   return (
-    <div className="widget-edit-bar" role="toolbar" aria-label={t("editWidgets")}>
+    <div className={`widget-edit-bar${closing ? " is-closing" : ""}`} role="toolbar" aria-label={t("editWidgets")}>
       <span className="widget-edit-bar__hint">{t("hint")}</span>
       <button type="button" className="widget-edit-bar__button" onClick={onAdd}>
         <Icon name="add" />
@@ -54,9 +56,11 @@ interface WidgetPickerProps {
   placedWidgetIds: string[];
   onAdd: (widgetId: string) => void;
   onClose: () => void;
+  /** 消える動きの間 */
+  closing?: boolean;
 }
 
-export function WidgetPicker({ registry, hiddenWidgetIds, placedWidgetIds, onAdd, onClose }: WidgetPickerProps) {
+export function WidgetPicker({ registry, hiddenWidgetIds, placedWidgetIds, onAdd, onClose, closing = false }: WidgetPickerProps) {
   const locale = useLocale();
   const t = messages.useT();
   const addable = registry.getAll().filter((def) => !hiddenWidgetIds.includes(def.id));
@@ -70,7 +74,7 @@ export function WidgetPicker({ registry, hiddenWidgetIds, placedWidgetIds, onAdd
   }, [onClose]);
 
   return (
-    <div className="widget-picker-overlay" onClick={onClose}>
+    <div className={`widget-picker-overlay${closing ? " is-closing" : ""}`} onClick={onClose}>
       <div
         className="widget-picker"
         role="dialog"
@@ -93,7 +97,10 @@ export function WidgetPicker({ registry, hiddenWidgetIds, placedWidgetIds, onAdd
                   <span className="widget-picker__name">
                     {textFor(def.name, locale)}
                     {placed > 0 && (
-                      <span className="widget-picker__placed">{t("placed")}{placed > 1 ? ` ×${placed}` : ""}</span>
+                      <Badge>
+                        {t("placed")}
+                        {placed > 1 ? ` ×${placed}` : ""}
+                      </Badge>
                     )}
                   </span>
                   {def.description && <span className="widget-picker__desc">{textFor(def.description, locale)}</span>}

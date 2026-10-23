@@ -7,6 +7,9 @@ import {
   type Locale,
   type WidgetDetailProps,
   type WidgetProps,
+  ProgressBar,
+  DetailFrame,
+  WidgetCard,
 } from "@home-dashboard/widget-sdk";
 
 const messages = defineMessages({
@@ -133,14 +136,14 @@ function ClaudeUsageView({ ctx, config, openDetail }: WidgetProps<ClaudeUsageCon
   const { data, loading } = usePolling(() => fetchUsage(ctx.apiBaseUrl), config.pollIntervalMs);
 
   if (loading && !data) {
-    return <div className="widget-card widget-usage">{t("aggregating")}</div>;
+    return <WidgetCard className="widget-usage">{t("aggregating")}</WidgetCard>;
   }
   if (data && !data.configured) {
     return (
-      <div className="widget-card widget-usage widget-usage--unconfigured">
+      <WidgetCard className="widget-usage widget-usage--unconfigured">
         {t("notFound")}
         <span className="widget-hint">{data.reason}</span>
-      </div>
+      </WidgetCard>
     );
   }
 
@@ -150,7 +153,7 @@ function ClaudeUsageView({ ctx, config, openDetail }: WidgetProps<ClaudeUsageCon
   const blockProgress = block ? Math.min(1, 1 - block.remainingMs / (5 * 60 * 60 * 1000)) : 0;
 
   return (
-    <button type="button" className="widget-card widget-usage" onClick={openDetail}>
+    <WidgetCard className="widget-usage" onClick={openDetail}>
       <span className="widget-usage__label">{t("todayLabel")}</span>
       <span className="widget-usage__value">{formatTokens(today?.tokens.total ?? 0)}</span>
       <span className="widget-usage__sub">
@@ -158,9 +161,7 @@ function ClaudeUsageView({ ctx, config, openDetail }: WidgetProps<ClaudeUsageCon
       </span>
       {block ? (
         <div className="widget-usage__block">
-          <div className="widget-usage__bar">
-            <div className="widget-usage__bar-fill" style={{ width: `${blockProgress * 100}%` }} />
-          </div>
+          <ProgressBar value={blockProgress} />
           <span className="widget-usage__sub">
             {t("blockRemaining", {
               remaining: formatDuration(block.remainingMs, t),
@@ -171,7 +172,7 @@ function ClaudeUsageView({ ctx, config, openDetail }: WidgetProps<ClaudeUsageCon
       ) : (
         <span className="widget-usage__sub">{t("noActiveBlock")}</span>
       )}
-    </button>
+    </WidgetCard>
   );
 }
 
@@ -207,13 +208,12 @@ function ClaudeUsageDetail({ ctx, config }: WidgetDetailProps<ClaudeUsageConfig>
   const t = messages.useT();
   const locale = useLocale();
   const { data } = usePolling(() => fetchUsage(ctx.apiBaseUrl), config.pollIntervalMs);
-  if (!data?.configured) return <div className="widget-detail">{t("loading")}</div>;
+  if (!data?.configured) return <DetailFrame>{t("loading")}</DetailFrame>;
 
   const maxDaily = Math.max(1, ...data.daily.map((d) => d.total));
 
   return (
-    <div className="widget-detail widget-usage-detail">
-      <h2>{t("title")}</h2>
+    <DetailFrame title={t("title")} className="widget-usage-detail">
 
       <section>
         <h3>{t("today", { date: data.today.date })}</h3>
@@ -276,7 +276,7 @@ function ClaudeUsageDetail({ ctx, config }: WidgetDetailProps<ClaudeUsageConfig>
       </section>
 
       <p className="widget-note">{t("noCost")}</p>
-    </div>
+    </DetailFrame>
   );
 }
 

@@ -16,6 +16,7 @@ import {
   type LocalizedText,
   type WidgetProps,
   type WidgetSettingsProps,
+  WidgetCard,
 } from "@home-dashboard/widget-sdk";
 import { localizeReading } from "./units";
 
@@ -261,7 +262,7 @@ function EntityButton({
   return (
     <button
       type="button"
-      className={`ha-entity ${on ? "ha-entity--on" : ""} ${service ? "" : "ha-entity--readonly"}`}
+      className={`ui-glass ha-entity ${on ? "ha-entity--on" : ""} ${service ? "" : "ha-entity--readonly"}`}
       disabled={!service}
       onClick={() => onToggle(entity)}
       // 状態は色で分かるので文字では出さない。読み上げと押さえたときの説明にだけ添える
@@ -281,10 +282,10 @@ function HaControlsView({ ctx, config }: WidgetProps<HaControlsConfig>) {
 
   if (!loading && data && !data.configured) {
     return (
-      <div className="widget-card ha-controls ha-controls--unconfigured">
+      <WidgetCard className="ha-controls ha-controls--unconfigured">
         {t("notConnected")}
         <span className="widget-hint">{t("notConnectedHint")}</span>
-      </div>
+      </WidgetCard>
     );
   }
 
@@ -292,7 +293,7 @@ function HaControlsView({ ctx, config }: WidgetProps<HaControlsConfig>) {
   const readings = chosenReadings(data?.readings ?? [], config.readings);
 
   return (
-    <div className="widget-card ha-controls">
+    <WidgetCard className="ha-controls">
       {readings.length > 0 && (
         <div className="ha-controls__readings">
           {readings.map((reading) => {
@@ -329,7 +330,7 @@ function HaControlsView({ ctx, config }: WidgetProps<HaControlsConfig>) {
           ))}
         </div>
       </div>
-    </div>
+    </WidgetCard>
   );
 }
 

@@ -21,7 +21,7 @@
 
 .widget-mail__count {
   font-size: 1.75rem;
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
@@ -44,7 +44,7 @@
   display: grid;
   grid-template-columns: 6rem 1fr;
   gap: 0.5rem;
-  font-size: 0.78rem;
+  font-size: var(--font-note);
 }
 
 .widget-mail__from,
@@ -142,8 +142,8 @@
 
 .mail-check--on {
   border-color: transparent;
-  background: rgba(var(--tint-rgb), 0.94);
-  color: rgb(var(--ink-rgb));
+  background: var(--fill);
+  color: var(--on-fill);
 }
 
 /* 「選ぶ」のときの操作の帯（一覧の上） */

@@ -6,6 +6,9 @@ import {
   type IconName,
   type WidgetDetailProps,
   type WidgetProps,
+  Badge,
+  DetailFrame,
+  WidgetCard,
 } from "@home-dashboard/widget-sdk";
 
 const messages = defineMessages({
@@ -90,20 +93,20 @@ function TailscaleView({ ctx, config, openDetail }: WidgetProps<TailscaleConfig>
   const t = messages.useT();
   const { data, loading } = usePolling(() => fetchStatus(ctx.apiBaseUrl), config.pollIntervalMs);
 
-  if (loading && !data) return <div className="widget-card widget-tailscale">{t("checking")}</div>;
+  if (loading && !data) return <WidgetCard className="widget-tailscale">{t("checking")}</WidgetCard>;
   if (data && !data.configured) {
     return (
-      <div className="widget-card widget-tailscale widget-tailscale--unconfigured">
+      <WidgetCard className="widget-tailscale widget-tailscale--unconfigured">
         {t("notConnected")}
         <span className="widget-hint">{data.reason}</span>
-      </div>
+      </WidgetCard>
     );
   }
 
   const running = data?.backendState === "Running";
 
   return (
-    <button type="button" className="widget-card widget-tailscale" onClick={openDetail}>
+    <WidgetCard className="widget-tailscale" onClick={openDetail}>
       <span className="widget-tailscale__header">
         <span className={`widget-homelab__dot ${running ? "widget-homelab__dot--ok" : "widget-homelab__dot--warn"}`} />
         <span className="widget-tailscale__title">Tailscale</span>
@@ -114,18 +117,17 @@ function TailscaleView({ ctx, config, openDetail }: WidgetProps<TailscaleConfig>
       </span>
       <span className="widget-tailscale__sub">{data?.self?.ip ?? ""}</span>
       {data?.exitNode && <span className="widget-tailscale__exit">exit: {data.exitNode.name}</span>}
-    </button>
+    </WidgetCard>
   );
 }
 
 function TailscaleDetail({ ctx, config }: WidgetDetailProps<TailscaleConfig>) {
   const t = messages.useT();
   const { data } = usePolling(() => fetchStatus(ctx.apiBaseUrl), config.pollIntervalMs);
-  if (!data?.configured) return <div className="widget-detail">{t("loading")}</div>;
+  if (!data?.configured) return <DetailFrame>{t("loading")}</DetailFrame>;
 
   return (
-    <div className="widget-detail widget-tailscale-detail">
-      <h2>Tailscale</h2>
+    <DetailFrame title="Tailscale" className="widget-tailscale-detail">
       <p className="widget-tailscale-detail__self">
         {t("self", { name: data.self?.name ?? "", ip: data.self?.ip ?? "" })} · {data.backendState} · v
         {data.version.split("-")[0]}
@@ -143,15 +145,13 @@ function TailscaleDetail({ ctx, config }: WidgetDetailProps<TailscaleConfig>) {
             </span>
             <span className="widget-tailscale-detail__ip">{peer.ip}</span>
             <span className="widget-tailscale-detail__meta">
-              {peer.isExitNode && <span className="widget-tailscale-detail__badge">exit node</span>}
+              {peer.isExitNode && <Badge>exit node</Badge>}
               {!peer.isExitNode && peer.offersExitNode && (
-                <span className="widget-tailscale-detail__badge widget-tailscale-detail__badge--dim">
-                  {t("exitCapable")}
-                </span>
+                <Badge tone="dim">{t("exitCapable")}</Badge>
               )}
-              {peer.active && peer.directAddr && <span className="widget-tailscale-detail__badge">direct</span>}
+              {peer.active && peer.directAddr && <Badge>direct</Badge>}
               {peer.active && !peer.directAddr && peer.relay && (
-                <span className="widget-tailscale-detail__badge">derp:{peer.relay}</span>
+                <Badge>derp:{peer.relay}</Badge>
               )}
               {!peer.online && (
                 <span className="widget-tailscale-detail__seen">{relativeLastSeen(peer.lastSeen, t)}</span>
@@ -162,7 +162,7 @@ function TailscaleDetail({ ctx, config }: WidgetDetailProps<TailscaleConfig>) {
       </ul>
 
       <p className="widget-note">{t("note")}</p>
-    </div>
+    </DetailFrame>
   );
 }
 

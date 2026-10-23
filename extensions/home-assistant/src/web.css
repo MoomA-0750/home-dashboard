@@ -6,7 +6,7 @@
 
 .home-control__area-name {
   margin: 0 0 0.6rem;
-  font-size: 1rem;
+  font-size: var(--font-small);
   font-weight: 600;
 }
 
@@ -14,67 +14,6 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
   gap: 14px;
-}
-
-.home-sensor {
-  --sensor-color: var(--text-primary);
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-  padding: 20px 24px;
-  border: 1px solid var(--glass-border);
-  border-radius: var(--card-radius);
-  font-variant-numeric: tabular-nums;
-  /* 押すと詳細（センサーごとの値と推移）を開くボタン */
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  background: var(--widget-sheen), var(--widget-bg);
-  /* 縁の線の下に光沢・背景を敷かない（敷くと、光沢の濃淡で線が所々暗く見える） */
-  background-clip: padding-box;
-  box-shadow: var(--widget-shadow);
-  backdrop-filter: var(--widget-blur);
-}
-
-.home-sensor:hover {
-  border-color: rgba(var(--tint-rgb), 0.35);
-}
-
-.home-sensor--warm {
-  --sensor-color: var(--accent-warn);
-  border-color: rgba(251, 191, 36, 0.45);
-}
-
-.home-sensor--hot {
-  --sensor-color: var(--danger-strong);
-  border-color: rgba(248, 113, 113, 0.55);
-}
-
-.home-sensor__label {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  color: var(--text-secondary);
-  font-size: var(--font-label);
-}
-
-.home-sensor__label .fluent-icon {
-  width: 20px;
-  height: 20px;
-}
-
-.home-sensor__value {
-  color: var(--sensor-color);
-  font-size: clamp(32px, 2.6vw, 46px);
-  font-weight: 600;
-  line-height: 1;
-}
-
-.home-sensor__value small {
-  margin-left: 0.2rem;
-  font-size: 0.4em;
-  font-weight: 400;
 }
 
 .home-control__locks,
@@ -90,13 +29,8 @@
   gap: 1.25rem;
   /* 角の丸みを中のボタン（高さ 52px・丸み 26px）とそろえる（カードの丸み ＝ 26px ＋ この余白） */
   padding: calc(var(--card-radius) - 26px);
-  border: 1px solid var(--glass-border);
   border-radius: var(--card-radius);
-  background: var(--widget-sheen), var(--widget-bg);
   /* 縁の線の下に光沢・背景を敷かない（敷くと、光沢の濃淡で線が所々暗く見える） */
-  background-clip: padding-box;
-  box-shadow: var(--widget-shadow);
-  backdrop-filter: var(--widget-blur);
 }
 
 .home-lock--unlocked {
@@ -156,14 +90,9 @@
   gap: 1.25rem;
   /* 角の丸みを中のボタン（高さ 52px・丸み 26px）とそろえる（カードの丸み ＝ 26px ＋ この余白） */
   padding: calc(var(--card-radius) - 26px);
-  border: 1px solid var(--glass-border);
   border-radius: var(--card-radius);
   font-variant-numeric: tabular-nums;
-  background: var(--widget-sheen), var(--widget-bg);
   /* 縁の線の下に光沢・背景を敷かない（敷くと、光沢の濃淡で線が所々暗く見える） */
-  background-clip: padding-box;
-  box-shadow: var(--widget-shadow);
-  backdrop-filter: var(--widget-blur);
 }
 
 .home-climate--off {
@@ -236,14 +165,9 @@
 .home-toggle {
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--glass-border);
   border-radius: var(--card-radius);
   overflow: hidden;
-  background: var(--widget-sheen), var(--widget-bg);
   /* 縁の線の下に光沢・背景を敷かない（敷くと、光沢の濃淡で線が所々暗く見える） */
-  background-clip: padding-box;
-  box-shadow: var(--widget-shadow);
-  backdrop-filter: var(--widget-blur);
   transition:
     background-color var(--motion-base) var(--ease-standard),
     border-color var(--motion-base) var(--ease-standard),
@@ -383,11 +307,6 @@
   /* カードの丸み 45px − カードの余白 30px。外の角と同じ中心になる */
   border-radius: var(--inner-radius);
   /* Home Control 画面の家電（.home-toggle）と同じ見た目。オフはウィジェットのガラス、オンは明るい黄色 */
-  border: 1px solid var(--glass-border);
-  background: var(--widget-sheen), var(--widget-bg);
-  background-clip: padding-box;
-  box-shadow: var(--widget-shadow);
-  backdrop-filter: var(--widget-blur);
   color: var(--text-primary);
   cursor: pointer;
   font: inherit;
@@ -610,7 +529,7 @@
     border-radius: 22px;
   }
 
-  .home-sensor__value {
+  .home-sensor .ui-stat__value {
     font-size: clamp(24px, 1.9vw, 34px);
   }
 

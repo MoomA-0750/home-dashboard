@@ -48,6 +48,39 @@ export function Button({
   );
 }
 
+/** アイコンだけのボタン（閉じる・その他の操作）。押せる大きさは 44px の丸。label は読み上げと hover の説明に使う */
+export function IconButton({
+  icon,
+  label,
+  className,
+  type = "button",
+  ...rest
+}: { icon: IconName; label: string } & Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children">) {
+  return (
+    <button type={type} className={cx("ui-icon-button", className)} aria-label={label} title={label} {...rest}>
+      <Icon name={icon} />
+    </button>
+  );
+}
+
+/**
+ * 進み具合・使っている量のバー（高さ 6px）。value は 0〜1。色は CSS の --progress-color で変える（既定は緑）。
+ * label を渡すと読み上げで量を伝える（無ければ飾りとして扱う。隣に数値を書いているとき）
+ */
+export function ProgressBar({ value, label, className }: { value: number; label?: string; className?: string }) {
+  const percent = Math.round(Math.min(1, Math.max(0, value)) * 100);
+  return (
+    <span
+      className={cx("ui-progress", className)}
+      {...(label
+        ? { role: "meter", "aria-label": label, "aria-valuemin": 0, "aria-valuemax": 100, "aria-valuenow": percent }
+        : { "aria-hidden": true })}
+    >
+      <span className="ui-progress__fill" style={{ width: `${percent}%` }} />
+    </span>
+  );
+}
+
 /** ボタンの形のリンク（書き出し・外のページを開くなど） */
 export function ButtonLink({
   variant = "default",
@@ -191,9 +224,10 @@ export function Message({ tone = "ok", children }: { tone?: "ok" | "error"; chil
   );
 }
 
-/** 小さな印（件数・状態） */
-export function Badge({ on, children }: { on?: boolean; children: ReactNode }) {
-  return <span className={cx("ui-badge", on && "ui-badge--on")}>{children}</span>;
+/** 小さな印（件数・状態）。tone: on（入っている・設定済み）／warn（気を付ける・変更あり）／dim（控えめ） */
+export function Badge({ on, tone, children }: { on?: boolean; tone?: "on" | "warn" | "dim"; children: ReactNode }) {
+  const kind = tone ?? (on ? "on" : null);
+  return <span className={cx("ui-badge", kind && `ui-badge--${kind}`)}>{children}</span>;
 }
 
 /** 前の画面へ戻るボタン（一覧から開いた詳しい画面の左上） */
@@ -306,6 +340,10 @@ export function StatTile({
   value,
   unit,
   note,
+  tone,
+  onClick,
+  ariaLabel,
+  className,
   children,
 }: {
   icon: IconName;
@@ -313,10 +351,17 @@ export function StatTile({
   value: ReactNode;
   unit?: string;
   note?: ReactNode;
+  /** 気を付けたい値（warm: 注意の色 / hot: 危ない色）。数値と縁の色が変わる */
+  tone?: "warm" | "hot";
+  /** 押すと詳しい中身を開くとき */
+  onClick?: () => void;
+  /** 押せるタイルの読み上げ（値と単位をまとめて伝えたいとき） */
+  ariaLabel?: string;
+  className?: string;
   children?: ReactNode;
 }) {
-  return (
-    <div className="ui-stat">
+  const content = (
+    <>
       <span className="ui-stat__label">
         <Icon name={icon} />
         {label}
@@ -327,8 +372,16 @@ export function StatTile({
       </span>
       {children}
       {note && <span className="ui-stat__note">{note}</span>}
-    </div>
+    </>
   );
+  const classes = cx("ui-stat", tone && `ui-stat--${tone}`, onClick && "ui-stat--action", className);
+  if (onClick)
+    return (
+      <button type="button" className={classes} aria-label={ariaLabel} onClick={onClick}>
+        {content}
+      </button>
+    );
+  return <div className={classes}>{content}</div>;
 }
 
 /** 値のタイルを、幅に合わせて並べる */

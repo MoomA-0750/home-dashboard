@@ -126,8 +126,13 @@
    */
   --danger: #ff9a9a;
   --danger-strong: #f87171;
+  /* 危ない操作のボタン（地は --danger-strong）の上の文字 */
+  --on-danger: #3b0a0a;
   --success: rgba(160, 240, 200, 0.95);
   --surface-raised: rgba(10, 23, 48, 0.95);
+  /* 明るい塗り（選んでいる項目・いちばん押すボタン）。地と、その上の文字 */
+  --fill: rgba(var(--tint-rgb), 0.94);
+  --on-fill: rgb(var(--ink-rgb));
   --surface-input: rgba(5, 14, 30, 0.5);
 
   /*
@@ -226,6 +231,47 @@ button {
   mask: var(--fluent-icon) center / contain no-repeat;
 }
 
+/*
+ * --- ガラスの面（5つ1組） ---
+ * 入れ物・カード・ボタンのガラスは、ここ1か所で書く。部品（Group・List boxed・StatTile・Button・WidgetCard）を使えば付いてくる。
+ * 拡張機能が自前の入れ物を作るときは、要素に ui-glass を付ける（CSS に5つを書き写さない）。
+ * 色や縁を変えるもの（選んでいる項目・自分の吹き出し）は、この後の規則で上書きする
+ */
+.ui-glass,
+.home-button,
+.home-icon-button,
+.home-chip,
+.pill-menu__button,
+.ui-list--boxed,
+.settings-list--boxed,
+.persona-preview__buttons button,
+.ui-chat__bubble--theirs,
+.snackbar,
+.voice-launcher,
+.ui-stat,
+.settings-list__row--static,
+.connection-settings__section,
+.persona-manager__notice,
+.voice-mcp__list,
+.ui-group,
+.connection-settings__actions button,
+.connection-settings__actions a,
+.connection-settings__inline-button,
+.account-settings__button,
+.settings-panel__edit-toggle,
+.persona-manager__import,
+.persona-manager__actions a,
+.persona-manager__actions button,
+.voice-mcp__toolbar button,
+.voice-mcp__form button,
+.ui-button {
+  border: 1px solid var(--glass-border);
+  background: var(--widget-sheen), var(--widget-bg);
+  background-clip: padding-box; /* 縁の線の下に光沢を敷かない */
+  box-shadow: var(--widget-shadow);
+  backdrop-filter: var(--widget-blur);
+}
+
 /* --- シェル（サイドバー / リサイズハンドル / メイン画面の3カラム） --- */
 
 .app-shell {
@@ -310,8 +356,8 @@ button {
 
 .nav-button:not(:disabled):hover,
 .nav-button--active {
-  color: rgb(var(--ink-rgb));
-  background: rgba(var(--tint-rgb), 0.94);
+  color: var(--on-fill);
+  background: var(--fill);
   box-shadow: 0 7px 22px rgba(2, 12, 32, 0.3);
 }
 
@@ -477,16 +523,11 @@ body.is-resizing {
 .home-button {
   min-height: 52px;
   padding: 0 1.4rem;
-  border: 1px solid var(--glass-border);
   border-radius: 999px;
   color: var(--text-primary);
   font-weight: 600;
   cursor: pointer;
-  background: var(--widget-sheen), var(--widget-bg);
   /* 縁の線の下に光沢・背景を敷かない（敷くと、光沢の濃淡で線が所々暗く見える） */
-  background-clip: padding-box;
-  box-shadow: var(--widget-shadow);
-  backdrop-filter: var(--widget-blur);
 }
 
 .home-button:disabled {
@@ -496,14 +537,14 @@ body.is-resizing {
 
 .home-button--primary {
   border-color: transparent;
-  background: rgba(var(--tint-rgb), 0.94);
-  color: rgb(var(--ink-rgb));
+  background: var(--fill);
+  color: var(--on-fill);
 }
 
 .home-button--danger {
   border-color: transparent;
-  background: #fbbf24;
-  color: #3b2300;
+  background: var(--danger-strong);
+  color: var(--on-danger);
 }
 
 .home-button--ghost {
@@ -517,15 +558,10 @@ body.is-resizing {
   width: 52px;
   height: 52px;
   padding: 0;
-  border: 1px solid var(--glass-border);
   border-radius: 50%;
   color: var(--text-primary);
   cursor: pointer;
-  background: var(--widget-sheen), var(--widget-bg);
   /* 縁の線の下に光沢・背景を敷かない（敷くと、光沢の濃淡で線が所々暗く見える） */
-  background-clip: padding-box;
-  box-shadow: var(--widget-shadow);
-  backdrop-filter: var(--widget-blur);
 }
 
 .home-icon-button:disabled {
@@ -535,28 +571,23 @@ body.is-resizing {
 
 .home-icon-button--on {
   border-color: transparent;
-  background: rgba(var(--tint-rgb), 0.94);
-  color: rgb(var(--ink-rgb));
+  background: var(--fill);
+  color: var(--on-fill);
 }
 
 .home-chip {
   min-height: 40px;
   padding: 0 1rem;
-  border: 1px solid var(--glass-border);
   border-radius: 999px;
   color: var(--text-primary);
   cursor: pointer;
-  background: var(--widget-sheen), var(--widget-bg);
   /* 縁の線の下に光沢・背景を敷かない（敷くと、光沢の濃淡で線が所々暗く見える） */
-  background-clip: padding-box;
-  box-shadow: var(--widget-shadow);
-  backdrop-filter: var(--widget-blur);
 }
 
 .home-chip--on {
   border-color: transparent;
-  background: rgba(var(--tint-rgb), 0.94);
-  color: rgb(var(--ink-rgb));
+  background: var(--fill);
+  color: var(--on-fill);
 }
 
 /* --- 時計・天気・日付 --- */
@@ -677,7 +708,7 @@ body.is-resizing {
 
 .widget-rail__empty {
   color: var(--text-secondary);
-  font-size: 14px;
+  font-size: var(--font-note);
 }
 
 /* react-grid-layout は1カラム縦積みで使う。
@@ -769,8 +800,8 @@ body.is-resizing {
 }
 
 .widget-host__edit-button--remove {
-  background: #ffd9d9;
-  color: #6b0d0d;
+  background: var(--danger-strong);
+  color: var(--on-danger);
 }
 
 .widget-host__edit-button .fluent-icon {
@@ -810,7 +841,7 @@ body.is-resizing {
   padding: 10px 10px 10px 24px;
   border: 1px solid var(--glass-border);
   border-radius: 999px;
-  background: rgba(10, 23, 48, 0.94);
+  background: var(--surface-raised);
   box-shadow: 0 14px 32px -12px rgba(0, 6, 20, 0.6);
   transform: translateX(-50%);
 }
@@ -825,7 +856,7 @@ body.is-resizing {
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  min-height: 48px;
+  min-height: 52px;
   padding: 0 1.25rem;
   border: 1px solid var(--glass-border);
   border-radius: 999px;
@@ -837,8 +868,8 @@ body.is-resizing {
 
 .widget-edit-bar__button--primary {
   border-color: transparent;
-  background: rgba(var(--tint-rgb), 0.94);
-  color: rgb(var(--ink-rgb));
+  background: var(--fill);
+  color: var(--on-fill);
 }
 
 .widget-picker-overlay {
@@ -860,7 +891,7 @@ body.is-resizing {
   padding: var(--card-padding);
   border: 1px solid var(--glass-border);
   border-radius: var(--card-radius);
-  background: rgba(10, 23, 48, 0.97);
+  background: var(--surface-raised);
 }
 
 .widget-picker__header {
@@ -872,7 +903,7 @@ body.is-resizing {
 
 .widget-picker__header h2 {
   margin: 0;
-  font-size: 1.2rem;
+  font-size: var(--font-heading);
 }
 
 .widget-picker__list {
@@ -908,15 +939,6 @@ body.is-resizing {
   align-items: center;
   gap: 0.5rem;
   font-weight: 600;
-}
-
-.widget-picker__placed {
-  padding: 0.15rem 0.5rem;
-  border-radius: 999px;
-  background: rgba(var(--tint-rgb), 0.16);
-  color: var(--text-secondary);
-  font-size: var(--font-micro);
-  font-weight: 400;
 }
 
 .widget-picker__desc {
@@ -993,7 +1015,7 @@ button.widget-card {
 .muted {
   margin: 7px 0 0;
   color: var(--muted);
-  font-size: 14px;
+  font-size: var(--font-small);
 }
 
 /* --- 時計ウィジェット（レールに置いた場合のコンパクト表示） --- */
@@ -1011,7 +1033,7 @@ button.widget-card {
 
 .widget-clock__date {
   color: var(--text-secondary);
-  font-size: 1rem;
+  font-size: var(--font-body);
 }
 
 /* --- 詳細ビュー --- */
@@ -1039,17 +1061,17 @@ button.widget-card {
   border: 1px solid var(--glass-border);
 }
 
+/* 詳細（DetailFrame）の見出し。小窓の見出しと同じ段 */
+.widget-detail > h2 {
+  margin: 0 0 var(--space-4);
+  font-size: var(--font-heading);
+  font-weight: 600;
+}
+
 .widget-detail-panel__close {
   position: absolute;
   top: 1rem;
   right: 1rem;
-  display: grid;
-  place-items: center;
-  padding: 0;
-  background: none;
-  border: none;
-  color: var(--text-primary);
-  cursor: pointer;
 }
 
 /* --- 画面の右上のピル型のボタン（widget-sdk の PillMenu。Media・Home Control） --- */
@@ -1065,17 +1087,12 @@ button.widget-card {
   max-width: 16rem;
   min-height: 44px;
   padding: 0 0.9rem 0 1rem;
-  border: 1px solid var(--glass-border);
   border-radius: 999px;
   color: var(--text-primary);
   font: inherit;
   font-size: var(--font-small);
   cursor: pointer;
-  background: var(--widget-sheen), var(--widget-bg);
   /* 縁の線の下に光沢・背景を敷かない（敷くと、光沢の濃淡で線が所々暗く見える） */
-  background-clip: padding-box;
-  box-shadow: var(--widget-shadow);
-  backdrop-filter: var(--widget-blur);
 }
 
 .pill-menu__button:hover,
@@ -1109,7 +1126,7 @@ button.widget-card {
   list-style: none;
   border: 1px solid var(--glass-border);
   border-radius: var(--inner-radius);
-  background: rgba(10, 23, 48, 0.97);
+  background: var(--surface-raised);
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
 }
 
@@ -1135,8 +1152,8 @@ button.widget-card {
 }
 
 .pill-menu__item--selected {
-  background: rgba(var(--tint-rgb), 0.94);
-  color: rgb(var(--ink-rgb));
+  background: var(--fill);
+  color: var(--on-fill);
 }
 
 .pill-menu__item:disabled {
@@ -1272,7 +1289,6 @@ button.widget-card {
   font-size: var(--font-title);
 }
 
-
 .settings-nav__label {
   flex: 1 1 auto;
 }
@@ -1382,13 +1398,8 @@ button.widget-card {
 .settings-list--boxed {
   gap: 0;
   overflow: hidden;
-  border: 1px solid var(--glass-border);
   border-radius: var(--group-radius);
-  background: var(--widget-sheen), var(--widget-bg);
   /* 縁の線の下に光沢・背景を敷かない（敷くと、光沢の濃淡で線が所々暗く見える） */
-  background-clip: padding-box;
-  box-shadow: var(--widget-shadow);
-  backdrop-filter: var(--widget-blur);
 }
 
 .ui-list--boxed > li + li,
@@ -1530,7 +1541,7 @@ button.widget-card {
 }
 
 .extension-detail__name {
-  font-size: 1.05rem;
+  font-size: var(--font-title);
   font-weight: 600;
 }
 
@@ -1546,7 +1557,7 @@ button.widget-card {
   color: var(--danger);
 }
 
-@media (max-width: 760px) {
+@media (max-width: 900px) {
   .settings-panel__columns {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -1706,16 +1717,29 @@ button.widget-card {
 .ui-badge {
   padding: 0.1rem 0.5rem;
   border-radius: 999px;
-  font-size: var(--font-caption);
+  font-size: var(--font-micro);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
   color: var(--text-secondary);
   border: 1px solid var(--glass-border);
 }
 
 .connection-settings__badge--on,
 .ui-badge--on {
-  color: rgb(var(--ink-rgb));
+  color: var(--on-fill);
   background: rgba(160, 240, 200, 0.9);
   border-color: transparent;
+}
+
+.ui-badge--warn {
+  color: var(--accent-warn);
+  background: rgba(251, 191, 36, 0.18);
+  border-color: transparent;
+}
+
+.ui-badge--dim {
+  border-color: transparent;
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .connection-settings__field,
@@ -1757,7 +1781,7 @@ label.ui-field {
   align-items: center;
   gap: 0.5rem;
   flex-wrap: wrap;
-  font-size: 0.72rem;
+  font-size: var(--font-micro);
   color: var(--text-secondary);
 }
 
@@ -1951,7 +1975,7 @@ label.ui-field {
   padding: clamp(20px, 4vw, 32px);
   border: 1px solid var(--glass-border);
   border-radius: var(--card-radius);
-  background: rgba(10, 23, 48, 0.9);
+  background: var(--surface-raised);
   backdrop-filter: blur(8px);
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
 }
@@ -2011,8 +2035,8 @@ label.ui-field {
   min-height: 48px;
   border: none;
   border-radius: var(--inner-radius);
-  background: rgba(var(--tint-rgb), 0.94);
-  color: rgb(var(--ink-rgb));
+  background: var(--fill);
+  color: var(--on-fill);
   font: inherit;
   font-weight: 600;
   cursor: pointer;
@@ -2046,25 +2070,9 @@ label.ui-field {
   border-top: 1px solid var(--glass-border);
 }
 
-
-
-.settings-panel__close {
-  display: grid;
-  place-items: center;
-  padding: 0;
-  background: none;
-  border: none;
-  color: var(--text-primary);
-  cursor: pointer;
-}
-
 .settings-panel__edit-toggle {
   margin-bottom: 1.25rem;
 }
-
-
-
-
 
 .settings-panel__desc {
   font-size: var(--font-note);
@@ -2097,11 +2105,6 @@ label.ui-field {
   background: var(--accent-ok);
   opacity: 1;
 }
-
-
-
-
-
 
 .settings-panel__voice-persona {
   display: flex;
@@ -2136,14 +2139,6 @@ label.ui-field {
   gap: 0.3rem;
 }
 
-.persona-manager__tags span {
-  padding: 0.15rem 0.5rem;
-  border: 1px solid var(--glass-border);
-  border-radius: 999px;
-  font-size: var(--font-micro);
-  color: var(--text-secondary);
-}
-
 .persona-manager__warning {
   margin: 0;
   line-height: 1.5;
@@ -2168,7 +2163,6 @@ label.ui-field {
   align-items: center;
   gap: 1.25rem;
 }
-
 
 .persona-manager__import:disabled,
 .persona-manager__actions :disabled {
@@ -2216,13 +2210,9 @@ label.ui-field {
 
 /* 切り替えの小さなボタン。ほかのボタンと同じガラスで、選んでいるものは「保存」と同じ明るい塗り */
 .persona-preview__buttons button {
-  min-height: 32px;
+  min-height: 40px;
   padding: 0 0.8rem;
-  border: 1px solid var(--glass-border);
   border-radius: 999px;
-  background: var(--widget-sheen), var(--widget-bg);
-  background-clip: padding-box;
-  backdrop-filter: var(--widget-blur);
   color: var(--text-primary);
   font: inherit;
   font-size: var(--font-note);
@@ -2231,8 +2221,8 @@ label.ui-field {
 
 .persona-preview__buttons button[aria-pressed="true"] {
   border-color: transparent;
-  background: rgba(var(--tint-rgb), 0.94);
-  color: rgb(var(--ink-rgb));
+  background: var(--fill);
+  color: var(--on-fill);
 }
 
 .persona-preview__rig {
@@ -2315,7 +2305,7 @@ label.ui-field {
   grid-row: 1 / span 2;
 }
 
-.voice-mcp__item > .voice-mcp__badge {
+.voice-mcp__item > .ui-badge {
   grid-column: 2;
   grid-row: 1;
 }
@@ -2399,19 +2389,6 @@ label.ui-field {
   white-space: nowrap;
   /* 省略で切るときは上下を詰めない（詰めた分だけ字の上下が欠ける） */
   text-box-trim: none;
-}
-
-.voice-mcp__badge {
-  padding: 0.05rem 0.45rem;
-  border-radius: 999px;
-  background: rgba(255, 170, 60, 0.2);
-  color: var(--accent-warn);
-  font-size: var(--font-micro);
-}
-
-.voice-mcp__badge--plain {
-  background: var(--glass-bg);
-  color: var(--text-secondary);
 }
 
 .voice-mcp__target {
@@ -2639,7 +2616,7 @@ label.ui-field {
 .ui-chat__title h2 {
   margin: 0;
   overflow: hidden;
-  font-size: 1.05rem;
+  font-size: var(--font-title);
   font-weight: 600;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -2668,7 +2645,7 @@ label.ui-field {
 .ui-button.ui-chat__icon-button--on {
   border-color: transparent;
   background: rgb(var(--accent-rgb));
-  color: rgb(var(--ink-rgb));
+  color: var(--on-fill);
 }
 
 .ui-chat__log {
@@ -2765,13 +2742,8 @@ label.ui-field {
 }
 
 .ui-chat__bubble--theirs {
-  border: 1px solid var(--glass-border);
   border-bottom-left-radius: 0.3rem;
-  background: var(--widget-sheen), var(--widget-bg);
   /* 縁の線の下に光沢・背景を敷かない（敷くと、光沢の濃淡で線が所々暗く見える） */
-  background-clip: padding-box;
-  box-shadow: var(--widget-shadow);
-  backdrop-filter: var(--widget-blur);
 }
 
 .ui-chat__meta,
@@ -2804,7 +2776,7 @@ label.ui-field {
   max-width: min(100%, 320px);
   overflow: hidden;
   border: 1px solid var(--glass-border);
-  border-radius: 1.1rem;
+  border-radius: var(--inner-radius);
 }
 
 .ui-chat__image img {
@@ -2905,8 +2877,8 @@ label.ui-field {
   padding: 0;
   border: none;
   border-radius: 50%;
-  background: rgba(var(--tint-rgb), 0.94);
-  color: rgb(var(--ink-rgb));
+  background: var(--fill);
+  color: var(--on-fill);
   font-size: 1rem;
   cursor: pointer;
 }
@@ -2990,12 +2962,7 @@ label.ui-field {
   max-width: min(560px, 100%);
   min-height: 48px;
   padding: 0.35rem 0.4rem 0.35rem 1.1rem;
-  border: 1px solid var(--glass-border);
   border-radius: 24px;
-  background: var(--widget-sheen), var(--widget-bg);
-  background-clip: padding-box;
-  box-shadow: var(--widget-shadow);
-  backdrop-filter: var(--widget-blur);
   color: var(--text-primary);
   font-size: var(--font-label);
   line-height: 1.45;
@@ -3008,7 +2975,7 @@ label.ui-field {
 }
 
 .snackbar--closing {
-  animation: motion-fade-out var(--motion-base) var(--ease-in) forwards;
+  animation: motion-exit var(--motion-base) var(--ease-in) forwards;
   pointer-events: none;
 }
 
@@ -3020,26 +2987,6 @@ label.ui-field {
 .snackbar__text {
   min-width: 0;
   overflow-wrap: anywhere;
-}
-
-.snackbar__close {
-  display: grid;
-  flex-shrink: 0;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  padding: 0;
-  border: none;
-  border-radius: 50%;
-  background: none;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: background-color var(--motion-fast) var(--ease-standard);
-}
-
-.snackbar__close:hover,
-.snackbar__close:focus-visible {
-  background: rgba(var(--tint-rgb), 0.1);
 }
 
 @media (max-width: 620px) {
@@ -3063,12 +3010,7 @@ label.ui-field {
   height: 48px;
   padding: 0 20px 0 14px;
   /* ほかのボタンと同じ、ウィジェットの見た目（光沢・暗い背景・影・ぼかし） */
-  border: 1px solid var(--glass-border);
   border-radius: 24px;
-  background: var(--widget-sheen), var(--widget-bg);
-  background-clip: padding-box;
-  box-shadow: var(--widget-shadow);
-  backdrop-filter: var(--widget-blur);
   color: var(--text-primary);
   font-size: 15px;
   cursor: pointer;
@@ -3208,7 +3150,7 @@ label.ui-field {
   width: 120px;
   height: 120px;
   border-radius: 50%;
-  color: rgb(var(--ink-rgb));
+  color: var(--on-fill);
   background: radial-gradient(circle at 35% 30%, #e6f8ff, var(--voice-accent) 70%);
   box-shadow: 0 0 48px -6px var(--voice-accent);
 }
@@ -3510,7 +3452,7 @@ label.ui-field {
 
 .widget-settings__title {
   margin: 0 3rem 1rem 0;
-  font-size: 1.15rem;
+  font-size: var(--font-heading);
 }
 
 /* 設定画面の「壁紙」 */
@@ -3725,6 +3667,7 @@ label.ui-field {
 }
 
 .ui-stat {
+  --stat-color: var(--text-primary);
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
@@ -3732,6 +3675,28 @@ label.ui-field {
   padding: 20px 24px;
   line-height: 1.4;
   font-variant-numeric: tabular-nums;
+}
+
+/* 押すと詳しい中身を開くタイル */
+.ui-stat--action {
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ui-stat--action:hover {
+  border-color: rgba(var(--tint-rgb), 0.35);
+}
+
+.ui-stat--warm {
+  --stat-color: var(--accent-warn);
+  border-color: rgba(251, 191, 36, 0.45);
+}
+
+.ui-stat--hot {
+  --stat-color: var(--danger-strong);
+  border-color: rgba(248, 113, 113, 0.55);
 }
 
 .ui-stat__label {
@@ -3743,6 +3708,7 @@ label.ui-field {
 }
 
 .ui-stat__value {
+  color: var(--stat-color);
   font-size: clamp(32px, 2.6vw, 46px);
   font-weight: 600;
   line-height: 1;
@@ -3768,13 +3734,8 @@ label.ui-field {
 .persona-manager__notice,
 .voice-mcp__list,
 .ui-group {
-  border: 1px solid var(--glass-border);
   border-radius: var(--group-radius);
-  background: var(--widget-sheen), var(--widget-bg);
   /* 縁の線の下に光沢・背景を敷かない（敷くと、光沢の濃淡で線が所々暗く見える） */
-  background-clip: padding-box;
-  box-shadow: var(--widget-shadow);
-  backdrop-filter: var(--widget-blur);
 }
 
 /* 値のタイルの角は、Home Control のセンサー・ウィジェットと同じ */
@@ -3828,12 +3789,7 @@ label.ui-field {
   gap: 0.45rem;
   min-height: 40px;
   padding: 0 1rem;
-  border: 1px solid var(--glass-border);
   border-radius: 999px;
-  background: var(--widget-sheen), var(--widget-bg);
-  background-clip: padding-box;
-  box-shadow: var(--widget-shadow);
-  backdrop-filter: var(--widget-blur);
   color: var(--text-primary);
   font: inherit;
   font-size: var(--font-label);
@@ -3875,17 +3831,67 @@ label.ui-field {
 .settings-panel__edit-toggle--on,
 .ui-button--primary {
   border-color: transparent;
-  background: rgba(var(--tint-rgb), 0.94);
+  background: var(--fill);
   box-shadow: none;
-  color: rgb(var(--ink-rgb));
+  color: var(--on-fill);
 }
 
 /* 消すのを確かめるボタン */
 .persona-manager__actions .persona-manager__danger,
 .ui-button--danger {
   border-color: transparent;
-  background: #b4233b;
-  color: #fff;
+  background: var(--danger-strong);
+  color: var(--on-danger);
+}
+
+/* アイコンだけのボタン（IconButton・小窓やスナックバーの閉じる）。押せる大きさは 44px の丸。地は無く、hover で薄く浮かぶ */
+.ui-icon-button,
+.settings-panel__close,
+.widget-detail-panel__close,
+.snackbar__close {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.ui-icon-button:hover,
+.ui-icon-button:focus-visible,
+.settings-panel__close:hover,
+.settings-panel__close:focus-visible,
+.widget-detail-panel__close:hover,
+.widget-detail-panel__close:focus-visible,
+.snackbar__close:hover,
+.snackbar__close:focus-visible {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.snackbar__close {
+  color: var(--text-secondary);
+}
+
+/* 進み具合・使っている量のバー（ProgressBar）。高さ 6px、地は線の色。色は --progress-color で変える */
+.ui-progress {
+  display: block;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--line);
+}
+
+.ui-progress__fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--progress-color, var(--accent-ok));
+  transition: width var(--motion-slow) var(--ease-standard);
 }
 
 /* 入力欄・選ぶ欄 */
@@ -4008,8 +4014,9 @@ label.ui-field {
 /*
  * --- 動き ---
  * 時間と曲線は :root の --motion-* と --ease-* だけを使う（docs/design-system.md の「動き」）。
- * - 出てくるもの（画面・小窓・メニュー・知らせ・吹き出し）は、下から --motion-rise だけ上がりながら現れる。消えるときは動かさずにすぐ消す
- *   （閉じた操作への返事を待たせない。消えるものは目で追わなくてよい）
+ * - 出てくるもの（画面・小窓・メニュー・知らせ・吹き出し）は、下から --motion-rise だけ上がりながら現れる
+ * - 開け閉めするもの（小窓・メニュー・編集の操作帯・スナックバー・音声のパネル）は、出てきた動きを短く逆にたどって消える。
+ *   消える間は押せなくする（閉じた操作への返事を待たせない）。.is-closing を付けるのは widget-sdk の usePresence / useClosing
  * - 押せるものは、色を --motion-fast で変え、押している間だけ少し縮む
  * - 動かすのは transform と opacity だけ（大きさ・位置・ぼかしは動かさない。ガラスのぼかしの描き直しが重くなる）
  */
@@ -4114,12 +4121,57 @@ label.ui-field {
   animation: motion-enter var(--motion-base) var(--ease-out);
 }
 
-/* 音声のパネルは、自分で開け閉めするので、閉じるときだけ薄くなってから消える（VoiceOverlay.tsx の closing） */
+/* 消えるとき。出てくる動きを逆にたどる（時間は出るときより短く、曲線は加速して去る --ease-in） */
 @keyframes motion-fade-out {
   to {
     opacity: 0;
   }
 }
+
+@keyframes motion-exit {
+  to {
+    opacity: 0;
+    transform: translateY(var(--motion-rise));
+  }
+}
+
+@keyframes motion-pop-out {
+  to {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+
+@keyframes motion-drop-out {
+  to {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+}
+
+.widget-picker-overlay.is-closing,
+.widget-detail-overlay.is-closing,
+.widget-host__edit.is-closing {
+  animation: motion-fade-out var(--motion-base) var(--ease-in) forwards;
+  pointer-events: none;
+}
+
+.is-closing > .widget-picker,
+.is-closing > .widget-detail-panel {
+  animation: motion-pop-out var(--motion-base) var(--ease-in) forwards;
+}
+
+.pill-menu__menu.is-closing {
+  animation: motion-drop-out var(--motion-fast) var(--ease-in) forwards;
+  pointer-events: none;
+}
+
+.widget-edit-bar.is-closing {
+  animation: motion-exit var(--motion-base) var(--ease-in) forwards;
+  pointer-events: none;
+}
+
+/* 音声のパネル（VoiceOverlay.tsx の closing） */
 
 .voice-overlay--closing {
   animation: motion-fade-out var(--motion-base) var(--ease-in) forwards;
@@ -4141,6 +4193,9 @@ label.ui-field {
     .ui-chat__send,
     .settings-panel__close,
     .widget-detail-panel__close,
+    .ui-icon-button,
+    .snackbar__close,
+    .ui-stat--action,
     .widget-edit-bar__button
   ) {
   transition:
@@ -4161,7 +4216,12 @@ label.ui-field {
     .home-chip,
     .ui-chat__send,
     .widget-edit-bar__button,
-    .widget-picker__item
+    .widget-picker__item,
+    .ui-icon-button,
+    .settings-panel__close,
+    .widget-detail-panel__close,
+    .snackbar__close,
+    .ui-stat--action
   ):active:not(:disabled) {
   transform: scale(0.96);
 }

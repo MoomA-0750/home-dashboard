@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Icon, type IconName } from "./Icon";
 import { defineMessages } from "./i18n";
+import { usePresence } from "./motion";
 
 const messages = defineMessages({
   ja: { empty: "ありません" },
@@ -37,6 +38,8 @@ export function PillMenu({
 }) {
   const t = messages.useT();
   const [open, setOpen] = useState(false);
+  // 閉じるときも、上へ縮みながら薄くなってから消す
+  const menu = usePresence(open, "fast");
   const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -70,8 +73,8 @@ export function PillMenu({
         <span className="pill-menu__label">{label}</span>
         <Icon name="chevron-down" className="pill-menu__chevron" />
       </button>
-      {open && (
-        <ul className="pill-menu__menu" role="listbox" aria-label={ariaLabel}>
+      {menu.shown && (
+        <ul className={`pill-menu__menu${menu.closing ? " is-closing" : ""}`} role="listbox" aria-label={ariaLabel}>
           {items.length === 0 && <li className="pill-menu__empty">{empty ?? t("empty")}</li>}
           {items.map((item) => (
             <li key={item.id} role="option" aria-selected={item.selected ?? false}>

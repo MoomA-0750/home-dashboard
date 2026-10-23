@@ -28,7 +28,7 @@
   display: block;
   max-width: min(100%, 320px);
   overflow: hidden;
-  border-radius: 1.1rem;
+  border-radius: var(--inner-radius);
   border: 1px solid var(--glass-border);
 }
 

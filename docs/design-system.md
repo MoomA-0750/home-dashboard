@@ -62,7 +62,7 @@
 | カードの見出し（`.widget-card h2`） | `clamp(21px, 2vw, 31px)` | 700（指定なしの既定） |
 | ホームの時計 | `--clock-size` | 700 / 200 |
 
-- 太さは3つ。400 は本文、600 は見出し・名前・数値、700 は時計とカードの大きな数値だけ。小さな薄い文字（caption・note）は 500 にする（細い線は壁紙に溶ける）
+- 太さは3つ。400 は本文、600 は見出し・名前・数値、700 は時計とカードの見出し（`.widget-card h2`）だけ。小さな薄い文字（caption・note）は 500 にする（細い線は壁紙に溶ける）
 - 行間は、文章が複数行になるもの（注記・説明）を 1.5、1行の名前・数値を 1 にする
 - 字の上下のフォント由来の余白は削ってある（`text-box-trim`）。省略（…）で切る1行は、`text-box-trim: none` で戻す
 
@@ -71,11 +71,11 @@
 | 面 | 見た目 | 使う所 | 書き方 |
 |---|---|---|---|
 | 壁紙の上 | 背景なし。文字に淡い影 | 画面の見出し・区画の見出し・注記・ホームの時計 | `ScreenFrame` の中に置けば影は付く |
-| ガラス | 光沢＋暗い地＋縁＋影＋ぼかし（5つ1組） | 入れ物・カード・ボタン・選んでいる項目・吹き出し | 部品（`Group`・`List boxed`・`StatTile`・`Button`・`WidgetCard`）を使う |
+| ガラス | 光沢＋暗い地＋縁＋影＋ぼかし（5つ1組） | 入れ物・カード・ボタン・選んでいる項目・吹き出し | 部品（`Group`・`List boxed`・`StatTile`・`Button`・`WidgetCard`）を使う。自前の入れ物は要素に `ui-glass` を付ける |
 | 浮かせる面 | `--surface-raised`（ぼかさない） | 小窓（`Dialog`）・メニュー（`PillMenu`）・詳細 | 部品を使う |
-| 明るい塗り | tint .94 の地に ink の文字 | 選んでいる項目・いちばん押すボタン（`Button variant="primary"`） | |
+| 明るい塗り | `--fill` の地に `--on-fill` の文字 | 選んでいる項目・いちばん押すボタン（`Button variant="primary"`） | `background: var(--fill); color: var(--on-fill);` |
 
-**ガラスの5つ1組**（入れ物を自分で作るときも、必ずこの組で書く）
+**ガラスの5つ1組**（theme.css の「ガラスの面」の1か所だけに書く。本体の新しい部品はそこにクラスを足し、拡張機能は `ui-glass` を付ける）
 
 ```css
 border: 1px solid var(--glass-border);
@@ -120,7 +120,9 @@ backdrop-filter: var(--widget-blur);
 | `999px` | ピル | ボタン・バッジ・バー |
 | `50%` | 丸 | アイコンのボタン・顔・印 |
 
-**押せるものの高さ**は 40px（ボタン・チップ）、44px（ピル・アイコンのボタン）、52px（Home Control の大きなボタン）の3段。
+**押せるものの高さ**は 40px（`Button`・チップ）、44px（`PillMenu`・`IconButton`・閉じるボタン）、52px（Home Control の大きなボタン・編集の操作帯。壁掛けで押すもの）の3段。
+
+**写真・アートワークの角丸**は、小さいもの（一覧の行の頭）が 12px、大きいもの（ジャケット・添付の写真）が `--inner-radius`。
 
 **ウィジェットのカード**は 650x200px・内側の余白 30px・角丸 45px（設計図どおり）。
 
@@ -135,7 +137,10 @@ backdrop-filter: var(--widget-blur);
 | 名前と説明の並び | `List` ＋ `ListItem`。読み比べる中身（予定・メール・天気の日ごと）は1つの入れ物にまとめる `List boxed`、左の欄で選ぶもの（受信箱・会話）は行ごとにガラスにする `List` | 自前の `ul` と線 |
 | 左で選んで右に出す（受信箱とメール、カレンダーと予定） | `SideLayout`（狭い画面で左の欄を消すなら `narrow="hide"` ＋ 右上に `NarrowOnly` で `PillMenu`、下に回すなら `"below"`） | 自前の2列の grid |
 | 入力欄をまとめる | `Group` ＋ `Field`（`hint` に説明） | |
-| 値を大きく見せる | `StatTile`（`StatGrid` で並べる） | 自前のタイル |
+| 値を大きく見せる | `StatTile`（`StatGrid` で並べる。押して詳しくするなら `onClick`、注意の値は `tone="warm"`・`"hot"`） | 自前のタイル |
+| 進み具合・使っている量 | `ProgressBar`（`value` は 0〜1、色は `--progress-color`） | 自前のバー |
+| 件数・状態の小さな印 | `Badge`（`tone`: on・warn・dim） | 自前のピル |
+| アイコンだけのボタン（閉じる・その他） | `IconButton`（44px の丸、`label` は必須） | 自前の丸いボタン |
 | 入／切 | `ToggleSwitch` | チェックボックス（`Check` は、選ぶものが多い一覧だけ） |
 | 量を変える（音量・明るさ・再生位置・強さ） | `Slider`（動かしている間は `onInput`、離したら `onCommit` で保存） | `<input type="range">` |
 | 画面の上に重ねて出す | `Dialog` | 自前の下敷き |
@@ -160,8 +165,9 @@ backdrop-filter: var(--widget-blur);
 | `max-width: 900px` | タブレット。ホームが2段組みになり、2列の画面が1列になる |
 | `max-width: 1100px` / `min-width: 1100px` | チャットの会話一覧を隠す・天気の横並び |
 | `min-aspect-ratio: 2/1 and max-height: 820px` | 壁掛けの横長で背の低い画面（本来の想定）。見出しを小さくする |
+| `min-width: 1500px` / `max-width: 1499px` | メールだけ。左の欄・一覧・本文の3つを並べられる幅（狭いときは本文を開くと一覧を隠す） |
 
-新しく区切るときは、この4つのどれかに合わせる。
+新しく区切るときは、この4つ（3つを並べる画面は 1500px）のどれかに合わせる。
 
 ## 8. 動き
 
@@ -185,17 +191,22 @@ backdrop-filter: var(--widget-blur);
 | 小窓を開く | 下敷きが薄く現れ、面が 97% から広がる | `motion-fade` base ＋ `motion-pop` slow |
 | メニューを開く | 上から落ちてくる。山形の印が回る | `motion-drop` base |
 | 知らせ・結果が出る | 現れる | `motion-fade` base |
-| スナックバー | 下から上がりながら現れ、消えるときは薄くなる（自分で開け閉めする部品） | `motion-enter` base ＋ `motion-fade-out` base |
+| スナックバー | 下から上がりながら現れ、下がりながら消える | `motion-enter` base ＋ `motion-exit` base |
 | 吹き出しが増える | 最後の1つが下から上がる | `motion-enter` base |
 | 押す | 色が変わり、押している間 96%（一覧の行は 98.5%）に縮む | transition fast |
 | トグル・タブ・家電の入／切 | 色と印が動く | transition base |
 | 追加したウィジェット | そこまでスクロールし、縁が光る | `widget-reveal` reveal |
-| 音声のパネルを閉じる | 薄くなってから消える（自分で開け閉めする部品の例） | `motion-fade-out` base |
+| 小窓を閉じる | 下敷きが薄くなり、面が 97% へ縮みながら消える | `motion-fade-out` ＋ `motion-pop-out` base |
+| メニューを閉じる | 上へ縮みながら薄くなる | `motion-drop-out` fast |
+| 編集の操作帯・カードの編集の層を閉じる | 下がりながら薄くなる／薄くなる | `motion-exit` ／ `motion-fade-out` base |
+| 音声のパネルを閉じる | 薄くなってから消える | `motion-fade-out` base |
 
 **決まり**
 
 - 動かすのは `transform` と `opacity` だけ。幅・高さ・位置・ぼかしは動かさない（ガラスのぼかしの描き直しが重い。GPU の無いキオスク端末で特に）
-- 消えるときは動かさずにすぐ消す（閉じた操作への返事を待たせない）。消える動きを付けるのは、自分で開け閉めの状態を持っている部品だけ（音声のパネルなど）
+- 開け閉めするものは、出てきた動きを逆にたどって消える。時間は出るときより短く（base か fast）、曲線は `--ease-in`。消える間は押せなくする（`pointer-events: none`）
+- 消える動きは widget-sdk の2つで付ける。親が開け閉めを持つもの（メニュー・親の状態で出す小窓）は `usePresence(open)` で、閉じた後も動きの間だけ出しておき `.is-closing` を付ける。親が出し消しする小窓が自分の × ・背景・Esc で閉じるときは `useClosing(onClose)` で、動きの後で `onClose` を呼ぶ（`Dialog` はこれで閉じる）
+- 画面の切り替えや、一覧から行が無くなるときは、消える動きを付けない（次の中身がすぐ出るので、目で追わなくてよい）
 - 繰り返す動き（回る・脈打つ）は、何かを待っている間だけにする。ウィジェットに常に動くものを置かない
 - `transition: all` は使わない。動かすプロパティを書く
 - ブラウザがタップした所に重ねる青い覆い（`-webkit-tap-highlight-color`）は、theme.css で全体を消してある。押した手応えは部品自身の縮み・色で出す（自前の部品も、押したときの見た目を付ける）
@@ -208,23 +219,23 @@ backdrop-filter: var(--widget-blur);
 - **アイコン**は Fluent UI System Icons（`apps/web/public/icons`）。`Icon` 部品で出し、色は文字の色に付いてくる
 - **字体**は Murecho（なければ Hiragino Sans・Noto Sans JP）
 
-## 10. まだ揃っていない所
+## 10. 揃えたこと（2026-10-23）
 
-棚卸し（2026-10-22）で見つかった、同じ役割なのに値や書き方が違う所。見た目が少し変わるので、揃えるかどうかは決めてから直す。
+10-22 の棚卸しで見つかった「同じ役割なのに値や書き方が違う所」は、次のように揃えた（見た目が少し変わった所がある）。
 
-| 何が | 今 | 揃えるなら |
-|---|---|---|
-| 字の大きさの直書き | 1rem・1.05rem・1.15rem・1.2rem、0.72rem・0.78rem、px の 14px・15px など（段に無いもの） | 近い段（body・title・heading・caption）へ |
-| 区画の見出し | 0.75 / 0.85 / 0.9 / 1rem、色も secondary と primary | label（設定）と small（画面）の2つ |
-| 小窓・詳細の見出し | 1.15 / 1.2 / 1.25rem、詳細（`.widget-detail h2`）は大きさの指定なし | title か heading に |
-| 大きな数値の太さ | 画面のタイルは 600、ウィジェットは 700 | どちらかに |
-| ガラスを自前で書いている所 | `.home-button`・`.home-chip`・`.home-sensor`（`StatTile` とほぼ同じ）・`.home-toggle`・`.ha-entity`・`.media__panel` など約20か所 | 5つ1組を1か所の一括指定にまとめる。`.home-sensor` は `StatTile` に |
-| ボタンの種類 | ガラスのピルが8種類（高さ 32〜52）、閉じるボタンが3種類、危険のボタンが3色 | `Button` と `IconButton`（44px）の2つに寄せる。危険は `--danger-strong` |
-| 明るい塗りの繰り返し | 同じ3行が13か所 | 1つの一括指定に |
-| 浮かせる面の不透明度 | .9 / .94 / .95 / .97 | `--surface-raised`（.95）に |
-| 写真・アートワークの角丸 | 10 / 16 / 18 / 28px、1.1rem | 2段（小 12px・大 `--inner-radius`）に |
-| 進み具合のバー | 5種類（高さ・地の色が別々） | 1つの部品（高さ 6px・地は `--line`） |
-| バッジ・チップ | 8種類 | `Badge` 部品（今は使われていない）に |
-| ウィジェットの部品 | `WidgetCard`・`DetailFrame` を使っているのは accounts だけ | 全部の拡張機能を部品に |
-| 画面の区切り | 「2列を1列にする」幅が 760 / 900 / 1000 / 1100 | 7章の4つに |
-| 使われていないもの | `Badge`・`ButtonLink`（拡張機能向けの部品なので残してある） | 使う所が無ければ消す |
+| 何が | 揃えた形 |
+|---|---|
+| 字の大きさの直書き | 3章の段へ。例外は、入力欄（スマホで拡大されないよう 1rem）・アイコンの字・音声のパネル（px で設計）・グラフの目盛り |
+| 小窓・詳細の見出し | heading（`Dialog`・ウィジェットの追加・ウィジェットの設定・`DetailFrame` の `title`） |
+| 大きな数値の太さ | 600（700 は時計とカードの見出しだけ） |
+| ガラスを自前で書いている所 | theme.css の「ガラスの面」の1か所にまとめた。拡張機能は要素に `ui-glass` を付ける。Home Control のセンサーは `StatTile`（`onClick`・`tone`） |
+| ボタン | 高さは 40（`Button`）・44（`PillMenu`・`IconButton`）・52（壁掛けで押す Home Control と編集の操作帯）。閉じるボタンは全部 `IconButton` と同じ 44px の丸。危ないボタンは `--danger-strong` の地に `--on-danger` の文字 |
+| 明るい塗り | `--fill`（地）と `--on-fill`（文字） |
+| 浮かせる面 | `--surface-raised` |
+| 写真・アートワークの角丸 | 小 12px・大 `--inner-radius` |
+| 進み具合のバー | `ProgressBar`（高さ 6px・地は `--line`・色は `--progress-color`） |
+| バッジ | `Badge`（`tone`: on・warn・dim） |
+| ウィジェットの部品 | 全部の拡張機能が `WidgetCard`・`DetailFrame` を使う |
+| 画面の区切り | 7章の4つ（メールの 1500px だけ例外） |
+
+`ButtonLink` は今は使われていないが、拡張機能向けの部品なので残す。

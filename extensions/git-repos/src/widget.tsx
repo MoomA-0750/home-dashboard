@@ -4,6 +4,9 @@ import {
   usePolling,
   type WidgetDetailProps,
   type WidgetProps,
+  Badge,
+  DetailFrame,
+  WidgetCard,
 } from "@home-dashboard/widget-sdk";
 
 const messages = defineMessages({
@@ -113,9 +116,9 @@ function RepoRow({ repo }: { repo: RepoStatus }) {
       <span className="widget-git__name">{repo.name}</span>
       <span className="widget-git__branch">{repo.branch}</span>
       <span className="widget-git__counts">
-        {changes > 0 && <span className="widget-git__badge widget-git__badge--dirty">{changes}</span>}
-        {repo.ahead > 0 && <span className="widget-git__badge">↑{repo.ahead}</span>}
-        {repo.behind > 0 && <span className="widget-git__badge">↓{repo.behind}</span>}
+        {changes > 0 && <Badge tone="warn">{changes}</Badge>}
+        {repo.ahead > 0 && <Badge>↑{repo.ahead}</Badge>}
+        {repo.behind > 0 && <Badge>↓{repo.behind}</Badge>}
       </span>
     </li>
   );
@@ -125,13 +128,13 @@ function GitReposView({ ctx, config, openDetail }: WidgetProps<GitReposConfig>) 
   const t = messages.useT();
   const { data, loading } = usePolling(() => fetchRepos(ctx.apiBaseUrl), config.pollIntervalMs);
 
-  if (loading && !data) return <div className="widget-card widget-git">{t("checking")}</div>;
+  if (loading && !data) return <WidgetCard className="widget-git">{t("checking")}</WidgetCard>;
   if (data && !data.configured) {
     return (
-      <div className="widget-card widget-git widget-git--unconfigured">
+      <WidgetCard className="widget-git widget-git--unconfigured">
         {t("noRepos")}
         <span className="widget-hint">{data.reason}</span>
-      </div>
+      </WidgetCard>
     );
   }
 
@@ -140,7 +143,7 @@ function GitReposView({ ctx, config, openDetail }: WidgetProps<GitReposConfig>) 
   const hidden = sorted.length - visible.length;
 
   return (
-    <button type="button" className="widget-card widget-git" onClick={openDetail}>
+    <WidgetCard className="widget-git" onClick={openDetail}>
       <span className="widget-git__header">
         <span className="widget-git__title">git</span>
         <span className="widget-git__summary">
@@ -153,18 +156,17 @@ function GitReposView({ ctx, config, openDetail }: WidgetProps<GitReposConfig>) 
         ))}
       </ul>
       {hidden > 0 && <span className="widget-git__more">{t("more", { n: hidden })}</span>}
-    </button>
+    </WidgetCard>
   );
 }
 
 function GitReposDetail({ ctx, config }: WidgetDetailProps<GitReposConfig>) {
   const t = messages.useT();
   const { data } = usePolling(() => fetchRepos(ctx.apiBaseUrl), config.pollIntervalMs);
-  if (!data?.configured) return <div className="widget-detail">{t("loading")}</div>;
+  if (!data?.configured) return <DetailFrame>{t("loading")}</DetailFrame>;
 
   return (
-    <div className="widget-detail widget-git-detail">
-      <h2>{t("title")}</h2>
+    <DetailFrame title={t("title")} className="widget-git-detail">
       <p className="widget-note">{data.root}</p>
 
       <ul className="widget-git-detail__list">
@@ -180,11 +182,11 @@ function GitReposDetail({ ctx, config }: WidgetDetailProps<GitReposConfig>) {
               <span className="widget-git__branch">{repo.branch}</span>
               {repo.upstream ? (
                 <span className="widget-git__counts">
-                  {repo.ahead > 0 && <span className="widget-git__badge">↑{repo.ahead}</span>}
-                  {repo.behind > 0 && <span className="widget-git__badge">↓{repo.behind}</span>}
+                  {repo.ahead > 0 && <Badge>↑{repo.ahead}</Badge>}
+                  {repo.behind > 0 && <Badge>↓{repo.behind}</Badge>}
                 </span>
               ) : (
-                <span className="widget-git__badge widget-git__badge--dim">{t("noUpstream")}</span>
+                <Badge tone="dim">{t("noUpstream")}</Badge>
               )}
             </div>
             {repo.error ? (
@@ -207,7 +209,7 @@ function GitReposDetail({ ctx, config }: WidgetDetailProps<GitReposConfig>) {
           </li>
         ))}
       </ul>
-    </div>
+    </DetailFrame>
   );
 }
 

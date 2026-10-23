@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { defineWidget, Icon, usePolledResource, type WidgetProps } from "@home-dashboard/widget-sdk";
+import { defineWidget, Icon, usePolledResource, type WidgetProps , WidgetCard } from "@home-dashboard/widget-sdk";
 import { messages } from "./i18n";
 import { useMusicProviders, useSelectedMusicProvider } from "./providers";
 import "./media.css";
@@ -53,12 +53,12 @@ function MediaWidgetView({ ctx, config }: WidgetProps<MediaWidgetConfig>) {
 
   if (!provider) {
     return (
-      <div className="widget-card widget-media widget-media--idle">
+      <WidgetCard className="widget-media widget-media--idle">
         <div className="widget-media__meta">
           <p className="widget-media__title">{t("noApps")}</p>
           <span className="widget-hint">{t("noAppsHint")}</span>
         </div>
-      </div>
+      </WidgetCard>
     );
   }
 
@@ -67,33 +67,33 @@ function MediaWidgetView({ ctx, config }: WidgetProps<MediaWidgetConfig>) {
 
   if (error && !data) {
     return (
-      <div className="widget-card widget-media widget-media--idle">
+      <WidgetCard className="widget-media widget-media--idle">
         <div className="widget-media__meta">
           {providerLabel}
           <p className="widget-media__title">{t("unreachable", { name: provider.name })}</p>
         </div>
-      </div>
+      </WidgetCard>
     );
   }
   if (data && !data.configured) {
     return (
-      <div className="widget-card widget-media widget-media--idle">
+      <WidgetCard className="widget-media widget-media--idle">
         <div className="widget-media__meta">
           {providerLabel}
           <p className="widget-media__title">{t("notConnectedShort", { name: provider.name })}</p>
           <span className="widget-hint">{t("notConnectedHint", { name: provider.name })}</span>
         </div>
-      </div>
+      </WidgetCard>
     );
   }
   if (!data?.track) {
     return (
-      <div className="widget-card widget-media widget-media--idle">
+      <WidgetCard className="widget-media widget-media--idle">
         <div className="widget-media__meta">
           {providerLabel}
           <p className="widget-media__title">{data ? t("notPlaying") : t("loading")}</p>
         </div>
-      </div>
+      </WidgetCard>
     );
   }
 
@@ -102,7 +102,7 @@ function MediaWidgetView({ ctx, config }: WidgetProps<MediaWidgetConfig>) {
   const nextRepeat = data.repeat === "off" ? "context" : data.repeat === "context" ? "track" : "off";
 
   return (
-    <div className="widget-card widget-media">
+    <WidgetCard className="widget-media">
       <div className="widget-media__meta">
         {providerLabel}
         <p className="widget-media__title">{data.track.title}</p>
@@ -153,7 +153,7 @@ function MediaWidgetView({ ctx, config }: WidgetProps<MediaWidgetConfig>) {
           {data.track.title.slice(0, 1)}
         </div>
       )}
-    </div>
+    </WidgetCard>
   );
 }
 

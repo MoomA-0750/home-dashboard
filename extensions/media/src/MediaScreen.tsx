@@ -300,7 +300,7 @@ function MediaScreenBody({ ctx, provider, providers, onChooseProvider }: MediaSc
           />
         </section>
 
-        <section className="media__panel">
+        <section className="ui-glass media__panel">
           <div className="media__tabs" role="tablist" aria-label={t("tabsAria")}>
             {(
               [

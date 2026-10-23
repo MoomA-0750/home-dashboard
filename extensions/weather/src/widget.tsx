@@ -8,6 +8,8 @@ import {
   weatherIcon,
   type WidgetDetailProps,
   type WidgetProps,
+  DetailFrame,
+  WidgetCard,
 } from "@home-dashboard/widget-sdk";
 import { conditionText, messages } from "./i18n";
 
@@ -35,7 +37,7 @@ function WeatherView({ ctx, config, openDetail }: WidgetProps<WeatherConfig>) {
   const temperature = useTemperature();
 
   return (
-    <button type="button" className="widget-card widget-weather" onClick={openDetail}>
+    <WidgetCard className="widget-weather" onClick={openDetail}>
       {loading && !data && <span className="widget-status">{t("loading")}</span>}
       {Boolean(error) && <span className="widget-status widget-status--error">{t("fetchFailed")}</span>}
       {data && (
@@ -45,7 +47,7 @@ function WeatherView({ ctx, config, openDetail }: WidgetProps<WeatherConfig>) {
           <span className="widget-weather__condition">{conditionText(data.current.code, data.current.condition, locale)}</span>
         </>
       )}
-    </button>
+    </WidgetCard>
   );
 }
 
@@ -54,13 +56,12 @@ function WeatherDetail({ ctx, config }: WidgetDetailProps<WeatherConfig>) {
   const t = messages.useT();
   const locale = useLocale();
   const temperature = useTemperature();
-  if (!data) return <div className="widget-detail">{t("loading")}</div>;
+  if (!data) return <DetailFrame>{t("loading")}</DetailFrame>;
 
   const maxProb = Math.max(1, ...data.hourly.map((h) => h.precipitationProbability));
 
   return (
-    <div className="widget-detail widget-weather-detail">
-      <h2>{t("weatherIn", { place: data.location.name })}</h2>
+    <DetailFrame title={t("weatherIn", { place: data.location.name })} className="widget-weather-detail">
       <div className="widget-weather-detail__current">
         <Icon name={weatherIcon(data.current.code, data.current.isDay)} className="widget-weather__icon" />
         <span className="widget-weather__temp">{temperature(data.current.temperatureC, { unit: true })}</span>
@@ -82,7 +83,7 @@ function WeatherDetail({ ctx, config }: WidgetDetailProps<WeatherConfig>) {
           </div>
         ))}
       </div>
-    </div>
+    </DetailFrame>
   );
 }
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { defineMessages, formatClock, Icon, useLocale, type IconName, type Locale } from "@home-dashboard/widget-sdk";
+import { defineMessages, formatClock, Icon, useClosing, useLocale, type IconName, type Locale } from "@home-dashboard/widget-sdk";
 import { localizeSeries } from "./units";
 
 /**
@@ -150,6 +150,8 @@ export function SensorDetail({
   onClose: () => void;
 }) {
   const t = messages.useT();
+  // 閉じるときは薄くなってから onClose を呼ぶ
+  const { closing, close } = useClosing(onClose);
   const [hours, setHours] = useState<number>(24);
   const [series, setSeries] = useState<Series[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -173,10 +175,10 @@ export function SensorDetail({
   }, [apiBaseUrl, ids, hours]);
 
   useEffect(() => {
-    const onKey = (event: KeyboardEvent) => event.key === "Escape" && onClose();
+    const onKey = (event: KeyboardEvent) => event.key === "Escape" && close();
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, [close]);
 
   // 一覧と線の色をそろえる（記録の並びではなく、センサーの並びで色を決める）
   const ordered = series
@@ -190,7 +192,7 @@ export function SensorDetail({
   };
 
   return createPortal(
-    <div className="widget-picker-overlay" onClick={onClose}>
+    <div className={`widget-picker-overlay${closing ? " is-closing" : ""}`} onClick={close}>
       <div
         className="widget-picker sensor-detail"
         role="dialog"
@@ -203,7 +205,7 @@ export function SensorDetail({
             <Icon name={icon} />
             {title}
           </h2>
-          <button type="button" className="settings-panel__close" onClick={onClose} aria-label={t("close")}>
+          <button type="button" className="settings-panel__close" onClick={close} aria-label={t("close")}>
             <Icon name="dismiss" />
           </button>
         </div>

@@ -7,6 +7,7 @@ import {
   PollingActiveContext,
   textFor,
   useLocale,
+  usePresence,
   useSettingsLinks,
   type SettingsLink,
   type WidgetInstance,
@@ -154,6 +155,7 @@ export function App({ account, sessionId, onSignedOut }: AppProps) {
 
   const [instances, setInstances] = useState<WidgetInstance[] | null>(null);
   const [editMode, setEditMode] = useState(false);
+  const editBar = usePresence(editMode);
   const [wallpaper, setWallpaper] = useWallpaper(ctx);
   const screens = extensions.screens;
   const currentScreen = screens.find((screen) => screen.key === activeScreen) ?? null;
@@ -171,6 +173,8 @@ export function App({ account, sessionId, onSignedOut }: AppProps) {
   }, [pageTitle]);
   const [sidebarWidth, setSidebarWidth] = useState(readStoredSidebarWidth);
   const [widgetPickerOpen, setWidgetPickerOpen] = useState(false);
+  // 閉じるときも薄くなってから消す
+  const widgetPicker = usePresence(widgetPickerOpen);
   // 追加したウィジェットを見える位置へ送るための目印
   const [revealInstanceId, setRevealInstanceId] = useState<string | null>(null);
   /**
@@ -442,9 +446,12 @@ export function App({ account, sessionId, onSignedOut }: AppProps) {
             onCancel={() => cancelVoiceAssistant(ctx.apiBaseUrl)}
           />
         )}
-        {editMode && <WidgetEditBar onAdd={() => setWidgetPickerOpen(true)} onDone={() => setEditMode(false)} />}
-        {widgetPickerOpen && (
+        {editBar.shown && (
+          <WidgetEditBar closing={editBar.closing} onAdd={() => setWidgetPickerOpen(true)} onDone={() => setEditMode(false)} />
+        )}
+        {widgetPicker.shown && (
           <WidgetPicker
+            closing={widgetPicker.closing}
             registry={extensions.registry}
             hiddenWidgetIds={CHROME_WIDGET_IDS}
             placedWidgetIds={railInstances.map((i) => i.widgetId)}
