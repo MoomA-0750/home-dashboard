@@ -4,7 +4,9 @@ services:
       context: .
       dockerfile: docker/Dockerfile
     ports:
-      - "8787:8787"
+      # この機械の中からだけ（画面は https の入口（下の https）か Tailscale から開く）。LAN に http のまま出すと、
+      # ログインの Cookie が暗号化されずに流れ、アカウントの無いうちは誰でも最初の管理者を作れてしまう
+      - "127.0.0.1:8787:8787"
     env_file:
       - apps/server/.env
     environment:
@@ -12,6 +14,8 @@ services:
       - CLAUDE_PROJECTS_DIR=/host/claude-projects
       - GIT_REPOS_DIR=/host/git-repos
       - TAILSCALE_SOCKET=/host/tailscaled.sock
+      # wave の拡張機能が読む wave-api。下の wave のネットワークでコンテナの名前で届く（トークンは .env の WAVE_API_TOKEN）
+      - WAVE_API_URL=http://wave-api:8793
     volumes:
       - ./data:/app/data
       - ./config:/app/config
@@ -22,6 +26,28 @@ services:
       # tailscaled の LocalAPI。unixソケットへの connect() には書き込み権限が要るので :ro は付けない
       # （ソケット越しの操作可否は tailscaled 側が判断する。こちらは status の取得しか行わない）
       - /var/run/tailscale/tailscaled.sock:/host/tailscaled.sock
+    networks:
+      - default
+      - wave
+    restart: unless-stopped
+
+  # LAN の IP で https を受けて、上のダッシュボードへ中継する（docker/Caddyfile）。証明書は家の認証局（step-ca）から ACME で取る。
+  # ホストの 192.168.1.10 の 443・80 に直接待ち受け、ダッシュボードの 127.0.0.1:8787 と step-ca の :9000 を呼ぶので、ホストのネットワークで動かす
+  https:
+    image: caddy:2.10.2-alpine
+    network_mode: host
+    environment:
+      - HTTPS_BIND=${DASHBOARD_HTTPS_BIND:-192.168.1.10}
+      - ACME_DIRECTORY=${DASHBOARD_ACME_DIRECTORY:-https://192.168.1.10:9000/acme/acme/directory}
+    volumes:
+      - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
+      # 認証局のルート証明書（公開してよいもの）。ACME の口を確かめるのに使う
+      - ${HOME}/.step/certs/root_ca.crt:/etc/caddy/home-root-ca.crt:ro
+      # 取った証明書と鍵。作り直しても取り直さないように残す
+      - https-data:/data
+      - https-config:/config
+    depends_on:
+      - home-dashboard
     restart: unless-stopped
 
   # 音声アシスタントの読み上げ。apps/voice-agent（ホスト上で動かす）から使うので、ホストのループバックにだけ公開する
@@ -32,3 +58,28 @@ services:
     # 既定のスレッド数では合成が実時間に追いつかなかったので、全コアを使わせる（コア数に合わせて変える）
     command: ["gosu", "user", "/opt/voicevox_engine/run", "--host", "0.0.0.0", "--cpu_num_threads", "4"]
     restart: unless-stopped
+
+  # persona.json で voice.engine を "aivis" にしたキャラクターの読み上げ（AivisSpeech。VOICEVOX と同じ形の API）。
+  # 初回起動時に BERT などを 1GB あまりダウンロードするので、ボリュームに残す。モデルを足すのも README 参照
+  aivisspeech:
+    image: ghcr.io/aivis-project/aivisspeech-engine:cpu-latest
+    ports:
+      - "127.0.0.1:10101:10101"
+    # エラー報告を外部（Sentry）に送らない
+    command:
+      ["gosu", "user", "/opt/python/bin/poetry", "run", "python", "./run.py", "--host", "0.0.0.0", "--disable_sentry"]
+    volumes:
+      - aivisspeech-data:/home/user/.local/share/AivisSpeech-Engine-Dev
+    restart: unless-stopped
+
+volumes:
+  aivisspeech-data:
+  https-data:
+  https-config:
+
+networks:
+  # wave（~/Documents/git-cloned/wave/dev/relay-deploy-v2）の compose が作るネットワーク。wave-api はホストの
+  # 127.0.0.1 にしか出ていないので、このネットワークに加わってコンテナの名前で呼ぶ。先に wave 側を起動しておく
+  wave:
+    name: relay-deploy-v2_default
+    external: true

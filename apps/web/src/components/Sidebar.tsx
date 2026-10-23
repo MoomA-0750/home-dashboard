@@ -1,48 +1,60 @@
+import { defineMessages, textFor, useLocale } from "@home-dashboard/widget-sdk";
 import { Icon, type IconName } from "./Icon";
+import type { ExtensionScreen } from "../lib/extensions";
 
-export type ScreenId = "home" | "media" | "home-control" | "toolbox" | "settings";
+const messages = defineMessages({
+  ja: { home: "ホーム", chat: "チャット", settings: "設定", mainMenu: "メインメニュー", sidebarWidth: "サイドバーの幅" },
+  en: { home: "Home", chat: "Chat", settings: "Settings", mainMenu: "Main menu", sidebarWidth: "Sidebar width" },
+});
+
+/** "home"・"chat"・"settings" と、拡張機能の画面（「拡張機能の id:画面の id」） */
+export type ScreenId = string;
 
 interface NavItem {
   id: ScreenId;
   label: string;
   ariaLabel: string;
-  icon: IconName;
+  icon: IconName | { src: string };
 }
-
-/** 設計図のサイドバー5項目。Home以外の画面はまだ実装していないので Settings 以外は無効にしてある。 */
-const NAV_ITEMS: NavItem[] = [
-  { id: "home", label: "Home", ariaLabel: "ホーム", icon: "home" },
-  { id: "media", label: "Media", ariaLabel: "メディア", icon: "play" },
-  { id: "home-control", label: "Home Control", ariaLabel: "ホームコントロール", icon: "lightbulb" },
-  { id: "toolbox", label: "Toolbox", ariaLabel: "ツールボックス", icon: "toolbox" },
-  { id: "settings", label: "Settings", ariaLabel: "設定", icon: "settings" },
-];
-
-const IMPLEMENTED: ScreenId[] = ["home", "settings"];
 
 interface SidebarProps {
   activeScreen: ScreenId;
-  settingsOpen: boolean;
+  /** 拡張機能の画面（Media・Home Control など）。切った拡張機能のものは出ない */
+  screens: ExtensionScreen[];
+  chatEnabled: boolean;
+  chatOpen: boolean;
   onSelect: (screen: ScreenId) => void;
 }
 
-export function Sidebar({ activeScreen, settingsOpen, onSelect }: SidebarProps) {
+/** サイドバーの項目。ホームの下に拡張機能の画面を並べ、チャット（設定で選んだときだけ）と設定を最後に置く */
+export function Sidebar({ activeScreen, screens, chatEnabled, chatOpen, onSelect }: SidebarProps) {
+  const locale = useLocale();
+  const t = messages.useT();
+  const items: NavItem[] = [
+    { id: "home", label: t("home"), ariaLabel: t("home"), icon: "home" },
+    ...screens.map((screen) => ({
+      id: screen.key,
+      label: textFor(screen.label, locale),
+      ariaLabel: textFor(screen.ariaLabel ?? screen.label, locale),
+      icon: screen.icon,
+    })),
+    ...(chatEnabled ? [{ id: "chat", label: t("chat"), ariaLabel: t("chat"), icon: "chat" as const }] : []),
+    { id: "settings", label: t("settings"), ariaLabel: t("settings"), icon: "settings" },
+  ];
   return (
-    <nav className="sidebar" aria-label="メインメニュー">
-      {NAV_ITEMS.map((item) => {
-        const active = item.id === "settings" ? settingsOpen : item.id === activeScreen;
+    <nav className="sidebar" aria-label={t("mainMenu")}>
+      {items.map((item) => {
+        const active = item.id === "chat" ? chatOpen : item.id === activeScreen;
         return (
           <button
             key={item.id}
             type="button"
             className={`nav-button${active ? " nav-button--active" : ""}`}
             aria-label={item.ariaLabel}
-            aria-current={active && item.id !== "settings" ? "page" : undefined}
-            disabled={!IMPLEMENTED.includes(item.id)}
-            title={IMPLEMENTED.includes(item.id) ? undefined : `${item.label}（未実装）`}
+            aria-current={active ? "page" : undefined}
             onClick={() => onSelect(item.id)}
           >
-            <Icon name={item.icon} />
+            {typeof item.icon === "string" ? <Icon name={item.icon} /> : <Icon src={item.icon.src} />}
             <span className="nav-button__label">{item.label}</span>
           </button>
         );
@@ -62,6 +74,7 @@ interface SidebarHandleProps {
 }
 
 export function SidebarHandle({ width, onResize }: SidebarHandleProps) {
+  const t = messages.useT();
   const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     const target = event.currentTarget;
     const startX = event.clientX;
@@ -96,7 +109,7 @@ export function SidebarHandle({ width, onResize }: SidebarHandleProps) {
     <div
       className="sidebar-handle"
       role="separator"
-      aria-label="サイドバーの幅"
+      aria-label={t("sidebarWidth")}
       aria-orientation="vertical"
       aria-valuemin={SIDEBAR_MIN_WIDTH}
       aria-valuemax={SIDEBAR_MAX_WIDTH}

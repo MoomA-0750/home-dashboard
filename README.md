@@ -16,18 +16,31 @@ apps/
   server/   Fastify製のAPIサーバー（レイアウト永続化・外部サービス連携・静的配信）
   voice-agent/  Python製の音声アシスタント（ウェイクワード → Claude Code → 読み上げ）。ホスト上で常駐させる
 packages/
-  widget-sdk/       ウィジェットを実装するための型定義・共通フック
+  widget-sdk/       ウィジェット・拡張機能の画面側の型と本体の部品（Button・List・Field・WidgetCard・Icon・ScreenFrame・取得フック・機能の口）
+  extension-sdk/    拡張機能のサーバー側の型（manifest・道・音声アシスタントのツール・機能の口）
   widgets/
-    clock/            時計
-    weather/           天気（Open-Meteo、APIキー不要）
-    spotify-media/     Spotify再生中トラック表示・操作
-    homelab-status/    ホームラボのホスト死活監視
-    ha-controls/       Home Assistantの家電操作（照明・スイッチ・鍵・エアコン）
-    ha-climate/        Home Assistantの室温・湿度
-    claude-usage/      Claude Codeのトークン使用量（ccusage相当）
-    tailscale-status/  tailnet内のノード状況
-    git-repos/         ローカルgitリポジトリの状況
-    mail-inbox/        メール（IMAP）の未読
+    clock/            時計（本体に入っている唯一のウィジェット）
+extensions/   本体に入っている拡張機能（連携と画面の機能）。設定画面の「拡張機能」で入／切できる
+  media/            Media 画面（キュー・プレイリスト・おすすめ・歌詞）とメディアのウィジェット、音声アシスタントの音楽の操作。
+                    機能の口「音楽アプリ」を持ち、下の wave・Spotify が入る
+  chat/             画面から音声アシスタントと話すチャット（画面は本体にあり、拡張機能は入／切を受け持つ）。
+                    機能の口「チャットアプリ」を持ち、iMessage が入る
+  weather/          天気（Open-Meteo、APIキー不要）。ホームの時刻の横の天気・ウィジェット
+  imessage/         iMessage。Chat 画面のチャットアプリとして入る（右上で切り替え）。Mac の imsg-web（imsg-web の docs/api.md）を、ダッシュボードのサーバーから呼ぶ
+  spotify/          Media の音楽アプリとしての Spotify
+  wave/             Media の音楽アプリとしての wave（自作の YouTube Music クライアント）。wave-api（wave の docs/wave-api.md）を呼ぶ
+  home-assistant/   Home Control 画面、家電操作・室温湿度のウィジェット（照明・スイッチ・鍵・エアコン）
+  claude/           Claude Code のトークン使用量（ccusage相当）と、利用制限（5時間・週）
+  tailscale/        tailnet内のノード状況
+  git-repos/        ローカルgitリポジトリの状況
+  homelab/          ホームラボのホスト死活監視
+  accounts/         カレンダー・メール。インターネットアカウント（Google・iCloud・Microsoft・一般）を人ごとに置き、
+                    Calendar・Mail の画面と予定・メールのウィジェット、音声アシスタントの予定とメール
+examples/extensions/memo/  外で作る拡張機能の見本（伝言メモ）。本体には入らない
+scripts/build-extension.mjs  拡張機能をビルドして ZIP にする道具（pnpm build:extension）
+scripts/new-extension.mjs    拡張機能のひな形を作る道具（pnpm new:extension）
+docs/extensions.md           拡張機能の作り方
+docs/design-system.md        見た目と動きの決まり（トークン・部品の使い分け・動き）
 config/     homelab-hosts.json などランタイム設定（Gitには含まれない値を置く）
 data/       レイアウト等の永続化データ（Gitには含まれない）
 docker/     Dockerfile
@@ -39,6 +52,11 @@ docker/     Dockerfile
 - `icons/` — Fluent UI System Icons（MIT）。CSSマスクとして読み込むので色は親から継承される
 - `background.jpg` — **Gitには含まれない。** 好きな画像をこのパスに置くと背景になり、
   置かなければ `--dash-background-fallback` のグラデーションが使われる
+- 壁紙（既定の写真・設定で選んだ写真）は、読み込んだときに画面が測る（`apps/web/src/lib/wallpaperTheme.ts`）
+  - 明るさ: 画面の左・中ほど・右寄り・右端の明るい所に、文字が読めるだけの暗さを足す（暗い壁紙なら足さない。強さは設定の「壁紙」で変える）
+  - 色合い: あざやかな所の色相を取り、選んでいる所・自分の吹き出し・明るいボタンなどのテーマの色をその色合いにする
+    （明るさ・あざやかさは決めた値なので、読みやすさは変わらない。色の無い壁紙なら既定の青）
+  - 文字の読みやすさは `tools/contrast-check/` で測れる
 
 ## 画面デザイン
 
@@ -55,9 +73,25 @@ docker/     Dockerfile
 react-grid-layout を1カラム（`rowHeight=200` / `margin=[0,30]`）で使っているので、
 編集モードではドラッグでの並べ替えと高さのリサイズができる。
 
-サイドバーはアイコン5項目で、間のハンドルをドラッグすると80〜240pxの範囲で広がり、
-広げるとアイコンの横にラベルが出る（幅は localStorage に保存される）。
-Home以外の画面は未実装のため、いまは Settings（ウィジェット追加・編集モード切り替え）だけが開く。
+ウィジェットの追加・並べ替え・削除は、Settings の「ウィジェットを並べ替え・削除」「ウィジェットを追加」から入る。
+編集中は設定パネルを閉じ、画面の下に操作帯（追加・完了）を出す。各カードには、つまみ（ドラッグ用）・上へ・下へ・削除が
+重なる。カード全体をつかめるようにするとタッチ端末で列をスクロールできなくなるので、ドラッグはつまみだけで行い、
+遠くへ動かすときやドラッグしにくい端末では上下のボタンを使う。追加したカードは列の末尾に入り、そこまでスクロールして光らせる。
+
+レイアウトは複数の端末で共有し、保存すると他の端末へ WebSocket で知らせる。中身が変わらない保存は知らせず、
+読み込んだだけ・知らせを受けただけの端末は保存し直さない（以前はこれで端末の間で保存と読み直しが往復し続け、
+ほかの端末の古い並びが並べ替えや追加を上書きしていた）。
+
+サイドバーは Home・Media・Home Control・Settings（設定で選んだ端末では Chat も）で、
+間のハンドルをドラッグすると80〜240pxの範囲で広がり、広げるとアイコンの横にラベルが出る（幅は localStorage に保存される）。
+Toolbox は中身が決まるまで外している（アイコンは `public/icons` に残してある）。
+
+- **Media**（再生アイコン）: 再生中の曲・操作・次に再生する曲と、歌詞・プレイリスト・おすすめのタブ。
+  音楽アプリはいまは Spotify を仮の連携先にしていて（`apps/server/src/music/`）、wave と連携できるようになったら
+  提供元（`MusicProvider`）を足して差し替える。歌詞は音楽アプリに依らず [LRCLIB](https://lrclib.net) から引き、
+  曲の位置に合わせて歌っている行を光らせる
+- **Home Control**（電球アイコン）: Home Assistant のセンサー（室温・湿度・CO₂・PM2.5・明るさ）を部屋ごとに、
+  鍵・空調・照明とスイッチをまとめて出す。部屋は HA のエリアから取る（テンプレート API で引く）
 
 ## セットアップ（開発）
 
@@ -66,14 +100,16 @@ pnpm install
 cp apps/server/.env.example apps/server/.env   # 天気の地点・Spotify連携などを設定
 cp config/homelab-hosts.example.json config/homelab-hosts.json  # 監視したいホストを追記
 
+pnpm build:extensions   # 拡張機能（extensions/*）をビルドする。サーバーは各 dist/ を読む
 pnpm dev:server   # http://localhost:8787
 pnpm dev:web      # http://localhost:5173 (APIは8787にプロキシ)
+pnpm dev:extensions   # 拡張機能を書き換えながら試すとき（見張ってビルドし直す。画面は再読み込み、サーバーは再起動で反映）
 ```
 
 ## ビルド
 
 ```bash
-pnpm build   # apps/web と apps/server の両方をビルド
+pnpm build   # 拡張機能（extensions/*）、apps/web、apps/server をビルド
 ```
 
 ## Docker
@@ -84,8 +120,9 @@ cp config/homelab-hosts.example.json config/homelab-hosts.json
 docker compose up -d --build
 ```
 
-単一コンテナがビルド済みのフロントエンド静的ファイルとAPIサーバーの両方を配信する
-（`http://<host>:8787` を開けばダッシュボードが表示される）。
+単一コンテナがビルド済みのフロントエンド静的ファイルとAPIサーバーの両方を配信する。
+8787 番はこの機械の中（`127.0.0.1:8787`）にだけ開く。ほかの端末からは下の https の入口か、tailnet の `*.ts.net` から開く
+（LAN に http のまま出すと、ログインの Cookie が暗号化されずに流れるため）。
 
 `data/`・`config/` はホスト側にボリュームマウントされるので、レイアウトやホスト一覧はコンテナを
 再作成しても保持される。
@@ -93,6 +130,79 @@ docker compose up -d --build
 > 注: この開発環境にはDockerデーモンがなく、実際の `docker build`/`docker compose up` の
 > 動作確認はできていない。初回はデプロイ先（`gco`）で `docker compose up -d --build` を実行し、
 > 問題があれば都度修正する想定。
+
+## LAN の IP で https（家の認証局）
+
+`https://192.168.1.10/` でも開ける。docker compose の `https`（Caddy。`docker/Caddyfile`）が LAN の IP の 443・80 で受けて、
+ダッシュボード（127.0.0.1:8787）へ中継する。証明書は general-console の家の認証局（step-ca。Obsidian の「LAN用の認証局（step-ca）」）から
+ACME で取り（30日）、期限前に自動で取り直す。
+
+- 端末に家の認証局のルート（`MoomA Home Root CA`。`https://192.168.1.10:9000/roots.pem`、指紋は Obsidian のノート）を入れておくと、
+  警告なしで開ける。https なので、PWA のインストールも使える
+- 8787 番はこの機械の中からだけ（音声エージェントや statusLine は `http://127.0.0.1:8787` に送る）。`http://192.168.1.10/` は https へ送る
+- tailnet の IP（<TAILSCALE_IP>）の 443 は tailscale serve が使っているので、tailnet からは今までどおり `*.ts.net` の URL で開く
+- LAN の IP を変えるときは、`DASHBOARD_HTTPS_BIND`（と `DASHBOARD_ACME_DIRECTORY`）を compose に渡す。IP が DHCP で変わらないよう、
+  ルーターで固定しておく
+- 状態: `docker compose logs https`（証明書を取った・取り直したことが出る）
+
+## 接続設定（設定画面から変える）
+
+Home Assistant・Spotify・メール（IMAP）・天気の場所など、拡張機能の設定は、`.env` のほかに、設定画面（サイドバーの歯車）の
+「接続設定」からも変えられる。保存するとすぐ効き、サーバーの再起動は要らない。節と項目は、動いている拡張機能の
+`manifest.json` の `settings` から来る（切った拡張機能の節は出ない）。
+
+- 画面で変えた値だけを `data/connections.json`（持ち主だけが読める 0600。`.gitignore` 済み）に置き、`.env` の値より優先する。
+  「.env に戻す」を押すか欄を空にして保存すると、`.env` の値に戻る
+- トークン・パスワードは画面へ返さない（「設定済み」とだけ出る）。空のまま保存すれば今の値のまま
+- 変えられるのは管理者のアカウントだけ（メンバーには読み取りだけ出る。→「ログインとアカウント」）
+
+## ログインとアカウント
+
+ダッシュボードの画面と API は、ログインしないと使えない。
+
+- **最初の1回**: アカウントが1つも無いと、開いた画面が「最初のアカウントを作る」になる。ここで作ったアカウントが管理者になる。
+  届く人が誰でも先に管理者になれてしまわないよう、サーバーのログに出る8文字の合言葉（`docker compose logs home-dashboard`）を入れないと作れない。
+  合言葉はサーバーを起動するたびに変わる
+- **ログインは期限で切れない**: 壁掛け端末のように常に表示しておく端末で、しばらく触らなくても切れないようにしている
+  （Home Assistant の長期トークンと同じ考え）。端末ごとのトークンは HttpOnly の cookie に置き、使っている間は延ばす。
+  サーバーにはトークンの SHA-256 とパスワードの scrypt だけを置く（`data/accounts.json`・`data/sessions.json`、0600）
+- **止めるとき**: 設定画面の「アカウント → ログインしている端末」から外す（自分の端末、管理者ならすべて）。外した端末の画面は
+  1分以内にログイン画面へ戻る。パスワードを変えると、いま使っている端末以外のログインは外れる
+- **ダッシュボード端末**: 家に置きっぱなしの端末は、設定の「アカウント → この端末 → ダッシュボード端末にする」
+  （ほかの端末からは「ログインしている端末」の一覧）で印を付ける。印を付けた端末は
+  - 画面を眠らせない（Screen Wake Lock。https で開いたときだけ効く）。ログアウトのボタンを出さず、端末が128台を超えても古い順に外されない
+  - ここで話した会話は部屋のマイクと同じ扱い（家族みんなの記録になり、見えるのも家族みんなの会話だけ。
+    「画面から話しかけたときだけ」の家の人の情報は出さない）
+- **軽い表示**: 「この端末 → 軽い表示」で、端末ごとにガラスのぼかしを切れる（自動・入・切）。自動では、端末の「透明度を下げる」設定、
+  GPU を使わない描画（SwiftShader・llvmpipe など）、開いてしばらくしてから3秒測った描画の速さ（30fps を切る）で入れる。
+  測った結果は端末のブラウザに覚え、「自動」を選び直すと測り直す
+- **権限**: 管理者はアカウントの追加・削除と接続設定の変更ができる。メンバーは使うこと（鍵の解錠を含む）だけ
+- パスワードの間違いが同じ名前で5回、全体で20回続くと、10分ログインを受け付けない
+- 別のサイトの画面からの書き込みは断る（Origin が Host と違うとき）。手前に Host を書き換えるプロキシを置くなら x-forwarded-host を渡す
+- **パスワードを忘れたら**: ホストで `data/accounts.json` と `data/sessions.json` を消すと、最初のアカウント作成からやり直せる
+
+ログインしなくても通すのは、ログイン画面の API と、画面を通さない次のものだけ:
+
+- 音声エージェント（`/ws/voice-agent`・`/mcp`・会話の記録・添付・道具の確かめ）: `VOICE_AGENT_TOKEN` で確かめる。**ログインを必須にしたので、
+  `apps/server/.env` と `apps/voice-agent/.env` の両方に同じ値を入れておく**（入れないと、エージェントが会話の履歴を読めない）。
+  トークンで入れるのはエージェントが使うこの道だけで、レイアウトや拡張機能の操作（`/api/ext/...`）には入れない
+- 拡張機能が「ログインなしで通す」と決めた道（Claude の利用率の受け取り `POST /api/ext/claude/limits` など）: 拡張機能が自分で確かめる
+  （Claude の利用率は `CLAUDE_LIMITS_TOKEN` の合言葉を Bearer で添えたときだけ受ける）。読むのはログインが要る
+
+## wave 連携のセットアップ
+
+wave の拡張機能は、wave の中継と同じ機械で常駐する wave-api（`~/Documents/git-cloned/wave/dev/relay-deploy-v2`）を呼ぶ。
+
+1. トークンを出す: `cd ~/Documents/git-cloned/wave/dev/relay-deploy-v2 && docker compose exec wave-api /app/bin/api token`
+2. `apps/server/.env` の `WAVE_API_TOKEN` に入れる（または設定画面の「接続設定 → wave」）。トークンはコミットしない
+3. Docker で動かすダッシュボードは、wave の compose が作るネットワーク（`relay-deploy-v2_default`）に加わり、
+   `http://wave-api:8793` で呼ぶ（`docker-compose.yml`。wave-api はホストの 127.0.0.1 にしか出ていないため）。
+   **wave 側を先に起動しておく**（ネットワークが無いと、ダッシュボードのコンテナが起動しない）。ホストで直接動かすときは `http://127.0.0.1:8793`
+
+Media 画面（サイドバーの再生のアイコン。右上のピルで wave を選ぶ）・音声アシスタントの `get_now_playing`・`control_music` から使う（wave は Media の機能の口「音楽アプリ」に入る拡張機能）。
+シャッフル・繰り返しは wave の連携の取り決めに無いので、ボタンを出さない。鳴らす・操作は、家の端末（スマホ・PC の wave）が
+中継につながっているときだけ効く。プレイリスト・おすすめは、家の端末から wave-api にログインを渡してあると読める。
+Media 画面とその道・歌詞は Media の拡張機能（`extensions/media`）が持ち、wave・Spotify はそこへ音楽アプリとして入る。
 
 ## Spotify連携のセットアップ
 
@@ -103,10 +213,18 @@ SSHポートフォワードでローカルの `127.0.0.1` 経由にするのが�
 1. [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) でアプリを作成し、
    Redirect URIに `http://127.0.0.1:8787/auth/spotify/callback` を登録
    （`apps/server/.env` の `SPOTIFY_REDIRECT_URI` と同じ値にする）
-2. `SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET` を設定してサーバーを起動
+2. `SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET` を設定してサーバーを起動（設定画面の「接続設定 → Spotify」でもよい）
 3. 手元のマシンから `ssh -L 8787:localhost:8787 gco` 等でポートフォワードしてトンネルを開く
 4. 手元のブラウザで `http://127.0.0.1:8787/auth/spotify/login` を開いて認可
-5. コールバック画面に表示されたrefresh tokenを `SPOTIFY_REFRESH_TOKEN` に設定し、サーバーを再起動
+5. 届いた refresh token はサーバーが接続設定（`data/connections.json`）に保存し、すぐ使い始める（再起動は要らない）
+
+Media 画面のプレイリスト・おすすめには、あとから足した scope（`playlist-read-private` / `playlist-read-collaborative` /
+`user-read-recently-played` / `user-top-read`）が要る。それより前に取った refresh token では、この2つのタブに
+「認可し直してください」と出るので、手順 3〜4 をもう一度行う。
+
+2026年2〜3月の Spotify の変更で、開発モードのアプリは、自分のか共同編集のプレイリストしか中の曲を一覧できない
+（ほかのプレイリストは「再生」だけ出す）。似た曲のおすすめ（`/recommendations`）も使えないことが多いので、
+使えなければ「最近よく聴く曲」「最近聴いた曲」で代わりに並べる。
 
 未設定の間、Spotifyウィジェットは「Spotify未接続」と表示される。
 
@@ -118,14 +236,15 @@ HTTPS有効化が必要）。
 ## Home Assistant連携のセットアップ
 
 1. HAの「プロフィール → セキュリティ → 長期アクセストークン」でトークンを発行
-2. `apps/server/.env` に設定
+2. 設定画面の「接続設定 → Home Assistant」に入れて保存し、「接続を確かめる」で確かめる（すぐ効く）。
+   または `apps/server/.env` に設定して再起動する
 
    ```
    HOMEASSISTANT_URL=http://<HAのIP>:8123
    HOMEASSISTANT_TOKEN=<発行したトークン>
    ```
 
-3. サーバーを再起動すると、`light` / `switch` / `lock` / `climate` のエンティティと、
+3. つながると、`light` / `switch` / `lock` / `climate` のエンティティと、
    `device_class` が `temperature` / `humidity` のセンサーが**自動検出**されてウィジェットに並ぶ
 
 表示するエンティティや順序を明示したい場合は、`config/homeassistant.example.json` を
@@ -133,15 +252,40 @@ HTTPS有効化が必要）。
 
 ### セキュリティ上の設計
 
-このダッシュボードは**LAN上に認証なしで公開される**前提なので、HA連携には2つの制限を入れている。
+サーバーは HA のトークンを持つので、HA連携には2つの制限を入れている。
 
 - **サービス呼び出しはホワイトリスト制**: サーバーはHAのトークンを持つため無制限に中継すると
-  事実上HAの全機能を認証なしで公開することになる。`light`/`switch`/`lock`/`climate` の
+  ログインした人に事実上HAの全機能を渡すことになる。`light`/`switch`/`lock`/`climate` の
   必要なサービスだけを許可している（`apps/server/src/routes/homeassistant.ts` の `ALLOWED_SERVICES`）
-- **解錠は既定で無効**: 玄関の物理錠を想定し、`lock.unlock` は既定で拒否する（状態表示と施錠のみ）。
-  有効にするには `HOMEASSISTANT_ALLOW_UNLOCK=true` を設定する。**LANに入れる誰でも解錠できるようになる**点に注意
+  サービスに添える値（明るさ・設定温度・運転モード）も決まったキーと範囲だけを通す（`entity_id` を上書きして別の機器を動かせないように）
+- **解錠はログインした画面からだけ**: 玄関の物理錠を想定し、画面からはログインしたアカウントなら解錠できる
+  （「もう一度押して解錠」の2度押し）。音声アシスタントからの解錠は、ログインしている人が画面でパスキーかパスワードで
+  本人確認して許可したときだけ（→「音声アシスタントの道具の確かめ」）
 
 トークンはサーバー内に留まり、フロントエンドには一切渡らない（ブラウザは自サーバーのAPIだけを叩く）。
+
+## Claude の利用制限（5時間・週）
+
+「Claude 利用制限」ウィジェットは、Claude（サブスクリプション）の5時間の枠と週の枠をどれだけ使ったか、いつ戻るかを出す。
+この値は Claude Code が statusLine のコマンドに渡す JSON（`rate_limits`）にしか出てこないので、
+camp と同じく statusLine から受け取る（Anthropic の非公開の API は叩かない）。`~/.claude/statusline.sh` に次の1行を足す:
+
+```bash
+printf '%s' "$input" | ~/Documents/git-cloned/home-dashboard/scripts/claude-limits-report.sh >/dev/null 2>&1 &
+```
+
+送り先は `HOME_DASHBOARD_URL`（既定 `http://localhost:8787`）の `/api/ext/claude/limits`（Claude の拡張機能）。
+ログインの代わりに合言葉で確かめる（届く人が誰でも嘘の値を書き込めないように）。合言葉を作り、ダッシュボードとスクリプトの両方に置く:
+
+```bash
+openssl rand -hex 32 > ~/.config/home-dashboard/claude-limits-token   # 先に mkdir -p ~/.config/home-dashboard
+chmod 600 ~/.config/home-dashboard/claude-limits-token
+# 同じ値を apps/server/.env の CLAUDE_LIMITS_TOKEN に入れる（設定画面の「Claude」の節でも入れられる）
+```
+
+合言葉が無い・違うときは受け取らない（401）。値は Claude Code の画面が描き直されたときだけ届くので、
+15分より古い値には「何分前の値」と添える。制限はアカウント単位なので、どこかで Claude Code が1つ開いていれば足りる。
+受け取った値は `data/extension-data/claude/limits.json` に置く。
 
 ## ホスト側の資源を見るウィジェット（Claude Code使用量 / Tailscale / gitリポジトリ）
 
@@ -163,30 +307,18 @@ HTTPS有効化が必要）。
   トークン数と、サブスクのレート制限に効く「5時間ブロック」の消費状況を見せる方針にしている
 - **Tailscale**: `tailscale` コマンドではなく tailscaled の LocalAPI（unixソケット上のHTTP）を直接叩くので、
   コンテナにtailscaleバイナリを入れる必要はない。**読み取り専用**で、exit nodeの切り替えなど
-  経路を変更する操作は実装していない（LAN上に認証なしで公開されるダッシュボードから
+  経路を変更する操作は実装していない（家族みんなが使うダッシュボードから
   ホスト自身の経路を書き換えられるのは危ないため）
 - **gitリポジトリ**: read-onlyマウントでも動くよう `--no-optional-locks` を、コンテナのrootと
   ホスト側のファイル所有者が違っても動くよう `-c safe.directory=*` を付けて `git` を呼んでいる。
   表示のみで、commitやpushなどの操作は行わない
 
-## メール（IMAP）連携のセットアップ
+## カレンダー・メール（インターネットアカウント）
 
-`apps/server/.env` に設定する。未設定なら「メール未接続」と表示されるだけで、他には影響しない。
-
-```
-MAIL_HOST=imap.gmail.com
-MAIL_PORT=993
-MAIL_USER=you@gmail.com
-MAIL_PASSWORD=<アプリパスワード>
-MAIL_MAILBOX=INBOX
-```
-
-Gmailの場合は2段階認証を有効にした上で [アプリパスワード](https://myaccount.google.com/apppasswords)
-を発行する（通常のアカウントのパスワードではIMAPログインできない）。
-
-未読件数と直近の差出人・件名を**表示するだけ**で、既読化・削除・返信は実装していない
-（LAN上の誰でも触れる画面から、誤操作でメールを失う操作ができないようにするため）。
-IMAPは接続コストが高いので、結果はサーバー側で60秒キャッシュして全クライアントで共有する。
+Google・iCloud・Microsoft・一般（IMAP・CalDAV・公開カレンダー）のアカウントを、ログインした人ごとに設定の
+「インターネットアカウント」で足すと、Calendar・Mail の画面と「予定」「メール」のウィジェット、音声アシスタントで使える。
+「家で共有する」にしたものだけが、家族と音声アシスタントにも見える。手順（Google・Microsoft のクライアントの作り方も）は
+[docs/internet-accounts.md](docs/internet-accounts.md)。前の `.env` の `MAIL_*` は、家で共有するアカウントとして一度だけ移る。
 
 > iMessageは今回見送った。tailnet上にMacはあるので原理的には可能だが、`~/Library/Messages/chat.db` を
 > 読むエージェントをMac側に常駐させ、フルディスクアクセスを与える必要があり、このダッシュボード単体では完結しない。
@@ -286,15 +418,54 @@ systemctl --user enable --now home-dashboard-voice-agent
 - 読み上げ中はマイクの音を捨てている（自分の声でウェイクワードを誤検出しないため）。
   中止は画面のパネルの ✕ か、マイクボタンから
 
+### 画面（ブラウザ）からチャットする
+
+拡張機能「チャット」が入っていれば、どの端末のサイドバーにもチャットのボタンが出る。
+スマホ・PCなど、ホストのマイク・スピーカーから離れた所で話したいとき向け。チャットは文字だけで、声は使わない。
+
+- 入力欄に**文字**で書いて送る。返答は吹き出しで流れてくる（声は鳴らさない）
+- 入力欄の左のクリップで**ファイルを添えられる**（1通に5つまで）。画像（PNG・JPEG・GIF・WebP。5MB まで、長い辺 1568px に縮めて送る）・
+  PDF（20MB まで）・テキスト（512KB まで）。種類はサーバーが中身で確かめる。添えたものは `data/voice-attachments/` に30日置き、
+  Claude には画像・PDF をそのまま、テキストは本文として見せる。やり取りの記録から見返せる（画像は吹き出しの上に出る）
+- 答えるのは既定のキャラクター。1通だけほかのキャラクターに答えてほしいときは
+  本文に「@カリン」と書く（全角の＠も可。表示名・ウェイクワードの表記・IDのどれでもよい。複数あれば最初のもの）。
+  「@」を打つと候補が出て、タップか Enter / Tab で埋められる
+- **会話**は Claude Code の会話ごとに分かれる。左上のボタンで一覧（最初の一言・答えたキャラクター・件数・最後に話した時刻）
+  を開いて前の会話に戻れ、右上のボタンで新しい会話を始められる。チャットは表示している会話に話しかけ、エージェントは
+  その会話でなければ切り替えて答える（保存済みなら `--resume`、まだ無ければ画面が決めたIDで `--session-id`）。
+  チャットで選んだ会話は間が空いても作り直さない。端末ごとに前に開いていた会話から続ける
+- **会話の記録は人ごとに分かれる**: 自分の画面のチャット・マイクで始めた会話（添えたファイルも）はその人のもので、本人にしか見えない
+  （管理者にも見えない）。話している途中の文・確かめの小窓も、その人の画面にだけ出る。部屋のマイクとダッシュボード端末で話した会話は
+  家族みんなのもの。家族の会話をチャットで選んで続けると、家族の会話のまま（家の人の情報は部屋と同じ扱い）。
+  分ける前の記録は家族みんなのものとして残る。エージェントは持ち主の違う人が話しかけたら別の会話にする
+- 新しい会話にも、キャラクターたちが最近の出来事を覚えているよう、直近のやり取りの記録（その会話の持ち主に見せてよい会話から。
+  部屋の会話なら家族みんなの会話だけ）を最初の質問に添える。
+  添えるのは `VOICE_HISTORY_TURNS`（既定20件）・`VOICE_HISTORY_HOURS`（既定24時間）以内で、発言・返答は1件200文字までなので、
+  会話や記録がいくら増えても1つの会話に渡す量は変わらない（多くて数千トークン）。前の会話に戻ったときは添えない
+- サーバーは読み込んだ記録を覚えておき、追記の分だけ足す（会話の一覧や記録を取るたびにファイル全体を読み直さない）。
+  Claude Code の会話のファイル（`~/.claude/projects/` の下）は Claude Code が古いものから消す（既定30日）。
+  消えた会話を一覧から開いて話しかけると、同じIDの新しい会話として、直近の記録を添えて始まる
+- ウェイクワードで話したやり取りは、そのときエージェントが使っている会話（チャットで最後に話した会話か、間が空いていれば
+  新しい会話）に入る。表示していない会話でやり取りがあると、チャットの上に「ほかの会話で〜が答えました」と出る
+- API: `POST /api/voice/ask`（`{text, speech, clientId, personaId, conversationId, attachments}`）。
+  `attachments` は先に `POST /api/voice/attachments?name=`（本文はファイルそのもの）で置いて返った id の並び。
+  声で話しかける `POST /api/voice/ask-audio?speech=&clientId=&personaId=&conversationId=`（本文は 16kHz mono s16le の PCM）も
+  残してある（画面のチャットからは使わない）。
+  `speech` は `browser` / `host` / `none`、`clientId` は `/ws?clientId=` で名乗ったタブのID。
+  `personaId` を省くと既定のキャラクター、`conversationId`（UUID）を省くとウェイクワードと同じ今の会話。
+  会話の一覧は `GET /api/voice/conversations`、1つの会話のやり取りは `GET /api/voice/history?conversationId=`
+
 ### Claude Code に渡す権限
 
 部屋にいる人やテレビの音なら誰の声でも動くので、Claude Code は権限を絞って起動している
 （`apps/voice-agent/voice_agent/claude.py`）。
 
 - `--restricted`: ユーザー/プロジェクトの設定ファイル（許可ルール・hooks）を読まず、コマンド実行系のツールを外す
-- `--strict-mcp-config` + `--mcp-config`: **ダッシュボードのMCPサーバー（`/mcp`）だけ**を読み込む
-  （Gmail・カレンダー等のコネクタやユーザー設定のMCPサーバーは読み込まない）
-- `--tools` / `--allowedTools`: 組み込みツールは既定で **WebSearch と WebFetch だけ**
+- `--strict-mcp-config` + `--mcp-config`: 既定では**ダッシュボードのMCPサーバー（`/mcp`）だけ**を読み込む
+  （Gmail・カレンダー等のコネクタやユーザー設定のMCPサーバーは、下の「コネクター・MCP」で選んだものだけ）
+- `--tools`: 組み込みツールは既定で **WebSearch と WebFetch だけ**
+- `--permission-prompt-tool stdio`: どの道具も事前には許さない。使うたびの「使ってよいか」の問い合わせを、エージェントが
+  サーバーの道具の確かめ（下の「音声アシスタントの道具の確かめ」）へ回す
 - 作業ディレクトリは専用の空ディレクトリ（`~/.local/share/home-dashboard-voice/workspace`）
 
 家電操作は Bash を開放するのではなく、サーバーの `/mcp`（`apps/server/src/routes/mcp.ts`）が
@@ -305,15 +476,64 @@ systemctl --user enable --now home-dashboard-voice-agent
 |---|---|
 | `get_weather` | 現在の天気、今後12時間の降水確率、今日〜明後日の予報 |
 | `list_home_devices` | 家電（照明・スイッチ・鍵・エアコン）と室温・湿度センサーの状態 |
-| `control_home_device` | 家電の操作（`ALLOWED_SERVICES` の範囲。解錠は `HOMEASSISTANT_ALLOW_UNLOCK=true` のときだけ） |
-| `get_now_playing` / `control_music` | Spotify の再生中の曲・再生/一時停止/次/前 |
+| `control_home_device` | 家電の操作（`ALLOWED_SERVICES` の範囲。施錠は了承、解錠は画面での本人確認の許可が要る） |
+| `get_now_playing` / `control_music` | 音楽アプリ（wave・Spotify など。Media の拡張機能が束ねる）の再生中の曲・再生/一時停止/次/前。`app` を省くと、いま鳴っているもの |
 
 `control_home_device` の説明には、Claude の起動時点の家電の一覧（entity_id と名前）を埋め込んでいる。
 先に一覧を取らせると「電気つけて」1回にツールが2往復し、最初の1文字まで7.4秒かかっていたのが、
 直接操作できるようにして約4秒になった。
 
-`VOICE_AGENT_TOKEN` を設定すると `/mcp` と `/ws/voice-agent` はトークン無しでは使えなくなる
-（未設定なら、既存の `/api/*` と同じくLAN内から誰でも使える）。
+`VOICE_AGENT_TOKEN` を設定すると `/mcp` と `/ws/voice-agent` はトークン無しでは使えなくなる。
+エージェントはこのトークンで、会話の記録・添付・道具の確かめの道（`/api/voice/history`・`/api/voice/attachments/:id`・
+`/api/voice/guard`）も読む（画面はログインが要るので、未設定だと会話の履歴を読めない。→「ログインとアカウント」）。
+`/mcp` は、道具の確かめを通った呼び出しだけを実行する（トークンだけでは、了承・許可の要る操作は動かせない）。
+
+### 音声アシスタントの道具の確かめ
+
+部屋にいる誰の声でも、読んだメールに書かれた文でも Claude は動けてしまうので、道具を使う前に、サーバーが決まった形で確かめる
+（`apps/server/src/voiceGuard.ts`）。Google のスマートホームの「操作ごとの確認」（解錠・警備の解除などは暗証番号、施錠などは「はい／いいえ」）、
+Apple の HomePod（解錠などは本人の iPhone で承認）・App Intents の認証の決まり、WWDC26 の「AIに操作させるときの守り」を参考にした。
+
+| 段 | どうなるか | 例 |
+|---|---|---|
+| 読むだけ（read） | そのまま実行 | 天気・家電の状態・予定・メールを読む・Web検索 |
+| そのまま（low） | そのまま実行。ただし外の人が書いた文を読んだ会話では「了承」に上がる | 照明・エアコン・音楽・予定を足す・ゲストモード |
+| 了承（confirm） | 「〜してよいですか？」に、**次の話しかけで**「はい」と答えたとき（か画面の確かめで「はい」を押したとき）だけ実行 | メールを送る・予定を変える・消す・施錠 |
+| 画面で許可（approve） | ログインしている画面に許可の小窓が出て、**パスキーかパスワードで本人確認**して許可したときだけ実行（2分で切れる） | 解錠・段を決めていない外の道具 |
+| 使わせない（deny） | 実行しない | 設定で止めた道具 |
+
+- 段は、ダッシュボードの道具は拡張機能が宣言する（`api.tool` の `risk`。→ docs/extensions.md）。外のコネクター・MCP の道具は、
+  管理者が設定画面の「コネクター・MCP → 道具ごとの確かめ」で道具ごとに決める。決めていない道具は、読むだけに見える名前でも了承を、
+  それ以外は画面での許可を求める（名前だけでは通さない）。ダッシュボードの道具の段は、設定で厳しくはできても緩くはできない
+- 了承は Claude に判断させない。聞き返したのとは別の話しかけの文を、サーバーが短い「はい」「お願い」などか確かめる
+  （「いいえ」「やめて」「大丈夫です」などは了承にしない）。内容が変わったら聞き直す
+- **外の人が書いた文**（メールの本文・予定の名前・Webページ・チャットに添えたファイル）を読んだ会話では、「そのまま」の操作にも了承を求める
+  （文に仕込まれた指示で動かされないため。会話を再開しても続く。`data/voice-guard.json`）
+- **家の人の情報**（メール・予定など。外の道具は既定でこちら扱い）を出すかは、設定の「音声アシスタント → 声で使うときの守り」で
+  「いつでも」「画面から話しかけたときだけ」（ログインしている画面のチャット・マイクからだけ）「出さない」から選ぶ（管理者）
+- **ゲストモード**: 家の人の情報を出さず、やり取りを記録に残さない（Claude Code の会話も保存しない新しい会話にし、前のやり取りも見せない）。
+  設定の「声で使うときの守り」で誰でも入／切でき、声で「ゲストモードにして」「ゲストモードを終わって」と言っても切り替えられる
+- API: `POST /api/voice/guard`・`GET /api/voice/guard/requests/:id/wait`（エージェントだけ）、`GET /api/voice/guard/requests`・
+  `POST /api/voice/guard/requests/:id/answer`（`{allow, password?, passkey?}`）・`POST /api/voice/guard/reauth/options`・
+  `GET/PUT /api/voice/guard/settings`（PUT は管理者）・`PUT /api/voice/guard/guest`
+
+### コネクター・MCP（設定画面で選ぶ）
+
+Settings の音声アシスタントの「Claude が使うコネクター・MCP」で、Claude に使わせるものを選べる。既定は何も使わない。
+
+- **claude.ai のコネクター**（Gmail・Google カレンダー・Notion など、claude.ai のアカウントにつないだもの）と、
+  **このホストの Claude Code に登録済みの MCP サーバー**（`claude mcp add` したユーザー単位のもの）は、
+  音声エージェントがホストで `claude mcp list` して一覧にする（起動時と「一覧を更新」のとき）。
+  コネクターを claude.ai で増やしたら「一覧を更新」を押す
+- **URL で追加**: Streamable HTTP の MCP サーバーを名前・URL・トークン（任意、`Authorization: Bearer`）で足す。
+  トークンは `data/voice-mcp.json`（パーミッション 600）に保存し、画面には返さない
+- 選ぶとすぐ保存され、エージェントが Claude Code を起動し直す（会話は `--resume` で引き継ぐ。返答中なら終わってから）
+- コネクターを1つでも選ぶと `--strict-mcp-config` を外し、代わりに `--settings` の `allowedMcpServers`
+  （コネクターは URL、ほかは URL かコマンドで照合）で選んだものだけに絞る。プラグインの MCP などは読み込まれない。
+  どの道具も、使う前に「音声アシスタントの道具の確かめ」を通る（段は道具ごとに決める）
+- 部屋にいる人なら誰でも声で使えるので、メール送信・予定の削除・PC操作などができるものは必要なものだけにする
+- API: `GET /api/voice/mcp`・`PUT /api/voice/mcp`（`{enabled: 名前[], custom: [{name, url, token?}]}`。
+  `token` を省くと保存済みのものを引き継ぎ、空文字で消す）・`POST /api/voice/mcp/scan`
 
 ### Claude Code の常駐
 
@@ -323,6 +543,9 @@ systemctl --user enable --now home-dashboard-voice-agent
 - 最後のやり取りから `VOICE_SESSION_IDLE_S`（既定5分）経つとプロセスを作り直し、新しい会話にする
   （次の質問に備えて先に起動しておく。待機中のメモリは約220MB）
 - 中止したときは読みかけの応答が次に混ざらないようプロセスを捨て、`--resume` で会話を引き継いだものを起動し直す
+- 会話のIDはエージェント（チャットの新しい会話は画面）が決めて `--session-id` で渡す。返答の前から記録・画面が会話を見分けられる。
+  会話を切り替えるとプロセスを作り直すので、切り替えた最初の返答は遅くなる（実測で最初の文字まで、新しい会話で約6秒・
+  前の会話の再開で約11秒。続けて話すと約1.3秒に戻る）
 - モデルは Sonnet。Haiku も試したが、この程度の質問では速くならず、読み上げに向かない `**` を混ぜたり、
   ツールを呼ばずに家電の状態を答えたりした
 
@@ -338,6 +561,7 @@ config/voice-personas/
   plum/persona.json    名前・ウェイクワード・おとり・声・表情
   plum/prompt.md       振る舞い・口調（無ければキャラクターの無い素のアシスタント）
   plum/avatar.vrm      VRMアバター（0.x / 1.0）
+  plum/icon.png        チャットに出すアイコン（無ければ名前の頭文字。下の「アイコン」）
 ```
 
 | `persona.json` の項目 | 内容 |
@@ -346,8 +570,8 @@ config/voice-personas/
 | `name` / `wakeLabel` | 表示名と、画面に出す呼び名（省略時は表示名。ウェイクワードと読みが違うときに書く） |
 | `wakeWords` | Vosk の語彙にある表記で書く（「あまなつ」は「甘夏」）。前に `wakePrefix` が付く |
 | `decoys` | 名前と音の似た語。後述の実測を見て足し引きする |
-| `voice` | VOICEVOX の話者IDと話速（`http://127.0.0.1:50021/speakers` で一覧できる） |
-| `expressions` | 返答の（表情名）で切り替える表情。`avatar` はVRMの表情名と重み、`voice` は声のスタイル（例: ささやき・ツンツンの話者ID）、`motion` は体の身振り（下の「VRMアバター」）、`keywords` は表情名以外の描写を書かれたときの手がかり |
+| `voice` | 声の話者IDと話速。`engine` を `"aivis"` にすると AivisSpeech の声になる（下の「声」） |
+| `expressions` | 返答の（表情名）で切り替える表情。`avatar` はVRMの表情名と重み、`voice` は声のスタイル（例: ささやき・ツンツンの話者ID。エンジンはキャラクターと同じ）、`motion` は体の身振り（下の「VRMアバター」）、`keywords` は表情名以外の描写を書かれたときの手がかり |
 | `rig` | 耳・尻尾の骨の名前（省略時は名前から探す） |
 
 プロンプトとVRMは個人のもの（第三者のキャラクター・モデルを含む）なので、`config/voice-personas/` は
@@ -355,19 +579,31 @@ config/voice-personas/
 
 #### 追加・書き出し・削除
 
-Settings の「キャラクター」から、1人分のディレクトリをZIPにしたパッケージ（`persona.json`・`prompt.md`・`avatar.vrm`。
+Settings の「キャラクター」から、1人分のディレクトリをZIPにしたパッケージ（`persona.json`・`prompt.md`・`avatar.vrm`・`icon.png`。
 直下でも1階層のフォルダの中でもよい）を追加・書き出し・削除できる。書き出したZIPはそのまま取り込み直せる。
 
 - **確かめること**: 取り込むときにサーバーが `persona.json` の形と、表情の割り当てがVRMに実在する表情名かを確かめる。
-  エージェントは読み直したときに、ウェイクワード・おとりが音声認識（Vosk）の語彙にあるか、話者IDが VOICEVOX にあるかを確かめる
+  エージェントは読み直したときに、ウェイクワード・おとりが音声認識（Vosk）の語彙にあるか、話者IDが声のエンジン（VOICEVOX / AivisSpeech）にあるかを確かめる
   （Vosk は語彙に無い語を黙って無視するので、それに気づかないと呼んでも反応しない）。見つかった問題はキャラクターの一覧に出す
 - **同じIDがあるとき**: 上書きするか確かめてから差し替える（前のVRM・プロンプトは残さない）
-- **安全のため**: ZIPの中のパスは書き込み先に使わず、決まった3つのファイル名だけを取り出す（`../` で `config/` の外へ書かれないように）。
+- **安全のため**: ZIPの中のパスは書き込み先に使わず、決まった4つのファイル名だけを取り出す（`../` で `config/` の外へ書かれないように）。
   展開する前に大きさを確かめ、一時ディレクトリに書いてから差し替えるので、書きかけのキャラクターをエージェントが読むこともない。
   LAN上の誰でも追加できるが、キャラクターのプロンプトで Claude Code のツールや権限は変わらないので、`/api/*` でできる以上のことはできない
 - **反映**: 画面から追加・削除するとエージェントに読み直させる。ファイルを直接直した場合も、エージェントが5秒ごとに変更を見て読み直す。
   応答や聞き取りの途中なら、待機に戻ってから差し替える。Claude の会話は全員の設定を入れ直した新しい会話になる
   （直近のやり取りは記録から引き継ぐ）
+
+#### アイコン
+
+チャットの吹き出し・話す相手・会話の一覧・「@」の候補と、Settings のキャラクター一覧に、キャラクターごとのアイコンを出す。
+`icon.png`（256px四方のPNG、512KBまで）が無いキャラクターは、名前の頭文字をキャラクターごとに決まった色の丸で出す。
+
+- **アイコンを作る**: VRMアバターの顔のアップを撮る（待機中の姿勢で少し笑った顔、こちらを見た向き）。
+  VRMのサムネイルはモデルによって全身・Tポーズ・無しとまちまちなので使わない。撮るのは押した端末のブラウザで、
+  モデルを別に読み込むので数十MB読む（重い端末では、ほかの端末で作るとよい）
+- **画像をアイコンに**: 選んだ画像の中央を正方形に切り抜いて256pxに縮めてから送る
+- アイコンのURLには更新時刻が付くので、置き換えると各端末がすぐ読み直す（同じ間はブラウザのキャッシュを使う）
+- API: `GET` / `PUT`（本文は `image/png`）/ `DELETE` `/api/voice/personas/:id/icon`
 
 - **記憶は全員で共有する**: Claude Code の会話は1本のままにして、全員の設定をシステムプロンプトに入れておき、
   質問ごとに `[話しかけられた相手: プラム]` を添えてそのキャラクターとして答えさせる。
@@ -413,6 +649,29 @@ Settings の「キャラクター」から、1人分のディレクトリをZIP�
 - whisper で名前を確かめる2段構えも試したが、whisper base が名前を崩す（プラム→クラム、あまなつ→マナツ）ため、
   正しい呼びかけを96件中34件弾いてしまい採用しなかった
 - 実際の人の声では精度が変わるはずなので、マイクをつないだら実際の声で確かめて `decoys` を調整する
+
+### 声（VOICEVOX / AivisSpeech）
+
+声のエンジンはキャラクターごとに選べる。どちらも `docker compose up -d` でホストのループバックにだけ公開して動かす。
+
+| エンジン | `voice.engine` | 話者の一覧 | 備考 |
+|---|---|---|---|
+| VOICEVOX | `"voicevox"`（省略時） | `http://127.0.0.1:50021/speakers` | 音素ごとの長さ・高さが取れるので、口パク・身振りが声にぴったり合う |
+| AivisSpeech | `"aivis"` | `http://127.0.0.1:10101/speakers` | 感情の乗った自然な声。初期の声は「まお」「コハク」 |
+
+```json
+"voice": { "engine": "aivis", "speaker": 888753764, "speed": 1.1 }
+```
+
+- **口パク**: AivisSpeech は `audio_query` の音素の長さ・高さをすべて 0 で返すので、合成した音声の長さを拍に配って
+  口パク・身振りの時系列を作る（`speech.estimate_lengths`。文の始まりと終わりは合うが、拍ごとには少しずれる）
+- **表情の声**: `expressions` の `voice.speaker` はキャラクターと同じエンジンの話者ID。エンジンを替えたら表情の声も
+  替える（直し忘れて話者が無いときは、黙らずにふだんの声で読み、エージェントのログとキャラクターの一覧に警告が出る）
+- **声を足す**: AivisHub（https://hub.aivis-project.com/）で試聴して、気に入ったモデルを入れる。
+  `curl -X POST 'http://127.0.0.1:10101/aivm_models/install' -F 'url=<AIVMXファイルのURL>'`
+  （モデルは compose のボリューム `aivisspeech-data` に残る）。モデルごとに利用規約が違うので、入れる前に確かめる
+- **重さ**: イメージは約7GB、起動時に BERT など約1.2GB を読み、メモリを2GBあまり使う。
+  使っているキャラクターがいなければ `docker compose stop aivisspeech` で止めてよい（エージェントは警告を出さない）
 
 ### VRMアバター
 
@@ -497,6 +756,7 @@ whisper と VOICEVOX はどちらも AVX の有無で大きく速度が変わる
 | whisper small（同） | 約5秒 |
 | VOICEVOX（5.3秒の音声、4スレッド） | 約4.3秒（既定のスレッド数では6.9秒） |
 | VOICEVOX（「はい。」0.6秒の音声） | 約0.85秒 |
+| AivisSpeech（2.6秒の音声） | 約2.9秒 |
 
 テキストで質問したときの内訳（Claude常駐・ダッシュボードのツールあり）はおおよそ次のとおりで、
 いま一番大きいのは読み上げの合成待ちになっている（画面には返答の文字が先に流れる）。
@@ -524,11 +784,14 @@ cd apps/voice-agent
 |---|---|
 | `tests/test_text.py` | 読み上げの文の区切り、（表情名）の読み取り（表情が続くこと・描写を隠すこと・数字入りの括弧は残すこと・声のスタイルの切り替え）、書き起こしからウェイクワード（キャラクター名）を落とす処理 |
 | `tests/test_listening.py` | キャラクターの呼び分けの精度（8人の声×正例12・負例26）、前後の無音・名前の前の間への強さ、命令の切り出し（一息で・間を空けて・言いよどみ）、呼ばれたキャラクターへの振り分け、タイムアウト、続けて話す、マイクボタン |
-| `tests/test_claude.py` | 偽の `claude` で、権限を絞るフラグ・渡すMCPの設定・常駐プロセスの使い回し・中止後の `--resume`・会話の作り直し・全キャラクターの設定と応答する相手の渡し方・新しい会話への記録の引き継ぎ |
-| `tests/test_voicevox.py` | 口パクの時系列の長さが、実際に合成した音声の長さと揃っているか |
+| `tests/test_claude.py` | 偽の `claude` で、権限を絞るフラグ・渡すMCPの設定・常駐プロセスの使い回し・中止後の `--resume`・会話の作り直し・全キャラクターの設定と応答する相手の渡し方・新しい会話への記録の引き継ぎ・チャットで選んだ会話への切り替え |
+| `tests/test_voicevox.py` | 口パクの時系列の長さが、実際に合成した音声の長さと揃っているか（VOICEVOX・AivisSpeech） |
+| `tests/test_mcp.py` | `claude mcp list` の読み取り、選んだコネクター・MCPサーバーから起動引数（`--mcp-config`・許可リスト・`--allowedTools`）を作る処理 |
+| `tests/test_browser.py` | 画面から話しかけたときの返答の声の鳴らし先（この端末・ホスト・声なし） |
 | `tests/test_personas.py` | キャラクターのディレクトリの読み込み（並び順・壊れた設定を飛ばす・一時ディレクトリを読まない）、変更の検知、語彙に無いウェイクワード・無い話者IDの警告、表情の身振りの推測 |
 
-サーバー側のキャラクターのパッケージ処理（検証・VRMの表情名・インポート/書き出し/削除・危険なパスのZIP）は
+サーバー側のキャラクターのパッケージ処理（検証・VRMの表情名・インポート/書き出し/削除・危険なパスのZIP）と
+コネクター・MCPの選択の保存（トークンの引き継ぎ・不正な名前やURLの拒否）は
 `cd apps/server && pnpm test`（Node のテストランナー）。
 
 `test_listening.py` は VOICEVOX Engine で発話を作り、実物の Vosk・Silero VAD・whisper に通す。
@@ -554,49 +817,46 @@ VOICE_OUTPUT_CMD="ffmpeg -loglevel error -re -i - -f null -" \
 ```
 
 > VOICEVOX の音声を公開・配布する場合はキャラクターごとの利用規約に従ってクレジット表記が必要。
+> AivisSpeech の声もモデルごとに利用規約（クレジット表記の要否など）が違う。
 > 家庭内で鳴らすだけなら表記の場は無いが、録画をSNSに載せる等の場合は注意。
 
-## ウィジェットの追加方法
+## 拡張機能（連携の足し方・外し方）
 
-各ウィジェットは `packages/widgets/<name>` に1つの独立したパッケージとして実装する。
+Spotify・Home Assistant・天気などの連携と、Media・チャットの画面は、すべて「拡張機能」になっている。1つの拡張機能は1つのフォルダで、
+サーバー側（API・音声アシスタントのツール）・画面側（ウィジェット・サイドバーの画面）・接続設定の項目をまとめて持つ。
 
-1. `packages/widgets/<name>/` を作成し、既存のウィジェット（例: `clock`）の `package.json` / `tsconfig.json` を
-   コピーしてパッケージ名を変更する
-2. `src/index.tsx` で `@home-dashboard/widget-sdk` の `defineWidget()` を使ってウィジェットを定義する
+- **入／切**: 設定画面の「拡張機能」で、管理者が入／切する。再起動もビルドし直しも要らず、つないでいるすべての画面がすぐ読み直す。
+  切った拡張機能は、API・音声アシスタントのツール・接続設定の節・サイドバーの画面・ウィジェットの追加の一覧から消える。
+  置いてあったウィジェットは「拡張機能が切ってある」と出たまま場所を残し、入れ直すと戻る（編集中なら削除もできる）
+- **持ち込み**: 設定画面の「拡張機能を持ち込む（ZIP）」で入れる。同じ名前のものを入れると入れ替わる。
+  持ち込んだものは `data/extensions/<id>/` に置かれ、「消す」（2度押し）で消せる。
+  拡張機能が書いたデータ（`data/extension-data/<id>/`）と接続設定は、消しても残る
+- **本体の拡張機能**（`extensions/*`）は切れるが消せない。持ち込んだものと同じ名前は使えない
+- **持ち込んだものは別のプロセスで動く**: ZIP・リポジトリから入れた拡張機能のサーバー側は、Node の権限の仕組み（`--permission`）を
+  付けた別のプロセスで動かす。読めるのはその拡張機能のファイルと `data/extension-data/<id>/`、書けるのはその置き場だけで、
+  アカウント・`.env`・ほかの拡張機能のトークンには触れられない。子プロセスも起動できず、環境変数も渡さない（接続設定はその拡張機能の分だけ渡す）。
+  ネットへの通信は止められない。動かないもの（ホストのファイルを読む・コマンドを使うなど）は、拡張機能の詳細の
+  「本体と同じ権限で動かす」で管理者が信頼できる。信頼したものは自動では更新しない（更新は管理者が押す）。
+  この仕組みを入れる前から入っていたものは、急に動かなくならないよう信頼した扱いで始まる（後から外せる）
+- **本体の拡張機能**（`extensions/*`）は本体と同じプロセスで動く
 
-   ```tsx
-   import { defineWidget, type WidgetProps } from "@home-dashboard/widget-sdk";
+### 作り方
 
-   interface MyConfig { /* ウィジェット固有の設定 */ }
+手引きは [docs/extensions.md](docs/extensions.md)。ひな形は `pnpm new:extension <id> [--widget] [--screen] [--server] [--provides <口>]` で作り、
+`pnpm build:extension <フォルダ> [--zip]` で組み立てる。見本は `examples/extensions/memo`。
 
-   function MyWidgetView({ config, ctx, openDetail }: WidgetProps<MyConfig>) {
-     return <div className="widget-card">...</div>;
-   }
-
-   export default defineWidget<MyConfig>({
-     id: "my-widget",
-     name: "マイウィジェット",
-     // レールでは 1行 = 200px（`w` は使わない）
-     defaultSize: { w: 3, h: 1 },
-     defaultConfig: {},
-     Component: MyWidgetView,
-     // 詳細ビューが必要な場合は DetailComponent も渡す
-   });
-   ```
-
-   - サーバーAPIを呼ぶ場合は `usePolling(fetcher, intervalMs)`（widget-sdk提供）でポーリングする
-   - 見た目は `widget-card` クラス（`apps/web/src/styles/theme.css` で定義されたガラス調カード）に
-     揃えると他のウィジェットとトーンが統一される
-   - 詳細ビューを持たせたい場合は `DetailComponent` を実装する。`widget-detail` クラスがベーススタイル
-
-3. `apps/web/package.json` の `dependencies` に新パッケージを追加し、
-   `apps/web/src/widgets.ts` で `widgetRegistry.register(...)` する
-
-これでサイドバーの Settings パネルの「ウィジェットを追加」に表示され、レールに追加できるようになる。
+- **形**: 自分でウィジェット・画面を持つもの（Media・チャット・Home Assistant など）と、ほかの拡張機能の**機能の口**へ入るもの
+  （Media の「音楽アプリ」に入る wave・Spotify）がある。設定画面の一覧も、この形で分かれて並ぶ
+- **デザイン**: 見た目は `@home-dashboard/widget-sdk` の本体の部品（`WidgetCard`・`Button`・`List`/`ListItem`・`Field`・`Group` など）で組み、
+  拡張機能の CSS には並べ方だけを書く
+- **本体の拡張機能を足す**ときは `extensions/<id>/` に置くだけでよい（`pnpm build:extensions` がビルドし、サーバーが見つける）
+- **リポジトリから入れる・更新する**: `pnpm publish:extensions --push` で公開用の枝に置き、設定画面の「拡張機能 → リポジトリ」で登録する。
+  新しい版は知らせが出て押すと入れ替わり、拡張機能ごとに自動で更新もできる（本体に入っている拡張機能も更新できる。
+  リポジトリの版で置き換えたものは別のプロセスで動く）。更新と自動更新の切り替えは管理者だけ
 
 ## ロードマップ
 
-実装済み: 基盤（ウィジェットプラグイン機構・トップ画面・Docker配布）＋ウィジェット10種
+実装済み: 基盤（ウィジェットプラグイン機構・拡張機能（入切・ZIP の持ち込み）・トップ画面・Docker配布）＋ウィジェット10種
 （時計・天気・Spotify・ホームラボ死活監視・HA家電操作・HA室温湿度・Claude Code使用量・
 Tailscale・gitリポジトリ・メール）。当初構想していた連携ウィジェットはメールを除きすべて実データで動作確認済み
 （メールのみ認証情報が未設定のため未接続表示のまま）。
@@ -606,7 +866,7 @@ Tailscale・gitリポジトリ・メール）。当初構想していた連携�
 
 未着手:
 
-- Home以外の画面（Media / Home Control / Toolbox）
+- Toolbox 画面
 - 設計図がまだ無いウィジェット（ホームラボ・Tailscale・git・メール等）のカードデザイン
   （現状は650x200のカードに旧レイアウトの中身がそのまま入っているだけ）
 - 時間帯・再生状況等に応じたウィジェットの自動出現/レイアウト変更

@@ -6,6 +6,7 @@
 
    余白・角丸・フォントサイズ・トランジションなどの数値は上記の設計図の指定をそのまま
    採用している。数値を変えるときは設計図側と揃えること。
+   どの値・部品をどこでどう使うかは docs/design-system.md にまとめてある。
    ========================================================================== */
 
 :root {
@@ -18,24 +19,132 @@
   /* サイドバーはドラッグでリサイズするため JS から上書きされる（80〜240px） */
   --sidebar-width: 80px;
 
+  /*
+   * テーマの色（「r, g, b」の形）。既定は青。壁紙を読み込んだときに、壁紙の色合いに合わせて差し替える（lib/wallpaperTheme.ts）。
+   * - accent: 選んでいる所・自分の吹き出し・光るもの / accent-soft: 文字のリンク・フォーカスの縁
+   * - tint: 明るいボタンの地・ガラスの縁 / ink: 明るいボタンの上の文字 / shade: 壁紙を暗くする色・文字の影
+   */
+  --accent-rgb: 71, 198, 255;
+  --accent-soft-rgb: 138, 220, 248;
+  --tint-rgb: 224, 247, 255;
+  --ink-rgb: 6, 32, 59;
+  --shade-rgb: 1, 7, 18;
   --line: rgba(255, 255, 255, 0.14);
   --text: #f7fbff;
-  --muted: #a9bdd2;
+  /* 薄い文字（説明・日時など）。明るい壁紙の上でも読めるよう、前の #a9bdd2 より明るくした */
+  --muted: #c4d4e4;
   --text-primary: var(--text);
   --text-secondary: var(--muted);
   --accent-ok: #4ade80;
   --accent-warn: #fbbf24;
 
-  /* ウィジェットの基本寸法。650x200px・内側余白30px・角丸45px。
+  /* ウィジェットの基本寸法。650x200px・内側余白30px・角丸45px（高さと間は WidgetRail の rowHeight・margin が持つ）。
      アートワーク等の内側要素は「外側の角丸 − 内側余白」を角丸にすると縁が平行になる。 */
-  --card-height: 200px;
-  --card-gap: 30px;
   --card-radius: 45px;
   --card-padding: 30px;
   --inner-radius: calc(var(--card-radius) - var(--card-padding));
+  /*
+   * 設定画面の入れ物（一覧・区画・知らせ）の寸法。どの入れ物もこの値だけを使う。
+   * - --group-padding: 入れ物の内側の余白。左右は常にこれ。中に入力欄などを並べる区画は、上下もこれ
+   * - --group-row-padding: 線で区切った一覧の1行（名前と説明だけの行）と、開け閉めする区画の見出しの行の、上下の余白。
+   *   文章を何行も載せるもの（キャラクターの知らせなど）は、区画と同じく上下も --group-padding にする
+   * - --group-gap: 入れ物と入れ物のあいだ
+   * - --group-radius: 入れ物の角丸。中の入力欄・ボタン（角丸 --inner-radius）と縁が平行になるよう「中の角丸 ＋ 内側の余白」
+   * - --field-padding-x: 入力欄・コードの枠・入れ物の中の知らせの、左右の余白
+   */
+  --group-padding: 1rem;
+  --group-row-padding: 0.8rem;
+  --group-gap: 0.75rem;
+  --group-radius: calc(var(--inner-radius) + var(--group-padding));
+  --field-padding-x: 0.9rem;
+  /* 設定の左の項目一覧。アイコンの角丸と、項目の上下左右の余白（選んだ項目の角丸はこの2つから決まる） */
+  --nav-icon-radius: 0.6rem;
+  --nav-item-padding: 0.5rem;
 
   --glass-bg: rgba(255, 255, 255, 0.08);
-  --glass-border: rgba(225, 244, 255, 0.16);
+  /*
+   * ウィジェットのカードの見た目（暗い背景・左上の光沢・影・ぼかし）。画面のボタンやパネルも同じ見た目にするため、値をここにまとめる。
+   * カード以外では、光沢を背景に重ねて使う（background: var(--widget-sheen), var(--widget-bg)）
+   */
+  --widget-bg: linear-gradient(0deg, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.25));
+  --widget-sheen: linear-gradient(120deg, rgba(255, 255, 255, 0.1), transparent 33%);
+  --widget-shadow: 0 14px 32px -16px rgba(0, 6, 20, 0.28);
+  /* ガラスの後ろの壁紙のぼかし（明るい所は、壁紙に合わせて足す暗さ（--wallpaper-dim-*）で抑える） */
+  --widget-blur: blur(5px);
+  /* 壁紙にじかに置く文字の影。濃さ（--text-halo-strength）は、壁紙に足した暗さの後に残る明るさで決める（wallpaperTheme.ts） */
+  --text-halo-strength: 0.6;
+  --text-halo:
+    0 0 2px rgba(var(--shade-rgb), calc(0.3 * var(--text-halo-strength))),
+    0 0 8px rgba(var(--shade-rgb), calc(0.3 * var(--text-halo-strength))),
+    0 0 20px rgba(var(--shade-rgb), calc(0.25 * var(--text-halo-strength)));
+  /* 画面の上に重ねる詳細・ウィジェットの追加などの下敷き。どれも同じ暗さとぼかしにする */
+  --modal-backdrop: rgba(var(--shade-rgb), 0.55);
+  --modal-backdrop-blur: blur(4px);
+  --glass-border: rgba(var(--tint-rgb), 0.16);
+
+  /*
+   * 字の大きさの段（docs/design-system.md の「字」）。役割で選ぶ。ここに無い大きさを新しく作らない
+   * - micro: 出典・小さなバッジ / caption: 行の2行目・日時・入力欄の下の説明 / note: 注記・結果の知らせ
+   * - label: 区画の見出し・ボタン / small: 画面の区画の見出し・入力欄 / body: 一覧の行の名前・設定の項目
+   * - title: カード・小窓の中の見出し / heading: 設定のページの見出し
+   */
+  --font-micro: 0.7rem;
+  --font-caption: 0.75rem;
+  --font-note: 0.8rem;
+  --font-label: 0.85rem;
+  --font-small: 0.9rem;
+  --font-body: 0.95rem;
+  --font-title: 1.1rem;
+  --font-heading: 1.25rem;
+
+  /* 余白の段。新しく書くときはここから選ぶ（今ある直書きは、同じ値のまま少しずつ置き換える） */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+
+  /* 重なりの順。下から、画面・つまみ・下のタブバー・音声の起動ボタン・メニューと詳細・編集の操作帯・小窓・音声のパネル・音声の確かめ */
+  --z-base: 1;
+  --z-handle: 2;
+  --z-tabbar: 3;
+  --z-launcher: 5;
+  --z-popover: 10;
+  --z-bar: 15;
+  --z-snackbar: 20;
+  --z-modal: 30;
+  --z-voice: 40;
+  --z-guard: 50;
+
+  /*
+   * 状態の色と、浮かせる面・入力欄の地。
+   * - danger: エラーの文字 / danger-strong: 危ない操作・止まっている印 / success: うまくいった知らせの文字
+   * - surface-raised: 小窓・メニューの面（ぼかさず、ほぼ不透明） / surface-input: 入力欄・コードの枠の地
+   */
+  --danger: #ff9a9a;
+  --danger-strong: #f87171;
+  --success: rgba(160, 240, 200, 0.95);
+  --surface-raised: rgba(10, 23, 48, 0.95);
+  --surface-input: rgba(5, 14, 30, 0.5);
+
+  /*
+   * 動き（docs/design-system.md の「動き」）。時間は3段と、追加したものを知らせる長い光だけ。曲線は3つ。
+   * - fast: 色・押した縮み・hover / base: トグル・メニュー・タブ・中身の入れ替え / slow: 小窓・画面の切り替え
+   * - out: 出てくるもの（減速して止まる）/ in: 消えるもの（加速して去る）/ standard: その場で形や色が変わるもの
+   * 動きを減らす設定（prefers-reduced-motion）では、時間を全部 0 にする（下の @media）
+   */
+  --motion-fast: 120ms;
+  --motion-base: 200ms;
+  --motion-slow: 280ms;
+  --motion-reveal: 1600ms;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  /* 出てくるときの距離。小さく、短く（大きく動かすと、ガラスのぼかしの描き直しが増えて重い） */
+  --motion-rise: 10px;
 
   /* 設計図の寸法はすべて px なのでこの値の影響を受けない。
      ここで効くのはウィジェット内部の rem 指定だけで、壁掛けパネルでの可読性のために
@@ -43,8 +152,29 @@
   font-size: clamp(14px, 1.1vw, 20px);
 }
 
+/*
+ * 軽い表示（lib/lite.ts。弱い端末向け）。ガラスのぼかしを切り、後ろが透けない落ち着いた板にする。
+ * ぼかしの無い分、板を濃くして壁紙の上でも文字を読めるようにする。拡張機能が自分で書いたぼかしもまとめて切る
+ */
+:root[data-lite] {
+  --widget-blur: none;
+  --modal-backdrop-blur: none;
+  --widget-bg: linear-gradient(0deg, rgba(var(--shade-rgb), 0.52), rgba(var(--shade-rgb), 0.62));
+  --modal-backdrop: rgba(var(--shade-rgb), 0.78);
+}
+
+:root[data-lite] *,
+:root[data-lite] *::before,
+:root[data-lite] *::after {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
 * {
   box-sizing: border-box;
+  /* タップしたときにブラウザが重ねる青い半透明の覆いを出さない（押したことは、ボタン自身が縮む・色が変わるので分かる）。
+     キーボードで動かしたときの枠（:focus-visible）は残す */
+  -webkit-tap-highlight-color: transparent;
 }
 
 html,
@@ -65,6 +195,17 @@ body {
 button {
   color: inherit;
   font: inherit;
+}
+
+/* スクロールバーは、ふだんは隠し、スクロールしている間だけ細く出す（lib/scrollbars.ts が .is-scrolling を付け外しする）。
+   隠す間も幅は取っておくので、出し入れで中身がずれない */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.is-scrolling {
+  scrollbar-color: rgba(204, 237, 255, 0.65) transparent;
 }
 
 /* フォント由来の上下余白を取り除き、設計図どおりのベースライン整列にする */
@@ -93,13 +234,11 @@ button {
   height: 100svh;
   overflow: hidden;
   background-color: #071226;
-  background-image:
-    linear-gradient(to right, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.4) 50%, rgba(0, 0, 0, 0) 70%),
-    var(--dash-background-image),
-    var(--dash-background-fallback);
+  /* 文字の後ろの暗さは、壁紙を測って場所ごとに足す（.app-shell::after の --wallpaper-dim-*） */
+  background-image: var(--dash-background-image), var(--dash-background-fallback);
   background-repeat: no-repeat;
   background-position: center;
-  background-size: auto, cover, cover;
+  background-size: cover, cover;
 }
 
 .app-shell::after {
@@ -108,8 +247,16 @@ button {
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(circle at 74% 42%, rgba(74, 199, 255, 0.13), transparent 34%),
-    linear-gradient(180deg, rgba(7, 15, 34, 0.18), rgba(1, 7, 18, 0.55));
+    /* 壁紙の明るさに合わせて足す暗さ（壁紙を読み込んだときに測る。lib/wallpaperTheme.ts） */
+    linear-gradient(
+      to right,
+      rgba(var(--shade-rgb), var(--wallpaper-dim-1, 0.4)) 12%,
+      rgba(var(--shade-rgb), var(--wallpaper-dim-2, 0)) 42%,
+      rgba(var(--shade-rgb), var(--wallpaper-dim-3, 0)) 67%,
+      rgba(var(--shade-rgb), var(--wallpaper-dim-4, 0)) 90%
+    ),
+    radial-gradient(circle at 74% 42%, rgba(var(--accent-rgb), 0.13), transparent 34%),
+    linear-gradient(180deg, rgba(var(--shade-rgb), 0.18), rgba(var(--shade-rgb), 0.55));
 }
 
 .app-loading {
@@ -121,13 +268,15 @@ button {
 }
 
 .sidebar {
-  z-index: 1;
+  z-index: var(--z-base);
   display: flex;
   flex-direction: column;
   min-width: 0;
   gap: 12px;
   padding: 12px;
-  overflow: hidden;
+  /* はみ出しは切るが、選んでいるボタンの影（左右 22px まで届く）は余白の外まで出す */
+  overflow: clip;
+  overflow-clip-margin: 12px;
 }
 
 .nav-button {
@@ -144,19 +293,25 @@ button {
   cursor: pointer;
   text-align: left;
   white-space: nowrap;
-  transition: 0.2s ease;
+  transition:
+    background-color var(--motion-base) var(--ease-standard),
+    color var(--motion-base) var(--ease-standard),
+    box-shadow var(--motion-base) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-standard);
 }
 
 .nav-button__label {
   opacity: 0;
   transform: translateX(-7px);
-  transition: 0.2s ease;
+  transition:
+    opacity var(--motion-base) var(--ease-standard),
+    transform var(--motion-base) var(--ease-out);
 }
 
 .nav-button:not(:disabled):hover,
 .nav-button--active {
-  color: #06203b;
-  background: rgba(224, 247, 255, 0.94);
+  color: rgb(var(--ink-rgb));
+  background: rgba(var(--tint-rgb), 0.94);
   box-shadow: 0 7px 22px rgba(2, 12, 32, 0.3);
 }
 
@@ -172,7 +327,7 @@ button {
 }
 
 .sidebar-handle {
-  z-index: 2;
+  z-index: var(--z-handle);
   position: relative;
   display: flex;
   align-items: center;
@@ -191,8 +346,8 @@ button {
   border-radius: 9px;
   background: rgba(218, 244, 255, 0.62);
   transition:
-    background 0.2s,
-    box-shadow 0.2s;
+    background-color var(--motion-base) var(--ease-standard),
+    box-shadow var(--motion-base) var(--ease-standard);
 }
 
 .sidebar-handle:hover .sidebar-handle__grip,
@@ -209,13 +364,199 @@ body.is-resizing {
 /* メイン画面は「余白・時計・余白・ウィジェット・余白」の5カラム。
    3つの余白は minmax(24px, 1fr) で均等に伸縮する。 */
 .main-screen {
-  z-index: 1;
+  z-index: var(--z-base);
   display: grid;
   grid-template-columns:
     minmax(24px, 1fr) auto minmax(24px, 1fr) clamp(420px, 37vw, 710px)
     minmax(24px, 1fr);
   height: 100svh;
   overflow: hidden;
+}
+
+.main-screen[hidden] {
+  display: none;
+}
+
+/* --- サイドバーから開く画面（Media・Home Control）の共通の枠 --- */
+
+.screen {
+  z-index: var(--z-base);
+  grid-column: 3;
+  height: 100svh;
+  min-width: 0;
+  overflow-y: auto;
+  /*
+   * 画面ごとの背景（暗くする・ぼかす）は載せない。ホームと同じく、背景の写真と全体の暗さ（.app-shell::after）だけにする
+   * （載せると、その画面の範囲だけ色が変わって、サイドバーとのあいだにくっきりした境界が出る）
+   */
+}
+
+.screen__inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 40px clamp(16px, 3vw, 48px) 80px;
+}
+
+.screen__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.screen__header h1 {
+  margin: 0;
+  font-size: clamp(28px, 2.6vw, 44px);
+  font-weight: 600;
+}
+
+.screen__section {
+  margin-bottom: 2.5rem;
+}
+
+/*
+ * 横長で背の低い画面（もともと想定している横長のディスプレイなど）。中身の幅の上限を外して横に広く使い、見出しと余白を詰める。
+ * --screen-header-space は、画面の高さに収めたい中身（Media など）が、見出しと余白の分を引くのに使う
+ */
+@media (min-aspect-ratio: 2/1) and (max-height: 820px) {
+  .screen {
+    --screen-header-space: 110px;
+  }
+
+  .screen__inner {
+    max-width: none;
+    padding: 20px clamp(20px, 2.5vw, 40px) 24px;
+  }
+
+  .screen__header {
+    margin-bottom: 1rem;
+  }
+
+  .screen__header h1 {
+    font-size: 30px;
+  }
+
+  .screen__section {
+    margin-bottom: 1.5rem;
+  }
+}
+
+/* 広い画面では節を2列に流す（左にセンサーと鍵、右に空調と照明など） */
+.screen__columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 520px), 1fr));
+  gap: 0 clamp(24px, 3vw, 48px);
+  align-items: start;
+}
+
+.screen__section-title {
+  margin: 0 0 1rem;
+  color: var(--text-secondary);
+  font-size: var(--font-small);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.screen__notice {
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.screen__error {
+  margin: 0 0 1.25rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--inner-radius);
+  background: rgba(248, 113, 113, 0.16);
+  color: #fecaca;
+  line-height: 1.5;
+}
+
+/* 画面の中のボタン類（大きめにして、壁掛けのタッチでも押しやすくする） */
+.home-button {
+  min-height: 52px;
+  padding: 0 1.4rem;
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  color: var(--text-primary);
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--widget-sheen), var(--widget-bg);
+  /* 縁の線の下に光沢・背景を敷かない（敷くと、光沢の濃淡で線が所々暗く見える） */
+  background-clip: padding-box;
+  box-shadow: var(--widget-shadow);
+  backdrop-filter: var(--widget-blur);
+}
+
+.home-button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.home-button--primary {
+  border-color: transparent;
+  background: rgba(var(--tint-rgb), 0.94);
+  color: rgb(var(--ink-rgb));
+}
+
+.home-button--danger {
+  border-color: transparent;
+  background: #fbbf24;
+  color: #3b2300;
+}
+
+.home-button--ghost {
+  background: transparent;
+  font-weight: 400;
+}
+
+.home-icon-button {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  padding: 0;
+  border: 1px solid var(--glass-border);
+  border-radius: 50%;
+  color: var(--text-primary);
+  cursor: pointer;
+  background: var(--widget-sheen), var(--widget-bg);
+  /* 縁の線の下に光沢・背景を敷かない（敷くと、光沢の濃淡で線が所々暗く見える） */
+  background-clip: padding-box;
+  box-shadow: var(--widget-shadow);
+  backdrop-filter: var(--widget-blur);
+}
+
+.home-icon-button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.home-icon-button--on {
+  border-color: transparent;
+  background: rgba(var(--tint-rgb), 0.94);
+  color: rgb(var(--ink-rgb));
+}
+
+.home-chip {
+  min-height: 40px;
+  padding: 0 1rem;
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  color: var(--text-primary);
+  cursor: pointer;
+  background: var(--widget-sheen), var(--widget-bg);
+  /* 縁の線の下に光沢・背景を敷かない（敷くと、光沢の濃淡で線が所々暗く見える） */
+  background-clip: padding-box;
+  box-shadow: var(--widget-shadow);
+  backdrop-filter: var(--widget-blur);
+}
+
+.home-chip--on {
+  border-color: transparent;
+  background: rgba(var(--tint-rgb), 0.94);
+  color: rgb(var(--ink-rgb));
 }
 
 /* --- 時計・天気・日付 --- */
@@ -325,8 +666,6 @@ body.is-resizing {
   grid-column: 4;
   min-height: 0;
   overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(204, 237, 255, 0.65) transparent;
 }
 
 /* 上余白で先頭ウィジェットが画面中央に来るようにし、
@@ -349,7 +688,7 @@ body.is-resizing {
 
 .react-grid-item.react-grid-placeholder {
   border-radius: var(--card-radius);
-  background: rgba(224, 247, 255, 0.18);
+  background: rgba(var(--tint-rgb), 0.18);
   opacity: 1;
 }
 
@@ -364,15 +703,58 @@ body.is-resizing {
   height: 100%;
 }
 
-.widget-host__remove {
+/* --- 編集モード（並べ替え・削除） --- */
+
+/* 編集中はカードの中身を押せないようにする（押すと詳細が開いたり照明が切り替わったりするため）。
+   上に重ねた層は縦のスクロールだけ通すので、タッチ端末でも列をスクロールできる */
+.widget-host__edit {
   position: absolute;
-  top: 10px;
-  right: 10px;
-  z-index: 2;
+  inset: 0;
+  z-index: var(--z-handle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 18px;
+  border: 2px dashed rgba(var(--tint-rgb), 0.55);
+  border-radius: var(--card-radius);
+  background: rgba(6, 18, 40, 0.35);
+  touch-action: pan-y;
+}
+
+.widget-host__drag {
   display: grid;
   place-items: center;
+  width: 56px;
+  height: 120px;
+  border-radius: 28px;
+  background: rgba(230, 246, 255, 0.92);
+  color: #09223c;
+  cursor: grab;
+  /* つまみの上だけはスクロールではなくドラッグにする */
+  touch-action: none;
+}
+
+.widget-host__drag:active {
+  cursor: grabbing;
+}
+
+.widget-host__grip {
   width: 28px;
   height: 28px;
+  background-color: currentColor;
+  mask: url("/icons/re_order_dots_vertical_24_regular.svg") center / contain no-repeat;
+}
+
+.widget-host__edit-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.widget-host__edit-button {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
   padding: 0;
   border: 0;
   border-radius: 50%;
@@ -381,9 +763,187 @@ body.is-resizing {
   cursor: pointer;
 }
 
-.widget-host__remove .fluent-icon {
-  width: 16px;
-  height: 16px;
+.widget-host__edit-button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.widget-host__edit-button--remove {
+  background: #ffd9d9;
+  color: #6b0d0d;
+}
+
+.widget-host__edit-button .fluent-icon {
+  width: 24px;
+  height: 24px;
+}
+
+.widget-host--revealed > .widget-card,
+.widget-host--revealed > button.widget-card {
+  animation: widget-reveal var(--motion-reveal) var(--ease-out);
+}
+
+@keyframes widget-reveal {
+  0%,
+  40% {
+    box-shadow: 0 0 0 4px rgba(var(--tint-rgb), 0.9);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(var(--tint-rgb), 0);
+  }
+}
+
+/* 編集中は下の操作帯に隠れないよう、列の下に余白を足す */
+.widget-rail--editing .widget-stack {
+  padding-bottom: 160px;
+}
+
+.widget-edit-bar {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  z-index: var(--z-bar);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: calc(100vw - 32px);
+  padding: 10px 10px 10px 24px;
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  background: rgba(10, 23, 48, 0.94);
+  box-shadow: 0 14px 32px -12px rgba(0, 6, 20, 0.6);
+  transform: translateX(-50%);
+}
+
+.widget-edit-bar__hint {
+  color: var(--text-secondary);
+  font-size: var(--font-label);
+  white-space: nowrap;
+}
+
+.widget-edit-bar__button {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 48px;
+  padding: 0 1.25rem;
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  background: var(--glass-bg);
+  color: var(--text-primary);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.widget-edit-bar__button--primary {
+  border-color: transparent;
+  background: rgba(var(--tint-rgb), 0.94);
+  color: rgb(var(--ink-rgb));
+}
+
+.widget-picker-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: var(--modal-backdrop);
+  backdrop-filter: var(--modal-backdrop-blur);
+}
+
+.widget-picker {
+  width: min(36rem, 100%);
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: var(--card-padding);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--card-radius);
+  background: rgba(10, 23, 48, 0.97);
+}
+
+.widget-picker__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.widget-picker__header h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.widget-picker__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.widget-picker__item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  width: 100%;
+  height: 100%;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--inner-radius);
+  background: var(--glass-bg);
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.widget-picker__item:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.widget-picker__name {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+}
+
+.widget-picker__placed {
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(var(--tint-rgb), 0.16);
+  color: var(--text-secondary);
+  font-size: var(--font-micro);
+  font-weight: 400;
+}
+
+.widget-picker__desc {
+  color: var(--text-secondary);
+  font-size: var(--font-note);
+  line-height: 1.5;
+}
+
+.settings-panel__widget-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.settings-panel__widget-actions .settings-panel__edit-toggle {
+  margin-bottom: 0;
+}
+
+@media (max-width: 620px) {
+  .widget-edit-bar {
+    bottom: 80px;
+  }
+
+  .widget-edit-bar__hint {
+    display: none;
+  }
 }
 
 /* --- ウィジェットカードの外装 --- */
@@ -401,9 +961,9 @@ body.is-resizing {
   padding: var(--card-padding);
   border: 1px solid var(--glass-border);
   border-radius: var(--card-radius);
-  background: linear-gradient(0deg, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.25));
-  box-shadow: 0 14px 32px -16px rgba(0, 6, 20, 0.28);
-  backdrop-filter: blur(5px);
+  background: var(--widget-bg);
+  box-shadow: var(--widget-shadow);
+  backdrop-filter: var(--widget-blur);
   color: var(--text-primary);
   text-align: left;
   cursor: default;
@@ -415,7 +975,9 @@ body.is-resizing {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: linear-gradient(120deg, rgba(255, 255, 255, 0.1), transparent 33%);
+  background: var(--widget-sheen);
+  /* 縁の線の下に光沢・背景を敷かない（敷くと、光沢の濃淡で線が所々暗く見える） */
+  background-clip: padding-box;
 }
 
 button.widget-card {
@@ -452,295 +1014,17 @@ button.widget-card {
   font-size: 1rem;
 }
 
-/* --- 天気ウィジェット --- */
-
-.widget-weather {
-  flex-direction: row;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.widget-weather__icon {
-  font-size: 2rem;
-}
-
-.widget-weather__temp {
-  font-size: 1.5rem;
-  font-weight: 700;
-}
-
-.widget-weather__condition {
-  color: var(--text-secondary);
-}
-
-.widget-weather__status--error {
-  color: var(--accent-warn);
-}
-
-/* --- Spotifyメディア（設計図の Media カード） --- */
-
-.widget-spotify {
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-}
-
-.widget-spotify__meta {
-  min-width: 0;
-}
-
-.widget-spotify__title {
-  margin: 0;
-  overflow: hidden;
-  font-size: clamp(21px, 2vw, 31px);
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.widget-spotify__artist {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.widget-spotify__controls {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  margin-top: 22px;
-}
-
-.widget-spotify__controls button {
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: transparent;
-  color: #e4f3ff;
-  opacity: 0.88;
-  cursor: pointer;
-  transition: opacity 0.2s ease;
-}
-
-.widget-spotify__controls button:hover {
-  opacity: 1;
-}
-
-.widget-spotify__controls .fluent-icon {
-  width: 20px;
-  height: 20px;
-}
-
-/* シャッフル・リピートはオン/オフのトグルなので、オンのときだけ色を強める */
-.widget-spotify__controls .widget-spotify__toggle {
-  opacity: 0.45;
-}
-
-.widget-spotify__controls .widget-spotify__toggle--on {
-  color: #8bdcff;
-  opacity: 1;
-}
-
-.widget-spotify__controls .widget-spotify__play {
-  width: 40px;
-  height: 40px;
-  background: #e6f6ff;
-  color: #09223c;
-  opacity: 1;
-}
-
-.widget-spotify__controls .widget-spotify__play .fluent-icon {
-  width: 18px;
-  height: 18px;
-}
-
-.widget-spotify__art {
-  flex: 0 0 140px;
-  width: 140px;
-  height: 140px;
-  border-radius: var(--inner-radius);
-  object-fit: cover;
-}
-
-.widget-spotify__art--placeholder {
-  display: grid;
-  place-items: center;
-  background: linear-gradient(135deg, #f4c6a9 0%, #dd825a 31%, #293d77 32%, #172f64 64%, #f2a0ba 65%);
-  color: rgba(255, 255, 255, 0.84);
-  font-size: 72px;
-  font-weight: 700;
-}
-
-.widget-spotify__hint {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-}
-
-/* --- ホームラボ死活監視 --- */
-
-.widget-homelab {
-  flex-direction: row;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.widget-homelab__dot {
-  width: 0.6rem;
-  height: 0.6rem;
-  border-radius: 50%;
-  background: var(--accent-warn);
-}
-
-.widget-homelab__dot--ok {
-  background: var(--accent-ok);
-}
-
-/* --- Home Assistant 家電操作 --- */
-
-.ha-controls {
-  align-items: stretch;
-  justify-content: flex-start;
-  gap: 0.5rem;
-}
-
-.ha-controls__grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr));
-  gap: 0.5rem;
-  width: 100%;
-}
-
-.ha-controls__grid--detail {
-  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
-}
-
-.ha-entity {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.1rem;
-  padding: 0.5rem 0.6rem;
-  border-radius: var(--inner-radius);
-  border: 1px solid var(--glass-border);
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--text-primary);
-  cursor: pointer;
-  font: inherit;
-  text-align: left;
-  transition: background 0.15s ease;
-}
-
-.ha-entity--on {
-  background: rgba(250, 204, 21, 0.22);
-  border-color: rgba(250, 204, 21, 0.5);
-}
-
-.ha-entity--readonly {
-  cursor: not-allowed;
-  opacity: 0.55;
-}
-
-.ha-entity__icon {
-  font-size: 1.1rem;
-}
-
-.ha-entity__name {
-  font-size: 0.8rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
-}
-
-.ha-entity__state {
-  font-size: 0.7rem;
-  color: var(--text-secondary);
-}
-
-.ha-controls__more {
-  align-self: flex-start;
-  background: none;
-  border: none;
-  color: var(--text-secondary);
-  font-size: 0.75rem;
-  cursor: pointer;
-  padding: 0;
-}
-
-.ha-controls__error {
-  font-size: 0.75rem;
-  color: var(--accent-warn);
-}
-
-.ha-controls__note {
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-  margin: 0 0 0.75rem;
-}
-
-/* --- Home Assistant 室温・湿度 --- */
-
-.ha-climate {
-  flex-direction: row;
-  align-items: center;
-  gap: 1rem;
-}
-
-.ha-climate__reading {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-
-.ha-climate__icon {
-  font-size: 1.2rem;
-}
-
-.ha-climate__value {
-  font-size: 1.3rem;
-  font-weight: 600;
-}
-
-.ha-climate-detail__list {
-  list-style: none;
-  padding: 0;
-  margin: 0 0 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-
-.ha-climate-detail__item {
-  display: flex;
-  align-items: baseline;
-  gap: 0.75rem;
-}
-
-.ha-climate-detail__state {
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-}
-
-.ha-climate-detail__value {
-  margin-left: auto;
-  font-variant-numeric: tabular-nums;
-}
-
 /* --- 詳細ビュー --- */
 
 .widget-detail-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--modal-backdrop);
+  backdrop-filter: var(--modal-backdrop-blur);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 10;
+  z-index: var(--z-popover);
 }
 
 .widget-detail-panel {
@@ -751,7 +1035,7 @@ button.widget-card {
   overflow-y: auto;
   padding: var(--card-padding);
   border-radius: var(--card-radius);
-  background: rgba(10, 23, 48, 0.95);
+  background: var(--surface-raised);
   border: 1px solid var(--glass-border);
 }
 
@@ -768,95 +1052,1001 @@ button.widget-card {
   cursor: pointer;
 }
 
-.widget-weather-detail__current {
-  display: flex;
+/* --- 画面の右上のピル型のボタン（widget-sdk の PillMenu。Media・Home Control） --- */
+
+.pill-menu {
+  position: relative;
+}
+
+.pill-menu__button {
+  display: inline-flex;
   align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
-}
-
-.widget-weather-detail__chart {
-  display: flex;
-  align-items: flex-end;
-  gap: 0.4rem;
-  height: 8rem;
-}
-
-.widget-weather-detail__bar-wrap {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
-  height: 100%;
-  gap: 0.25rem;
-}
-
-.widget-weather-detail__bar {
-  width: 0.75rem;
-  min-height: 2px;
-  border-radius: 0.25rem 0.25rem 0 0;
-  background: linear-gradient(#88daf8, rgba(105, 190, 237, 0.34));
-}
-
-.widget-weather-detail__bar-label {
-  font-size: 0.7rem;
-  color: var(--text-secondary);
-}
-
-.widget-homelab-detail__list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
   gap: 0.5rem;
+  max-width: 16rem;
+  min-height: 44px;
+  padding: 0 0.9rem 0 1rem;
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--font-small);
+  cursor: pointer;
+  background: var(--widget-sheen), var(--widget-bg);
+  /* 縁の線の下に光沢・背景を敷かない（敷くと、光沢の濃淡で線が所々暗く見える） */
+  background-clip: padding-box;
+  box-shadow: var(--widget-shadow);
+  backdrop-filter: var(--widget-blur);
 }
 
-.widget-homelab-detail__item {
+.pill-menu__button:hover,
+.pill-menu__button--open {
+  background: rgba(var(--tint-rgb), 0.16);
+}
+
+.pill-menu__label {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  /* 省略で切るときは上下を詰めない（詰めた分だけ字の上下が欠ける） */
+  text-box-trim: none;
+}
+
+.pill-menu__chevron {
+  font-size: 0.9em;
+  opacity: 0.75;
+}
+
+.pill-menu__menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: var(--z-popover);
+  min-width: 14rem;
+  max-height: 60vh;
+  margin: 0;
+  padding: 6px;
+  overflow-y: auto;
+  list-style: none;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--inner-radius);
+  background: rgba(10, 23, 48, 0.97);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+}
+
+.pill-menu__item {
   display: flex;
-  align-items: center;
-  gap: 0.75rem;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  width: 100%;
+  padding: 0.55rem 0.8rem;
+  border: none;
+  /* 一覧の角の丸みとそろえる（一覧の丸み ＝ 項目の丸み ＋ 一覧の余白 6px） */
+  border-radius: calc(var(--inner-radius) - 6px);
+  background: none;
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
 }
 
-.widget-homelab-detail__host {
-  color: var(--text-secondary);
-  font-size: 0.85rem;
+.pill-menu__item:hover:not(:disabled) {
+  background: rgba(var(--tint-rgb), 0.1);
 }
 
-.widget-homelab-detail__latency {
-  margin-left: auto;
-  font-size: 0.85rem;
+.pill-menu__item--selected {
+  background: rgba(var(--tint-rgb), 0.94);
+  color: rgb(var(--ink-rgb));
+}
+
+.pill-menu__item:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* 名前と補足を2行で並べるので、文字の上下は詰めない（詰めると2行が重なる） */
+.pill-menu__item-label,
+.pill-menu__item-detail {
+  line-height: 1.35;
+  text-box-trim: none;
+}
+
+.pill-menu__item-detail,
+.pill-menu__empty {
+  font-size: var(--font-caption);
   color: var(--text-secondary);
+}
+
+.pill-menu__item--selected .pill-menu__item-detail {
+  color: rgba(6, 32, 59, 0.7);
+}
+
+.pill-menu__empty {
+  padding: 0.65rem 0.8rem;
+}
+
+/* --- ウィジェットで共通に使う文字 --- */
+
+/* 補足の一行（「未接続」の理由など） */
+.widget-hint {
+  font-size: var(--font-caption);
+  color: var(--text-secondary);
+}
+
+/* 詳細ビューの注記 */
+.widget-note {
+  font-size: var(--font-caption);
+  color: var(--text-secondary);
+  margin: 0.5rem 0 0;
+}
+
+.widget-status--error {
+  color: var(--accent-warn);
 }
 
 /* --- 設定パネル（ウィジェットの追加・編集モード） --- */
 
-.settings-panel {
-  position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 20;
-  width: 20rem;
-  max-width: 85vw;
-  overflow-y: auto;
-  padding: var(--card-padding);
-  background: rgba(10, 23, 48, 0.97);
-  border-left: 1px solid var(--glass-border);
-  backdrop-filter: blur(5px);
+/*
+ * 設定は Media・Home Control・チャットと同じ「画面」（.screen）。2列で並べ、狭い画面では1列にする（下の @media）。
+ * 左の一覧と右の中身をそれぞれ送れるよう、画面自体は送らずに高さを画面いっぱいに決める
+ */
+.settings-screen {
+  overflow: hidden;
 }
 
-.settings-panel__header {
+.settings-screen__inner {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
+  flex-direction: column;
+  height: 100%;
+  padding-bottom: 24px;
 }
 
-.settings-panel__header h2 {
-  margin: 0;
-  font-size: 1.1rem;
+.settings-screen__inner > .screen__header {
+  flex: 0 0 auto;
 }
+
+/* macOS の設定のように、左で項目を選び、右にその中身を出す */
+.settings-panel__columns {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: 15rem minmax(0, 1fr);
+  gap: 0 1.75rem;
+  min-height: 0;
+}
+
+.settings-nav {
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+}
+
+.settings-nav ul {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.settings-nav__item {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  width: 100%;
+  /* 上下左右を同じ余白にし、角丸 ＝ アイコンの角丸 ＋ 余白 ＋ 縁の線。アイコンの角と縁が平行になる */
+  padding: var(--nav-item-padding);
+  border: 1px solid transparent;
+  border-radius: calc(var(--nav-icon-radius) + var(--nav-item-padding) + 1px);
+  background: none;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--font-body);
+  text-align: left;
+  cursor: pointer;
+}
+
+.settings-nav__item:hover {
+  background: rgba(var(--tint-rgb), 0.06);
+}
+
+/* 選んでいる項目は、チャットの会話の一覧と同じく、ウィジェットのガラスで浮かせる */
+.settings-nav__item--on,
+.settings-nav__item--on:hover {
+  border-color: var(--glass-border);
+  background: var(--widget-sheen), var(--widget-bg);
+  background-clip: padding-box;
+  box-shadow: var(--widget-shadow);
+  backdrop-filter: var(--widget-blur);
+}
+
+.settings-nav__icon,
+.ui-list-icon {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  flex-shrink: 0;
+  border-radius: var(--nav-icon-radius);
+  background: rgba(var(--accent-soft-rgb), 0.18);
+  font-size: var(--font-title);
+}
+
+
+.settings-nav__label {
+  flex: 1 1 auto;
+}
+
+/* 一覧の「開く」の矢印は、狭い画面（一覧と中身を入れ替える）でだけ出す */
+.settings-nav__chevron {
+  display: none;
+  opacity: 0.6;
+}
+
+.settings-detail {
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 0.25rem;
+}
+
+.settings-detail__title {
+  margin: 0.2rem 0 1rem;
+  font-size: var(--font-heading);
+}
+
+.settings-detail__subtitle,
+.ui-section-title {
+  margin: 1.5rem 0 0.6rem;
+  font-size: var(--font-label);
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.settings-detail__back,
+.ui-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin: 0 0 0.75rem -0.4rem;
+  padding: 0.35rem 0.6rem 0.35rem 0.3rem;
+  border: none;
+  border-radius: var(--inner-radius);
+  background: none;
+  color: rgb(var(--accent-soft-rgb));
+  font: inherit;
+  cursor: pointer;
+}
+
+.settings-detail__back:hover,
+.ui-back:hover {
+  background: rgba(var(--tint-rgb), 0.08);
+}
+
+/* 「設定」へ戻るのは、一覧と中身を入れ替える狭い画面でだけ */
+.settings-detail__back--page {
+  display: none;
+}
+
+/* --- 一覧（設定の項目・拡張機能の List）。チャットの会話の一覧と同じ形: 入れ物の枠は無く、行ごとに角の丸い行が並び、
+   指したところは薄いガラス、選んでいる行はウィジェットと同じガラス（光沢・暗い背景・影・ぼかし）で示す。
+   読み比べるものは、下の boxed で入れ物に入れる --- */
+
+.settings-list,
+.ui-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 0 0 var(--group-gap);
+  padding: 0;
+  list-style: none;
+}
+
+.settings-list__row,
+.ui-list-item {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  /* 左のアイコンの丸と角丸をそろえるため、左と上下の余白を同じにする */
+  padding: 0.7rem 0.9rem 0.7rem 0.7rem;
+  /* 角丸 ＝ 小さなアイコンの半径（0.625rem ＋ 縁取り 1px）＋ 余白 0.7rem */
+  border: 1px solid transparent;
+  border-radius: calc(0.625rem + 1px + 0.7rem);
+  cursor: pointer;
+}
+
+.settings-list__row:hover,
+.settings-list__row:focus-visible,
+.ui-list-item--action:hover,
+.ui-list-item--action:focus-visible {
+  border-color: var(--glass-border);
+  background: var(--glass-bg);
+  outline: none;
+}
+
+/* 選んでいる行 */
+.ui-list-item--on,
+.ui-list-item--on:hover {
+  border-color: var(--glass-border);
+  background: var(--widget-sheen), var(--widget-bg);
+  /* 縁の線の下に光沢・背景を敷かない（敷くと、光沢の濃淡で線が所々暗く見える） */
+  background-clip: padding-box;
+  box-shadow: var(--widget-shadow);
+  backdrop-filter: var(--widget-blur);
+}
+
+/* 入れ物の一覧（List の boxed）。天気の日ごと・予定・メールのように、並べて読み比べるものは、1つのガラスの入れ物に入れて線で区切る。
+   左の欄で選ぶもの（会話・受信箱・設定の項目）は、上の行ごとの形 */
+.ui-list--boxed,
+.settings-list--boxed {
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--group-radius);
+  background: var(--widget-sheen), var(--widget-bg);
+  /* 縁の線の下に光沢・背景を敷かない（敷くと、光沢の濃淡で線が所々暗く見える） */
+  background-clip: padding-box;
+  box-shadow: var(--widget-shadow);
+  backdrop-filter: var(--widget-blur);
+}
+
+.ui-list--boxed > li + li,
+.settings-list--boxed > li + li {
+  border-top: 1px solid var(--line);
+}
+
+.ui-list--boxed .ui-list-item,
+.ui-list--boxed .ui-list-item--on,
+.settings-list--boxed .settings-list__row {
+  padding: var(--group-row-padding) var(--group-padding);
+  border: none;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.ui-list--boxed .ui-list-item--action:hover,
+.ui-list--boxed .ui-list-item--action:focus-visible,
+.ui-list--boxed .ui-list-item--on,
+.settings-list--boxed .settings-list__row:not(.settings-list__row--plain):hover,
+.settings-list--boxed .settings-list__row:focus-visible {
+  background: rgba(var(--tint-rgb), 0.06);
+}
+
+.settings-list__row--static {
+  cursor: default;
+  margin-bottom: var(--group-gap);
+}
+
+.settings-list__row--static:hover {
+  border-color: transparent;
+  background: none;
+}
+
+/* 一覧の中の、押しても開かない行（トグルだけの行） */
+.settings-list__row--plain {
+  cursor: default;
+}
+
+.settings-list__row--plain:hover {
+  border-color: transparent;
+  background: none;
+}
+
+.settings-list__row--off .settings-list__text,
+.ui-list-item--off .ui-list-item__text {
+  opacity: 0.6;
+}
+
+.settings-list__text,
+.ui-list-item__text {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.settings-list__title,
+.ui-list-item__title {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: var(--font-body);
+}
+
+.settings-list__title small,
+.ui-list-item__title small {
+  font-size: var(--font-micro);
+  color: var(--text-secondary);
+}
+
+.settings-list__detail,
+.ui-list-item__detail {
+  overflow: hidden;
+  font-size: var(--font-caption);
+  line-height: 1.5;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  /* 省略で切るときは上下を詰めない（詰めた分だけ字の上下が欠ける） */
+  text-box-trim: none;
+}
+
+.settings-list__detail--error,
+.ui-list-item__detail--error {
+  color: var(--danger);
+}
+
+.settings-list__chevron,
+.ui-list-item__chevron {
+  flex-shrink: 0;
+  opacity: 0.5;
+}
+
+.toggle-switch {
+  position: relative;
+  flex-shrink: 0;
+  width: 51px;
+  height: 31px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  cursor: pointer;
+  transition: background-color var(--motion-base) var(--ease-standard);
+}
+
+.toggle-switch--on {
+  background: #34c759;
+}
+
+.toggle-switch:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.toggle-switch:focus-visible {
+  outline: 2px solid rgb(var(--accent-soft-rgb));
+  outline-offset: 2px;
+}
+
+.toggle-switch__knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 27px;
+  height: 27px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  transition: transform var(--motion-base) var(--ease-standard);
+}
+
+.toggle-switch--on .toggle-switch__knob {
+  transform: translateX(20px);
+}
+
+.extension-detail__name {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.extension-detail__description {
+  margin: 0 0 0.5rem;
+  font-size: var(--font-label);
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+
+.extension-detail__remove {
+  margin-top: 1.5rem;
+  color: var(--danger);
+}
+
+@media (max-width: 760px) {
+  .settings-panel__columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* 狭い画面では一覧と中身を入れ替える（項目を選ぶと中身、「設定」で一覧に戻る） */
+  .settings-detail,
+  .settings-panel__columns--page-open .settings-nav {
+    display: none;
+  }
+
+  .settings-panel__columns--page-open .settings-detail {
+    display: block;
+  }
+
+  .settings-nav__chevron,
+  .settings-detail__back--page {
+    display: inline-flex;
+  }
+
+  .settings-nav__item--on,
+  .settings-nav__item--on:hover {
+    border-color: transparent;
+    background: none;
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+
+}
+
+/* --- 接続設定 --- */
+
+.connection-settings {
+  margin-bottom: 1.25rem;
+}
+
+.connection-settings__notice,
+.connection-settings__note,
+.ui-notice,
+.ui-note {
+  margin: 0 0 0.6rem;
+  font-size: var(--font-note);
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.connection-settings__notice,
+.ui-notice {
+  padding: 0.6rem var(--field-padding-x);
+  border-radius: var(--inner-radius);
+  background: rgba(255, 196, 0, 0.12);
+  color: var(--text-primary);
+}
+
+.connection-settings__section--open {
+  padding: var(--group-padding);
+}
+
+.connection-settings__section--open > .connection-settings__badge {
+  display: inline-block;
+  margin: 0 0 0.75rem;
+}
+
+.connection-settings__section.connection-settings__section--open form {
+  padding: 0;
+}
+
+/* 区画（Google・Microsoft など）の見出しと「設定済み」 */
+.connection-settings__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin: 0 0 0.75rem;
+}
+
+.connection-settings__head .connection-settings__badge {
+  margin: 0;
+}
+
+.connection-settings__group-title {
+  margin: 0;
+  font-size: var(--font-label);
+  font-weight: 600;
+}
+
+/* 手順。開くと番号付きで出す */
+.connection-settings__steps {
+  margin: 0 0 0.75rem;
+  font-size: var(--font-note);
+  line-height: 1.55;
+}
+
+.connection-settings__section .connection-settings__steps summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0;
+  color: var(--text-primary);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.connection-settings__steps ol {
+  margin: 0.4rem 0 0;
+  padding-left: 1.4rem;
+  color: var(--text-secondary);
+}
+
+.connection-settings__steps li + li {
+  margin-top: 0.35rem;
+}
+
+.connection-settings__steps code {
+  padding: 0 0.3rem;
+  border-radius: 6px;
+  background: rgba(var(--tint-rgb), 0.14);
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+.connection-settings__placeholder {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.connection-settings__section,
+.ui-group {
+  margin-bottom: var(--group-gap);
+}
+
+.connection-settings__section summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: var(--group-row-padding) var(--group-padding);
+  cursor: pointer;
+  list-style: none;
+}
+
+.connection-settings__section summary::-webkit-details-marker {
+  display: none;
+}
+
+.connection-settings__section form {
+  padding: 0 var(--group-padding) var(--group-padding);
+}
+
+.connection-settings__section fieldset {
+  margin: 0;
+  padding: 0;
+  border: none;
+  min-width: 0;
+}
+
+.connection-settings__badge,
+.ui-badge {
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  font-size: var(--font-caption);
+  color: var(--text-secondary);
+  border: 1px solid var(--glass-border);
+}
+
+.connection-settings__badge--on,
+.ui-badge--on {
+  color: rgb(var(--ink-rgb));
+  background: rgba(160, 240, 200, 0.9);
+  border-color: transparent;
+}
+
+.connection-settings__field,
+.ui-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.connection-settings__field label:not(.connection-settings__check),
+label.connection-settings__field,
+label.ui-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: var(--font-label);
+}
+
+.connection-settings__field input:not([type="checkbox"]),
+.ui-field :is(input:not([type="checkbox"]), select, textarea, .ui-code) {
+  width: 100%;
+}
+
+.connection-settings__field input::placeholder {
+  color: var(--text-secondary);
+}
+
+.connection-settings__check,
+.ui-check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: var(--font-label);
+}
+
+.connection-settings__source {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+}
+
+.connection-settings__source button {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text-primary);
+  text-decoration: underline;
+  font: inherit;
+  cursor: pointer;
+}
+
+.connection-settings__actions,
+.ui-button-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.connection-settings fieldset:disabled {
+  opacity: 0.6;
+}
+
+.connection-settings__message,
+.ui-message {
+  margin: 0.6rem 0 0;
+  font-size: var(--font-note);
+  color: var(--success);
+}
+
+.connection-settings__message--error,
+.ui-message--error {
+  color: var(--danger);
+}
+
+.connection-settings__field select {
+  width: 100%;
+}
+
+.connection-settings__field option {
+  background: #0a1730;
+}
+
+/* --- 拡張機能 --- */
+
+.extension-settings {
+  margin-bottom: 1.25rem;
+}
+
+/* 知らせの中の「見る」 */
+.extension-settings__link {
+  margin-left: 0.5rem;
+  padding: 0;
+  border: none;
+  background: none;
+  color: rgb(var(--accent-soft-rgb));
+  font: inherit;
+  cursor: pointer;
+}
+
+/* リポジトリの画面 */
+.extension-sources {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.extension-sources__fields {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.extension-settings__install .settings-panel__edit-toggle {
+  margin-bottom: 0.5rem;
+}
+
+/* --- アカウント --- */
+
+.account-settings {
+  margin-bottom: 1.25rem;
+}
+
+.account-settings__me {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+  font-size: var(--font-small);
+}
+
+.account-settings__button {
+  flex-shrink: 0;
+}
+
+.account-settings__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0 var(--group-padding) var(--group-padding);
+  list-style: none;
+}
+
+.account-settings__list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.15rem 0.75rem;
+}
+
+.account-settings__name {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  font-size: var(--font-small);
+  overflow-wrap: anywhere;
+}
+
+.account-settings__name small {
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(74, 222, 128, 0.16);
+  color: #bbf7d0;
+  font-size: var(--font-micro);
+}
+
+.account-settings__meta {
+  grid-column: 1;
+  font-size: var(--font-caption);
+  color: var(--text-secondary);
+}
+
+.account-settings__list > li > .account-settings__button,
+.account-settings__list .account-settings__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.4rem;
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+
+.account-settings__device {
+  padding: 0 var(--group-padding) var(--group-padding);
+}
+
+/* 選ぶ前に読んでほしい説明なので、省略せず折り返す */
+.account-settings__device .settings-list__detail,
+.extension-trust .ui-list-item__detail {
+  white-space: normal;
+}
+
+.account-settings__note {
+  margin: 0 var(--group-padding) 0.75rem;
+  font-size: var(--font-note);
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.account-settings__new h4 {
+  margin: 0.5rem 0 0.6rem;
+  font-size: var(--font-label);
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+/* --- ログイン画面 --- */
+
+.auth-screen {
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+}
+
+.auth-screen__wait {
+  color: var(--text-secondary);
+}
+
+.auth-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: min(26rem, 100%);
+  padding: clamp(20px, 4vw, 32px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--card-radius);
+  background: rgba(10, 23, 48, 0.9);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
+}
+
+.auth-card h1 {
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+.auth-card__lead {
+  margin: 0;
+  font-size: var(--font-label);
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+
+.auth-card__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: var(--font-label);
+  color: var(--text-secondary);
+}
+
+.auth-card__field input {
+  min-height: 48px;
+  padding: 0 1rem;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--inner-radius);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 1rem;
+}
+
+.auth-card__hint {
+  font-size: var(--font-caption);
+  line-height: 1.5;
+}
+
+.auth-card__notice {
+  margin: 0;
+  padding: 0.6rem var(--field-padding-x);
+  border-radius: var(--inner-radius);
+  background: rgba(255, 196, 0, 0.12);
+  font-size: var(--font-note);
+  line-height: 1.5;
+}
+
+.auth-card__error {
+  margin: 0;
+  color: var(--danger);
+  font-size: var(--font-label);
+}
+
+.auth-card__submit {
+  min-height: 48px;
+  border: none;
+  border-radius: var(--inner-radius);
+  background: rgba(var(--tint-rgb), 0.94);
+  color: rgb(var(--ink-rgb));
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.auth-card__submit:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.auth-card__submit--secondary {
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+}
+
+/* 「または」の両脇に線を引く */
+.auth-card__or {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0;
+  font-size: var(--font-note);
+  color: var(--text-secondary);
+}
+
+.auth-card__or::before,
+.auth-card__or::after {
+  content: "";
+  flex: 1;
+  border-top: 1px solid var(--glass-border);
+}
+
+
 
 .settings-panel__close {
   display: grid;
@@ -869,58 +2059,15 @@ button.widget-card {
 }
 
 .settings-panel__edit-toggle {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  width: 100%;
   margin-bottom: 1.25rem;
-  padding: 0.75rem 1rem;
-  border-radius: var(--inner-radius);
-  border: 1px solid var(--glass-border);
-  background: var(--glass-bg);
-  color: var(--text-primary);
-  cursor: pointer;
-  text-align: left;
 }
 
-.settings-panel__edit-toggle--on {
-  background: rgba(224, 247, 255, 0.94);
-  border-color: transparent;
-  color: #06203b;
-}
 
-.settings-panel__section-title {
-  margin: 0 0 0.5rem;
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-}
 
-.settings-panel__list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
 
-.settings-panel__item {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.25rem;
-  padding: 0.75rem 1rem;
-  border-radius: var(--inner-radius);
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
-  color: var(--text-primary);
-  cursor: pointer;
-  text-align: left;
-}
 
 .settings-panel__desc {
-  font-size: 0.8rem;
+  font-size: var(--font-note);
   color: var(--text-secondary);
 }
 
@@ -933,7 +2080,7 @@ button.widget-card {
   align-items: center;
   gap: 0.5rem;
   margin: 0 0 0.6rem;
-  font-size: 0.8rem;
+  font-size: var(--font-label);
   color: var(--text-secondary);
 }
 
@@ -951,99 +2098,36 @@ button.widget-card {
   opacity: 1;
 }
 
-.settings-panel__voice-form {
-  display: flex;
-  gap: 0.5rem;
-}
 
-.settings-panel__voice-form input {
-  flex: 1 1 auto;
-  min-width: 0;
-  padding: 0.7rem 1rem;
-  border-radius: var(--inner-radius);
-  border: 1px solid var(--glass-border);
-  background: var(--glass-bg);
-  color: var(--text-primary);
-  font: inherit;
-}
 
-.settings-panel__voice-form input::placeholder {
-  color: var(--text-secondary);
-}
 
-.settings-panel__voice-form button {
-  display: grid;
-  place-items: center;
-  flex: 0 0 auto;
-  width: 2.75rem;
-  border-radius: var(--inner-radius);
-  border: 1px solid transparent;
-  background: rgba(224, 247, 255, 0.94);
-  color: #06203b;
-  cursor: pointer;
-}
 
-.settings-panel__voice-form :disabled {
-  opacity: 0.45;
-  cursor: default;
-}
 
 .settings-panel__voice-persona {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
   margin: 0 0 0.75rem;
-  font-size: 0.8rem;
+  font-size: var(--font-note);
   color: var(--text-secondary);
-}
-
-.settings-panel__voice-persona select {
-  padding: 0.6rem 0.9rem;
-  border-radius: var(--inner-radius);
-  border: 1px solid var(--glass-border);
-  background: var(--glass-bg);
-  color: var(--text-primary);
-  font: inherit;
-  font-size: 0.95rem;
 }
 
 .settings-panel__voice-persona option {
   background: #0a1730;
 }
 
-.persona-manager__list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  margin: 0 0 0.6rem;
-  padding: 0;
-  list-style: none;
-}
-
-.persona-manager__item,
 .persona-manager__notice {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
-  padding: 0.6rem 0.8rem;
-  border-radius: calc(var(--inner-radius) - 4px);
-  background: var(--glass-bg);
-  font-size: 0.8rem;
+  gap: 0.5rem;
+  margin-top: var(--group-gap);
+  font-size: var(--font-label);
+  line-height: 1.6;
 }
 
 .persona-manager__notice p {
   margin: 0;
   line-height: 1.5;
-}
-
-.persona-manager__head {
-  display: flex;
-  align-items: baseline;
-  gap: 0.5rem;
-}
-
-.persona-manager__wake {
-  color: var(--text-secondary);
 }
 
 .persona-manager__tags {
@@ -1056,7 +2140,7 @@ button.widget-card {
   padding: 0.15rem 0.5rem;
   border: 1px solid var(--glass-border);
   border-radius: 999px;
-  font-size: 0.7rem;
+  font-size: var(--font-micro);
   color: var(--text-secondary);
 }
 
@@ -1068,39 +2152,23 @@ button.widget-card {
 
 .persona-manager__actions {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 0.5rem;
 }
 
 .persona-manager__actions a,
 .persona-manager__actions button {
-  padding: 0.3rem 0.7rem;
-  border: 1px solid var(--glass-border);
-  border-radius: 999px;
-  background: none;
-  color: var(--text-primary);
-  font-size: 0.75rem;
-  text-decoration: none;
-  cursor: pointer;
+  font-family: inherit;
 }
 
-.persona-manager__actions .persona-manager__danger {
-  border-color: transparent;
-  background: #b4233b;
-}
-
-.persona-manager__import {
+/* 今のアイコンと、それを変えるボタンを横に並べる */
+.persona-manager__icon-settings {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 0.4rem;
-  width: 100%;
-  padding: 0.6rem 1rem;
-  border: 1px dashed var(--glass-border);
-  border-radius: var(--inner-radius);
-  background: none;
-  color: var(--text-primary);
-  cursor: pointer;
+  gap: 1.25rem;
 }
+
 
 .persona-manager__import:disabled,
 .persona-manager__actions :disabled {
@@ -1108,70 +2176,30 @@ button.widget-card {
   cursor: default;
 }
 
-.persona-manager__notice {
-  margin-top: 0.5rem;
-}
-
-.persona-preview {
-  position: fixed;
-  inset: 0;
-  z-index: 40;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
-  background: rgba(1, 7, 18, 0.7);
-  backdrop-filter: blur(6px);
-}
-
-.persona-preview__panel {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  width: min(1000px, 100%);
-  max-height: 100%;
-  padding: 20px 24px;
-  overflow: hidden;
-  border: 1px solid var(--glass-border);
-  border-radius: 28px;
-  background: rgba(10, 23, 48, 0.97);
-}
-
-.persona-preview__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.persona-preview__header h3 {
-  margin: 0;
-  font-size: 1rem;
-}
-
+/* キャラクターの詳細に埋め込む、アバターの動きの確認。幅が足りなければ、アバターの下に操作を回す */
 .persona-preview__body {
   display: flex;
+  flex-wrap: wrap;
   gap: 20px;
-  min-height: 0;
 }
 
 .persona-preview__stage {
   position: relative;
   flex: 0 0 auto;
-  width: min(360px, 40vw);
-  height: min(460px, calc(100svh - 120px));
-  border-radius: 20px;
-  background: radial-gradient(circle at 50% 35%, rgba(74, 199, 255, 0.18), transparent 70%);
+  width: min(300px, 100%);
+  height: min(400px, 60svh);
+  border-radius: var(--inner-radius);
+  background: radial-gradient(circle at 50% 35%, rgba(var(--accent-rgb), 0.18), transparent 70%);
 }
 
 .persona-preview__controls {
-  flex: 1 1 auto;
+  flex: 1 1 16rem;
   min-width: 0;
-  overflow-y: auto;
 }
 
 .persona-preview__controls h4 {
   margin: 0.9rem 0 0.4rem;
-  font-size: 0.75rem;
+  font-size: var(--font-caption);
   font-weight: 600;
   color: var(--text-secondary);
 }
@@ -1186,20 +2214,25 @@ button.widget-card {
   gap: 0.35rem;
 }
 
+/* 切り替えの小さなボタン。ほかのボタンと同じガラスで、選んでいるものは「保存」と同じ明るい塗り */
 .persona-preview__buttons button {
-  padding: 0.3rem 0.7rem;
+  min-height: 32px;
+  padding: 0 0.8rem;
   border: 1px solid var(--glass-border);
   border-radius: 999px;
-  background: none;
+  background: var(--widget-sheen), var(--widget-bg);
+  background-clip: padding-box;
+  backdrop-filter: var(--widget-blur);
   color: var(--text-primary);
-  font-size: 0.8rem;
+  font: inherit;
+  font-size: var(--font-note);
   cursor: pointer;
 }
 
 .persona-preview__buttons button[aria-pressed="true"] {
   border-color: transparent;
-  background: rgba(224, 247, 255, 0.94);
-  color: #06203b;
+  background: rgba(var(--tint-rgb), 0.94);
+  color: rgb(var(--ink-rgb));
 }
 
 .persona-preview__rig {
@@ -1207,7 +2240,7 @@ button.widget-card {
   grid-template-columns: auto 1fr;
   gap: 0.25rem 0.75rem;
   margin: 1rem 0 0;
-  font-size: 0.75rem;
+  font-size: var(--font-caption);
   color: var(--text-secondary);
 }
 
@@ -1217,97 +2250,811 @@ button.widget-card {
   overflow-wrap: anywhere;
 }
 
-@media (max-width: 700px) {
-  .persona-preview__body {
-    flex-direction: column;
-  }
-
-  .persona-preview__stage {
-    width: 100%;
-    height: 45svh;
-  }
+.settings-panel__voice-error {
+  margin: 0.5rem 0 0;
+  font-size: var(--font-note);
+  color: var(--accent-warn);
 }
 
-.settings-panel__voice-history-title {
-  margin: 1.25rem 0 0.5rem;
-  font-size: 0.8rem;
+/* --- Claude が使うコネクター・MCP（設定の音声アシスタント） --- */
+
+.voice-mcp__note {
+  margin: 0 0 0.6rem;
+  font-size: var(--font-note);
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.voice-mcp__toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: var(--font-note);
+  color: var(--text-secondary);
+}
+
+.voice-mcp__toolbar button,
+.voice-mcp__form button {
+  gap: 0.35rem;
+}
+
+.voice-mcp__toolbar button .fluent-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.voice-mcp__group {
+  margin: 0.9rem 0 0.4rem;
+  font-size: var(--font-label);
   font-weight: 600;
   color: var(--text-secondary);
 }
 
-.settings-panel__voice-history {
+.voice-mcp__list {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.voice-history-item {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-  padding: 0.6rem 0.8rem;
-  border-radius: calc(var(--inner-radius) - 4px);
-  background: var(--glass-bg);
-  font-size: 0.8rem;
+/* 名前（と印）の下に宛先を置き、右端に入／切のスイッチや外すボタンを置く */
+.voice-mcp__item {
+  display: grid;
+  /* 名前 | 状態 | 入切 */
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  column-gap: 0.75rem;
+  row-gap: 0.15rem;
+  font-size: var(--font-small);
 }
 
-.voice-history-item__head {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.5rem;
-  color: var(--text-secondary);
+.voice-mcp__item > .toggle-switch,
+.voice-mcp__item > .voice-mcp__remove {
+  grid-column: 3;
+  grid-row: 1 / span 2;
 }
 
-.voice-history-item__head strong {
-  color: var(--text-primary);
+.voice-mcp__item > .voice-mcp__badge {
+  grid-column: 2;
+  grid-row: 1;
 }
 
-.voice-history-item__transcript,
-.voice-history-item__response {
-  display: -webkit-box;
-  margin: 0;
+/* 道具ごとの確かめ。名前 | 印 | 段（外の道具は、その下に「家の人の情報を返す」） */
+.voice-guard-tools {
+  margin-top: var(--space-6);
+}
+
+.voice-guard-tools__item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  column-gap: 0.75rem;
+  row-gap: var(--space-1);
+  font-size: var(--font-small);
+}
+
+.voice-guard-tools__name {
   overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-height: 1.5;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   text-box-trim: none;
 }
 
-.voice-history-item__transcript {
+.voice-guard-tools__badges {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.voice-guard-tools__item select {
+  width: 15rem;
+  max-width: 48vw;
+}
+
+.voice-guard-tools__personal {
+  grid-column: 1 / -1;
+  font-size: var(--font-note);
   color: var(--text-secondary);
 }
 
-.settings-panel__voice-option {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-top: 0.75rem;
-  font-size: 0.8rem;
+@media (max-width: 620px) {
+  .voice-guard-tools__item {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .voice-guard-tools__badges {
+    grid-row: 2;
+  }
+}
+
+/* 音声アシスタントの確かめ（了承・許可）。話しかけている最中に出るので、音声のパネルより上に重ねる。答えるまで閉じない */
+.voice-guard-overlay {
+  z-index: var(--z-guard);
+}
+
+.voice-guard__what {
+  margin: 0 0 var(--space-3);
+  font-size: var(--font-title);
+  font-weight: 600;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.voice-guard .ui-button-row {
+  margin-top: var(--space-4);
+}
+
+.voice-guard__password .ui-field {
+  margin-top: var(--space-3);
+}
+
+.voice-mcp__item--disabled {
+  opacity: 0.55;
+}
+
+.voice-mcp__name {
+  grid-column: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  /* 省略で切るときは上下を詰めない（詰めた分だけ字の上下が欠ける） */
+  text-box-trim: none;
+}
+
+.voice-mcp__badge {
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(255, 170, 60, 0.2);
+  color: var(--accent-warn);
+  font-size: var(--font-micro);
+}
+
+.voice-mcp__badge--plain {
+  background: var(--glass-bg);
+  color: var(--text-secondary);
+}
+
+.voice-mcp__target {
+  grid-column: 1 / 3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--font-caption);
+  color: var(--text-secondary);
+  /* 省略で切るときは上下を詰めない（詰めた分だけ字の上下が欠ける） */
+  text-box-trim: none;
+}
+
+.voice-mcp__remove {
+  display: grid;
+  place-items: center;
+  padding: 0.2rem;
+  border: none;
+  background: none;
   color: var(--text-secondary);
   cursor: pointer;
 }
 
-.settings-panel__voice-option input {
+.voice-mcp__remove .fluent-icon {
   width: 1rem;
   height: 1rem;
-  margin: 0;
-  accent-color: #4ac7ff;
 }
 
-.settings-panel__voice-error {
-  margin: 0.5rem 0 0;
-  font-size: 0.8rem;
-  color: var(--accent-warn);
+.voice-mcp__form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+}
+
+.voice-mcp__form input {
+  min-width: 0;
+}
+
+.voice-mcp__form input::placeholder {
+  color: var(--text-secondary);
+}
+
+.voice-mcp__form button {
+  justify-content: center;
+}
+
+.voice-mcp :disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* --- チャット（widget-sdk の Chat。本体の Chat 画面の、音声アシスタントとチャットアプリ（iMessage など）） --- */
+
+/* 画面の高さいっぱいに中身を置く画面（ScreenFrame の fill）。画面は送らず、中身（やり取りなど）が自分で送る */
+.screen--fill {
+  overflow: hidden;
+}
+
+.screen--fill > .screen__inner {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding-bottom: 24px;
+}
+
+.screen--fill > .screen__inner > * {
+  flex: 0 0 auto;
+}
+
+/* 左に選ぶ欄（受信箱・カレンダーの一覧）、右に中身（widget-sdk の SideLayout）。左の欄は送っても見えるよう貼り付ける */
+.ui-side-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 300px) minmax(0, 1fr);
+  gap: clamp(16px, 2.5vw, 40px);
+  align-items: start;
+}
+
+.ui-side-layout__side {
+  position: sticky;
+  top: 0;
+  min-width: 0;
+  /* 項目が多ければ欄の中で送る。選んだ行の影（左右 16px・下 30px まで届く）が切れないよう、余白を取って同じだけ外へ広げる */
+  max-height: 100svh;
+  margin: 0 -16px -30px;
+  padding: 0 16px 30px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.ui-side-layout__main {
+  min-width: 0;
+}
+
+.ui-narrow-only {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .ui-side-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ui-side-layout__side {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .ui-side-layout--narrow-hide > .ui-side-layout__side {
+    display: none;
+  }
+
+  .ui-side-layout--narrow-below > .ui-side-layout__side {
+    order: 1;
+  }
+
+  .ui-narrow-only {
+    display: contents;
+  }
+}
+
+/* 左に会話の一覧、右にやり取り */
+.screen--fill > .screen__inner > .ui-chat {
+  flex: 1 1 auto;
+}
+
+.ui-chat {
+  display: grid;
+  grid-template-columns: minmax(240px, 340px) minmax(0, 1fr);
+  gap: clamp(16px, 2vw, 32px);
+  min-height: 0;
+}
+
+.ui-chat__list,
+.ui-chat__main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* 一覧は自分で送る。選んだ行・一覧の影（左右 16px・下 30px まで届く）が送りの枠で切れないよう、余白を取って同じだけ外へ広げる */
+.ui-chat__list {
+  margin: 0 -16px -30px;
+  padding: 0 16px 30px;
+  overflow-y: auto;
+}
+
+.ui-chat__list > .ui-list {
+  flex: 0 0 auto;
+}
+
+/* 会話の一覧の行は、押すとやり取りが開くだけなので矢印は出さない */
+.ui-chat__list .ui-list-item__chevron {
+  display: none;
+}
+
+.ui-chat__back,
+.ui-button.ui-chat__list-button {
+  display: none;
+}
+
+/* 一覧の上の「戻る」と一覧は縮めない（一覧の欄が送る） */
+.ui-chat__list > * {
+  flex-shrink: 0;
+}
+
+/* 会話の名前は1行に収め、入りきらなければ … で切る */
+.ui-chat__list .ui-list-item__title {
+  min-width: 0;
+}
+
+.ui-chat__list .ui-list-item__name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-box-trim: none;
+}
+
+.ui-chat__list .ui-list-item__title small {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 1100px) {
+  .ui-chat {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ui-chat__list {
+    display: none;
+  }
+
+  .ui-button.ui-chat__list-button {
+    display: inline-flex;
+  }
+
+  /* 狭い画面では、一覧を開いたらやり取りの代わりに出す */
+  .ui-chat--list-open .ui-chat__list {
+    display: flex;
+  }
+
+  .ui-chat--list-open .ui-chat__back {
+    display: block;
+  }
+
+  .ui-chat--list-open .ui-chat__main {
+    display: none;
+  }
+}
+
+.ui-chat__header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0 0 0.75rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.ui-chat__title {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.ui-chat__title h2 {
+  margin: 0;
+  overflow: hidden;
+  font-size: 1.05rem;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  /* 省略で切るときは上下を詰めない（詰めた分だけ字の上下が欠ける） */
+  text-box-trim: none;
+}
+
+.ui-chat__status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.35rem 0 0;
+  font-size: var(--font-note);
+  color: var(--text-secondary);
+}
+
+/* アイコンだけのボタン（一覧・新しい会話・マイク・添付・送る・止める）。形は本体のボタンのまま丸くする */
+.ui-button.ui-chat__icon-button {
+  flex: 0 0 auto;
+  width: 44px;
+  min-height: 44px;
+  padding: 0;
+  font-size: var(--font-title);
+}
+
+.ui-button.ui-chat__icon-button--on {
+  border-color: transparent;
+  background: rgb(var(--accent-rgb));
+  color: rgb(var(--ink-rgb));
+}
+
+.ui-chat__log {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  /* 端に並ぶ顔の縁取りや吹き出しの影（左右 16px・下 30px まで届く）が、送りの枠で切れないよう余白を取る
+     （左右は並びの位置を変えないよう、同じだけ外へ広げる） */
+  margin: 0 -16px;
+  padding: 1rem 16px 30px;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.ui-chat__empty {
+  margin: auto;
+  font-size: var(--font-label);
+  color: var(--text-secondary);
+}
+
+.ui-chat__row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.ui-chat__row--mine {
+  align-items: flex-end;
+}
+
+/* ひとまとまり（同じ人の続き）の最後のあとだけ空ける */
+.ui-chat__row--gap {
+  margin-bottom: 0.75rem;
+}
+
+/* 相手の吹き出しと、その左の顔 */
+.ui-chat__from {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+  max-width: 85%;
+  min-width: 0;
+}
+
+.ui-chat__from-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.ui-chat__avatar-space {
+  flex: 0 0 auto;
+  width: 2rem;
+}
+
+/* 顔の分だけ右へ寄せて、吹き出しとそろえる（相手の名前・時刻） */
+.ui-chat__from ~ .ui-chat__meta,
+.ui-chat__row > .ui-chat__meta--indent {
+  padding-left: 2.5rem;
+}
+
+.ui-chat__bubble {
+  max-width: 85%;
+  margin: 0;
+  padding: 0.6rem 0.9rem;
+  border-radius: 1.1rem;
+  font-size: var(--font-body);
+  line-height: 1.6;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+  text-box-trim: none;
+}
+
+.ui-chat__from .ui-chat__bubble {
+  max-width: 100%;
+}
+
+/* 吹き出しはウィジェットと同じ見た目。自分の吹き出しは、見分けやすいよう同じガラスに薄い水色を重ねる */
+.ui-chat__bubble--mine {
+  align-self: flex-end;
+  border: 1px solid rgba(var(--accent-soft-rgb), 0.35);
+  border-bottom-right-radius: 0.3rem;
+  background: var(--widget-sheen), linear-gradient(0deg, rgba(var(--accent-rgb), 0.2), rgba(var(--accent-rgb), 0.3));
+  /* 縁の線の下に光沢・背景を敷かない（敷くと、光沢の濃淡で線が所々暗く見える） */
+  background-clip: padding-box;
+  box-shadow: var(--widget-shadow);
+  backdrop-filter: var(--widget-blur);
+  color: var(--text-primary);
+}
+
+.ui-chat__bubble--theirs {
+  border: 1px solid var(--glass-border);
+  border-bottom-left-radius: 0.3rem;
+  background: var(--widget-sheen), var(--widget-bg);
+  /* 縁の線の下に光沢・背景を敷かない（敷くと、光沢の濃淡で線が所々暗く見える） */
+  background-clip: padding-box;
+  box-shadow: var(--widget-shadow);
+  backdrop-filter: var(--widget-blur);
+}
+
+.ui-chat__meta,
+.ui-chat__pending {
+  margin: 0;
+  font-size: var(--font-caption);
+  color: var(--text-secondary);
+}
+
+.ui-chat__pending {
+  font-size: var(--font-label);
+}
+
+/* 1通に添えた画像・ファイル */
+.ui-chat__attachments {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.4rem;
+  max-width: 85%;
+}
+
+.ui-chat__attachments--mine {
+  align-self: flex-end;
+  justify-content: flex-end;
+}
+
+.ui-chat__image {
+  display: block;
+  max-width: min(100%, 320px);
+  overflow: hidden;
+  border: 1px solid var(--glass-border);
+  border-radius: 1.1rem;
+}
+
+.ui-chat__image img {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  max-height: 320px;
+}
+
+.ui-chat__file {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  max-width: 100%;
+  padding: 0.4rem 0.8rem;
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  font-size: var(--font-note);
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+
+.ui-chat__file .fluent-icon {
+  flex-shrink: 0;
+  width: 1rem;
+  height: 1rem;
+}
+
+/* 送る前のファイル（入力欄の上）。押すと外す */
+.ui-chat__file-chip {
+  max-width: 16rem;
+}
+
+.ui-chat__file-name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-box-trim: none;
+}
+
+/* 入力欄（と、その上のエラー・添えたもの） */
+.ui-chat__composer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.75rem 0 0;
+  border-top: 1px solid var(--line);
+}
+
+.ui-chat__composer > .ui-message,
+.ui-chat__composer > .ui-note {
+  margin: 0;
+}
+
+.ui-chat__form {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* 入力欄はピル型（本体の入力欄 ui-field と同じ色と線）。送るボタン（止めるボタン）は、文字を入れてから欄の中の右端に出す */
+.ui-chat__field {
+  position: relative;
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.ui-chat__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 1.1rem;
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  background: var(--surface-input);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--font-small);
+}
+
+.ui-chat__field--button .ui-chat__input {
+  padding-right: 3rem;
+}
+
+.ui-chat__input::placeholder {
+  color: var(--text-secondary);
+}
+
+.ui-chat__send {
+  position: absolute;
+  right: 5px;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(var(--tint-rgb), 0.94);
+  color: rgb(var(--ink-rgb));
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.ui-chat__send:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.ui-chat__input:disabled {
+  opacity: 0.6;
+}
+
+/* 丸い顔（写真か頭文字）。何人かの顔は少し重ねて並べる */
+.ui-avatar {
+  flex: 0 0 auto;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--glass-bg);
+  box-shadow: 0 0 0 1px var(--glass-border);
+}
+
+.ui-avatar--initial {
+  color: var(--text-secondary);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.ui-avatar--colored {
+  background: hsl(var(--avatar-hue) 55% 42%);
+  color: #fff;
+}
+
+.ui-avatar--small {
+  width: 1.25rem;
+  height: 1.25rem;
+  font-size: 0.65rem;
+}
+
+.ui-avatar--medium {
+  width: 2rem;
+  height: 2rem;
+  font-size: var(--font-small);
+}
+
+.ui-avatar--large {
+  width: 2.5rem;
+  height: 2.5rem;
+  font-size: 1.05rem;
+}
+
+.ui-avatar-stack {
+  display: flex;
+  flex: 0 0 auto;
+}
+
+.ui-avatar-stack > * + * {
+  margin-left: -0.6rem;
+}
+
+/* --- スナックバー（操作の結果を少しのあいだ出す。components/SnackbarHost.tsx）。画面の下の中央、スマホではタブバーの上 --- */
+
+.snackbar-area {
+  position: fixed;
+  z-index: var(--z-snackbar);
+  left: var(--sidebar-width);
+  right: 0;
+  bottom: 30px;
+  display: flex;
+  justify-content: center;
+  padding: 0 16px;
+  pointer-events: none;
+}
+
+.snackbar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  max-width: min(560px, 100%);
+  min-height: 48px;
+  padding: 0.35rem 0.4rem 0.35rem 1.1rem;
+  border: 1px solid var(--glass-border);
+  border-radius: 24px;
+  background: var(--widget-sheen), var(--widget-bg);
+  background-clip: padding-box;
+  box-shadow: var(--widget-shadow);
+  backdrop-filter: var(--widget-blur);
+  color: var(--text-primary);
+  font-size: var(--font-label);
+  line-height: 1.45;
+  pointer-events: auto;
+  animation: motion-enter var(--motion-base) var(--ease-out) both;
+}
+
+.snackbar--error {
+  border-color: rgba(255, 120, 120, 0.45);
+}
+
+.snackbar--closing {
+  animation: motion-fade-out var(--motion-base) var(--ease-in) forwards;
+  pointer-events: none;
+}
+
+.snackbar__icon {
+  flex-shrink: 0;
+  color: var(--danger);
+}
+
+.snackbar__text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.snackbar__close {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background-color var(--motion-fast) var(--ease-standard);
+}
+
+.snackbar__close:hover,
+.snackbar__close:focus-visible {
+  background: rgba(var(--tint-rgb), 0.1);
+}
+
+@media (max-width: 620px) {
+  /* タブバー（下から 12px・高さ 56px）の上に出す */
+  .snackbar-area {
+    left: 0;
+    bottom: calc(12px + 56px + 12px + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 /* --- 音声アシスタントの待機表示（画面左下。タップするとウェイクワード無しで話しかけられる） --- */
 
 .voice-launcher {
   position: fixed;
-  z-index: 5;
+  z-index: var(--z-launcher);
   left: calc(var(--sidebar-width) + 45px);
   bottom: 30px;
   display: flex;
@@ -1315,25 +3062,22 @@ button.widget-card {
   gap: 10px;
   height: 48px;
   padding: 0 20px 0 14px;
+  /* ほかのボタンと同じ、ウィジェットの見た目（光沢・暗い背景・影・ぼかし） */
   border: 1px solid var(--glass-border);
   border-radius: 24px;
-  background: rgba(7, 18, 38, 0.35);
-  backdrop-filter: blur(5px);
-  color: var(--text-secondary);
+  background: var(--widget-sheen), var(--widget-bg);
+  background-clip: padding-box;
+  box-shadow: var(--widget-shadow);
+  backdrop-filter: var(--widget-blur);
+  color: var(--text-primary);
   font-size: 15px;
   cursor: pointer;
-  opacity: 0.75;
-  transition:
-    opacity 160ms ease,
-    background-color 160ms ease,
-    color 160ms ease;
+  transition: background-color var(--motion-fast) var(--ease-standard);
 }
 
 .voice-launcher:hover,
 .voice-launcher:focus-visible {
-  opacity: 1;
   background-color: var(--glass-bg);
-  color: var(--text-primary);
 }
 
 .voice-launcher .fluent-icon {
@@ -1357,17 +3101,17 @@ button.widget-card {
 /* --- 音声アシスタント（ウェイクワードを聞いてから返答し終えるまで手前に出すパネル） --- */
 
 .voice-overlay {
-  --voice-accent: #4ac7ff;
+  --voice-accent: rgb(var(--accent-rgb));
   position: fixed;
   inset: 0;
-  z-index: 30;
+  z-index: var(--z-voice);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 30px;
-  background: linear-gradient(180deg, rgba(1, 7, 18, 0.45), rgba(1, 7, 18, 0.72));
+  background: linear-gradient(180deg, rgba(var(--shade-rgb), 0.45), rgba(var(--shade-rgb), 0.72));
   backdrop-filter: blur(6px);
-  animation: voice-fade-in 220ms ease-out;
+  animation: voice-fade-in var(--motion-base) var(--ease-out);
 }
 
 .voice-overlay[data-state="error"] {
@@ -1387,7 +3131,7 @@ button.widget-card {
   border-radius: var(--card-radius);
   background: linear-gradient(0deg, rgba(4, 14, 32, 0.55), rgba(10, 30, 60, 0.6));
   box-shadow: 0 24px 60px -24px rgba(0, 6, 20, 0.6);
-  animation: voice-rise 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation: voice-rise var(--motion-slow) var(--ease-out);
 }
 
 .voice-panel::before {
@@ -1395,7 +3139,9 @@ button.widget-card {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: linear-gradient(120deg, rgba(255, 255, 255, 0.1), transparent 33%);
+  background: var(--widget-sheen);
+  /* 縁の線の下に光沢・背景を敷かない（敷くと、光沢の濃淡で線が所々暗く見える） */
+  background-clip: padding-box;
 }
 
 .voice-panel__body {
@@ -1462,7 +3208,7 @@ button.widget-card {
   width: 120px;
   height: 120px;
   border-radius: 50%;
-  color: #06203b;
+  color: rgb(var(--ink-rgb));
   background: radial-gradient(circle at 35% 30%, #e6f8ff, var(--voice-accent) 70%);
   box-shadow: 0 0 48px -6px var(--voice-accent);
 }
@@ -1638,417 +3384,6 @@ button.widget-card {
   }
 }
 
-/* --- Claude Code使用量 --- */
-
-.widget-usage {
-  align-items: stretch;
-  justify-content: flex-start;
-  gap: 0.15rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.widget-usage__label {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-}
-
-.widget-usage__value {
-  font-size: 2rem;
-  font-weight: 700;
-  line-height: 1.1;
-}
-
-.widget-usage__sub {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-}
-
-.widget-usage__block {
-  margin-top: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.widget-usage__bar {
-  height: 0.35rem;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.14);
-  overflow: hidden;
-}
-
-.widget-usage__bar-fill {
-  display: block;
-  height: 100%;
-  border-radius: 999px;
-  background: var(--accent-ok);
-}
-
-.widget-usage-detail section {
-  margin-bottom: 1.25rem;
-}
-
-.widget-usage-detail h3 {
-  margin: 0 0 0.5rem;
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-  font-weight: 600;
-}
-
-.widget-usage-detail__breakdown,
-.widget-usage-detail__models,
-.widget-usage-detail__daily {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  font-variant-numeric: tabular-nums;
-}
-
-.widget-usage-detail__breakdown li,
-.widget-usage-detail__models li {
-  display: flex;
-  justify-content: space-between;
-  gap: 1.5rem;
-  padding: 0.15rem 0;
-  font-size: 0.85rem;
-}
-
-.widget-usage-detail__breakdown-total {
-  border-top: 1px solid var(--glass-border);
-  margin-top: 0.25rem;
-  padding-top: 0.35rem !important;
-  font-weight: 600;
-}
-
-.widget-usage-detail__model {
-  color: var(--text-secondary);
-}
-
-.widget-usage-detail__daily li {
-  display: grid;
-  grid-template-columns: 3rem 1fr 3.5rem;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.8rem;
-  padding: 0.1rem 0;
-}
-
-.widget-usage-detail__daily-bar {
-  height: 0.5rem;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.1);
-  overflow: hidden;
-}
-
-.widget-usage-detail__daily-bar > span {
-  display: block;
-  height: 100%;
-  background: rgba(96, 165, 250, 0.85);
-}
-
-.widget-usage-detail__daily-value,
-.widget-usage-detail__date {
-  color: var(--text-secondary);
-}
-
-.widget-usage-detail__daily-value {
-  text-align: right;
-}
-
-.widget-usage-detail__note {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-  margin: 0.5rem 0 0;
-}
-
-/* --- Tailscale --- */
-
-.widget-tailscale {
-  align-items: stretch;
-  gap: 0.2rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.widget-tailscale__header {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-.widget-tailscale__title {
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-}
-
-.widget-tailscale__count {
-  font-size: 2rem;
-  font-weight: 700;
-  line-height: 1.1;
-}
-
-.widget-tailscale__total {
-  font-size: 1rem;
-  font-weight: 400;
-  color: var(--text-secondary);
-}
-
-.widget-tailscale__sub,
-.widget-tailscale__exit {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-}
-
-.widget-tailscale-detail__self {
-  color: var(--text-secondary);
-  font-size: 0.85rem;
-  margin: 0 0 0.75rem;
-}
-
-.widget-tailscale-detail__list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-}
-
-.widget-tailscale-detail__item {
-  display: grid;
-  grid-template-columns: auto 1fr auto auto;
-  align-items: center;
-  gap: 0.6rem;
-  font-size: 0.85rem;
-}
-
-.widget-tailscale-detail__ip,
-.widget-tailscale-detail__seen {
-  color: var(--text-secondary);
-  font-variant-numeric: tabular-nums;
-}
-
-.widget-tailscale-detail__meta {
-  display: flex;
-  gap: 0.3rem;
-  align-items: center;
-}
-
-.widget-tailscale-detail__badge {
-  font-size: 0.7rem;
-  padding: 0.05rem 0.4rem;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
-  white-space: nowrap;
-}
-
-.widget-tailscale-detail__badge--dim {
-  color: var(--text-secondary);
-  background: rgba(255, 255, 255, 0.06);
-}
-
-/* --- gitリポジトリ --- */
-
-.widget-git {
-  align-items: stretch;
-  justify-content: flex-start;
-  gap: 0.35rem;
-}
-
-.widget-git__header {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 0.5rem;
-}
-
-.widget-git__title {
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-}
-
-.widget-git__summary {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-  font-variant-numeric: tabular-nums;
-}
-
-.widget-git__list,
-.widget-git-detail__list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-}
-
-.widget-git__item {
-  display: grid;
-  grid-template-columns: auto 1fr auto auto;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 0.8rem;
-}
-
-.widget-git__mark--dirty {
-  color: var(--accent-warn);
-}
-
-.widget-git__mark--clean {
-  color: var(--text-secondary);
-}
-
-.widget-git__name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.widget-git__branch {
-  font-size: 0.7rem;
-  color: var(--text-secondary);
-}
-
-.widget-git__counts {
-  display: flex;
-  gap: 0.2rem;
-}
-
-.widget-git__badge {
-  font-size: 0.7rem;
-  padding: 0.05rem 0.35rem;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
-  font-variant-numeric: tabular-nums;
-}
-
-.widget-git__badge--dirty {
-  background: rgba(251, 191, 36, 0.25);
-}
-
-.widget-git__badge--dim {
-  color: var(--text-secondary);
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.widget-git__more {
-  font-size: 0.7rem;
-  color: var(--text-secondary);
-}
-
-.widget-git-detail__list {
-  gap: 0.65rem;
-}
-
-.widget-git-detail__head {
-  display: flex;
-  align-items: baseline;
-  gap: 0.5rem;
-}
-
-.widget-git-detail__name {
-  font-weight: 600;
-}
-
-.widget-git-detail__body {
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
-  padding-left: 1.2rem;
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-}
-
-.widget-git-detail__date {
-  margin-left: 0.5rem;
-}
-
-.widget-git-detail__error {
-  padding-left: 1.2rem;
-  font-size: 0.8rem;
-  color: var(--accent-warn);
-}
-
-/* --- メール --- */
-
-.widget-mail {
-  align-items: stretch;
-  justify-content: flex-start;
-  gap: 0.35rem;
-}
-
-.widget-mail__header {
-  display: flex;
-  align-items: baseline;
-  gap: 0.4rem;
-}
-
-.widget-mail__count {
-  font-size: 1.75rem;
-  font-weight: 700;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-}
-
-.widget-mail__label {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-}
-
-.widget-mail__list,
-.widget-mail-detail__list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-}
-
-.widget-mail__item {
-  display: grid;
-  grid-template-columns: 6rem 1fr;
-  gap: 0.5rem;
-  font-size: 0.78rem;
-}
-
-.widget-mail__from,
-.widget-mail__subject {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.widget-mail__from {
-  color: var(--text-secondary);
-}
-
-.widget-mail__empty,
-.widget-mail__error {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-}
-
-.widget-mail__error {
-  color: var(--accent-warn);
-}
-
-.widget-mail-detail__list {
-  gap: 0.6rem;
-}
-
-.widget-mail-detail__head {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-}
-
-.widget-mail-detail__subject {
-  font-size: 0.9rem;
-}
-
 /* --- タブレット幅: 時計を上、ウィジェットを下の2段組みにする --- */
 
 @media (max-width: 900px) {
@@ -2086,7 +3421,7 @@ button.widget-card {
 
   .sidebar {
     position: fixed;
-    z-index: 3;
+    z-index: var(--z-tabbar);
     inset: auto 12px 12px;
     height: 56px;
     min-height: 56px;
@@ -2120,13 +3455,766 @@ button.widget-card {
     padding-inline: 30px;
   }
 
-  .widget-spotify__art {
-    flex-basis: 92px;
-    width: 92px;
-    height: 92px;
+  .screen {
+    grid-column: 1;
+    height: calc(100svh - 68px);
   }
 
-  .widget-spotify__art--placeholder {
-    font-size: 62px;
+  .screen__inner {
+    padding-top: 24px;
   }
+}
+
+/* --- キャラクターのアイコン（チャット・設定のキャラクター一覧） --- */
+
+.persona-icon {
+  flex: 0 0 auto;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--glass-bg);
+  box-shadow: 0 0 0 1px var(--glass-border);
+}
+
+.persona-icon--medium {
+  width: 2rem;
+  height: 2rem;
+  font-size: var(--font-small);
+}
+
+/* キャラクターの詳細の「アイコン設定」。今のアイコンを大きめに見せる */
+.persona-icon--large {
+  width: 6rem;
+  height: 6rem;
+  font-size: 2.6rem;
+}
+
+.persona-icon--small {
+  width: 1.25rem;
+  height: 1.25rem;
+  font-size: 0.65rem;
+}
+
+.persona-icon--initial {
+  background: hsl(var(--persona-hue) 55% 42%);
+  color: #fff;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* ウィジェットの設定（編集中に歯車から開く） */
+.widget-settings {
+  width: min(32rem, 90vw);
+}
+
+.widget-settings__title {
+  margin: 0 3rem 1rem 0;
+  font-size: 1.15rem;
+}
+
+/* 設定画面の「壁紙」 */
+.wallpaper-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.wallpaper-settings__preview {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--inner-radius);
+  background-position: center;
+  background-size: cover;
+}
+
+/* 角の丸みをプレビューとそろえる（プレビューの丸み ＝ 札の丸み 12px ＋ 余白） */
+.wallpaper-settings__badge {
+  position: absolute;
+  top: calc(var(--inner-radius) - 12px);
+  left: calc(var(--inner-radius) - 12px);
+  padding: 0.35rem 0.8rem;
+  border-radius: 12px;
+  background: var(--widget-sheen), rgba(5, 14, 30, 0.6);
+  backdrop-filter: var(--widget-blur);
+  font-size: var(--font-note);
+}
+
+.wallpaper-settings__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* 明るい所の暗さ（壁紙の設定）。プレビューの上に、測った場所ごとの明るさと足す暗さを出す */
+.wallpaper-dim {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.wallpaper-dim .settings-detail__subtitle {
+  margin-bottom: 0;
+}
+
+/* 画面と同じ縦横比で、高さは画面の4割まで（縦長のスマホでも、場所ごとの数字まで一度に見える） */
+.wallpaper-dim__preview {
+  width: min(100%, calc(40vh * var(--preview-aspect, 1.78)));
+  aspect-ratio: var(--preview-aspect, 1.78);
+  overflow: hidden;
+  background-size: cover, cover;
+}
+
+.wallpaper-dim__zone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: flex-end;
+  border-left: 1px dashed rgba(var(--tint-rgb), 0.45);
+}
+
+/* 場所の番号（プレビューの下の一覧と対応させる） */
+.wallpaper-dim__chip {
+  display: inline-grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin: 0 0 0.5rem 0.5rem;
+  border-radius: 50%;
+  background: rgba(var(--shade-rgb), 0.72);
+  font-size: var(--font-caption);
+  font-weight: 600;
+}
+
+.wallpaper-dim__chip--static {
+  margin: 0;
+  border: 1px solid var(--glass-border);
+}
+
+.wallpaper-dim__amount {
+  flex-shrink: 0;
+  font-size: var(--font-label);
+  color: var(--text-secondary);
+}
+
+.wallpaper-dim__strength {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  font-size: var(--font-small);
+}
+
+.wallpaper-dim__strength > span {
+  flex: 0 0 auto;
+  min-width: 6.5rem;
+}
+
+.wallpaper-dim__strength .ui-slider {
+  flex: 1 1 auto;
+}
+
+/*
+ * --- 設定画面の部品 ---
+ * どの項目（拡張機能の設定も含む）のボタン・入れ物・入力欄も、ここで同じ形と見た目にそろえる。
+ * 見た目はウィジェット・Media の右上のボタンと同じガラス（光沢・暗い背景・影・ぼかし）
+ */
+
+/* 値を選ぶバー（widget-sdk の Slider）。プレイヤーの再生位置・壁紙の暗さの強さなど */
+.ui-slider {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 28px;
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+}
+
+.ui-slider--disabled {
+  cursor: default;
+}
+
+.ui-slider:focus-visible {
+  outline: 2px solid rgb(var(--accent-soft-rgb));
+  outline-offset: 4px;
+  border-radius: 999px;
+}
+
+.ui-slider__track {
+  width: 100%;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--slider-track, rgba(255, 255, 255, 0.16));
+}
+
+.ui-slider__fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--slider-color, var(--text-primary));
+}
+
+/* つまみ。触れている間・キーボードで選んでいる間は大きくする */
+.ui-slider__thumb {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--slider-color, var(--text-primary));
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  transform: translate(-50%, -50%);
+  transition: transform var(--motion-fast) var(--ease-standard);
+}
+
+.ui-slider:active .ui-slider__thumb,
+.ui-slider:focus-visible .ui-slider__thumb {
+  transform: translate(-50%, -50%) scale(1.43);
+}
+
+.ui-slider--disabled .ui-slider__thumb {
+  display: none;
+}
+
+/* 拡張機能の部品（widget-sdk の ui）。区画の内側の余白・押せない一覧の行・入力欄の下の説明・写して使う文字 */
+.ui-group {
+  padding: var(--group-padding);
+}
+
+.ui-list-item:not(.ui-list-item--action) {
+  cursor: default;
+}
+
+.ui-check {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.ui-field__hint {
+  font-size: var(--font-caption);
+  color: var(--text-secondary);
+}
+
+.ui-code {
+  display: block;
+  width: 100%;
+  max-height: 7rem;
+  overflow: auto;
+  padding: 0.6rem var(--field-padding-x);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--inner-radius);
+  background: var(--surface-input);
+  font-size: var(--font-caption);
+  word-break: break-all;
+  user-select: all;
+}
+
+/* 値のタイル（widget-sdk の StatTile。Home Control のセンサーと同じ形） */
+.ui-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 190px), 1fr));
+  /* どの行のタイルも同じ高さにそろえる */
+  grid-auto-rows: 1fr;
+  gap: 14px;
+  margin-bottom: var(--group-gap);
+}
+
+.ui-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  min-width: 0;
+  padding: 20px 24px;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+}
+
+.ui-stat__label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--text-secondary);
+  font-size: var(--font-label);
+}
+
+.ui-stat__value {
+  font-size: clamp(32px, 2.6vw, 46px);
+  font-weight: 600;
+  line-height: 1;
+}
+
+.ui-stat__value small {
+  margin-left: 0.2rem;
+  font-size: 0.4em;
+  font-weight: 400;
+}
+
+.ui-stat__note {
+  margin-top: auto;
+  color: var(--text-secondary);
+  font-size: var(--font-note);
+  line-height: 1.5;
+}
+
+/* 入れ物（開け閉めする区画・知らせ）。一覧（settings-list・ui-list）は行ごとの形なので、ここには入れない */
+.ui-stat,
+.settings-list__row--static,
+.connection-settings__section,
+.persona-manager__notice,
+.voice-mcp__list,
+.ui-group {
+  border: 1px solid var(--glass-border);
+  border-radius: var(--group-radius);
+  background: var(--widget-sheen), var(--widget-bg);
+  /* 縁の線の下に光沢・背景を敷かない（敷くと、光沢の濃淡で線が所々暗く見える） */
+  background-clip: padding-box;
+  box-shadow: var(--widget-shadow);
+  backdrop-filter: var(--widget-blur);
+}
+
+/* 値のタイルの角は、Home Control のセンサー・ウィジェットと同じ */
+.ui-stat {
+  border-radius: var(--card-radius);
+}
+
+/* ウィジェット・壁紙の説明は、ボタンの並びの上に1行で置く */
+.settings-panel__widget-actions > p {
+  flex-basis: 100%;
+}
+
+.voice-mcp__form button {
+  justify-self: start;
+}
+
+/* 入れ物の中の行は、一覧と同じく線で区切る */
+.voice-mcp__list {
+  overflow: hidden;
+}
+
+.voice-mcp__list li + li {
+  border-top: 1px solid var(--line);
+}
+
+/* 名前と説明の2行だけの行は一覧の行と同じ余白、文章を何行も載せる知らせは区画と同じ余白 */
+.voice-mcp__item,
+.voice-guard-tools__item {
+  padding: var(--group-row-padding) var(--group-padding);
+}
+
+.persona-manager__notice {
+  padding: var(--group-padding);
+}
+
+/* ボタン。どれも丸い端の同じ高さ */
+.connection-settings__actions button,
+.connection-settings__actions a,
+.connection-settings__inline-button,
+.account-settings__button,
+.settings-panel__edit-toggle,
+.persona-manager__import,
+.persona-manager__actions a,
+.persona-manager__actions button,
+.voice-mcp__toolbar button,
+.voice-mcp__form button,
+.ui-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 40px;
+  padding: 0 1rem;
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  background: var(--widget-sheen), var(--widget-bg);
+  background-clip: padding-box;
+  box-shadow: var(--widget-shadow);
+  backdrop-filter: var(--widget-blur);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--font-label);
+  line-height: 1.2;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.connection-settings__actions button:hover,
+.connection-settings__actions a:hover,
+.connection-settings__inline-button:hover,
+.account-settings__button:hover,
+.settings-panel__edit-toggle:hover,
+.persona-manager__import:hover,
+.persona-manager__actions a:hover,
+.persona-manager__actions button:hover,
+.voice-mcp__toolbar button:hover,
+.voice-mcp__form button:hover,
+.ui-button:hover {
+  border-color: rgba(var(--tint-rgb), 0.32);
+}
+
+.connection-settings__actions button:disabled,
+.connection-settings__inline-button:disabled,
+.account-settings__button:disabled,
+.settings-panel__edit-toggle:disabled,
+.persona-manager__import:disabled,
+.persona-manager__actions button:disabled,
+.voice-mcp__toolbar button:disabled,
+.voice-mcp__form button:disabled,
+.ui-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* 決める・保存するボタン（その場でいちばん押すもの）と、入っている切り替え */
+.connection-settings__actions .connection-settings__save,
+.settings-panel__edit-toggle--on,
+.ui-button--primary {
+  border-color: transparent;
+  background: rgba(var(--tint-rgb), 0.94);
+  box-shadow: none;
+  color: rgb(var(--ink-rgb));
+}
+
+/* 消すのを確かめるボタン */
+.persona-manager__actions .persona-manager__danger,
+.ui-button--danger {
+  border-color: transparent;
+  background: #b4233b;
+  color: #fff;
+}
+
+/* 入力欄・選ぶ欄 */
+.settings-screen :is(input:not([type="checkbox"], [type="radio"], [type="file"], [type="range"]), select, textarea),
+.ui-field :is(input:not([type="checkbox"], [type="radio"], [type="file"], [type="range"]), select, textarea) {
+  min-height: 44px;
+  padding: 0 var(--field-padding-x);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--inner-radius);
+  background: var(--surface-input);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--font-small);
+}
+
+.settings-screen textarea,
+.ui-field textarea {
+  padding: 0.6rem var(--field-padding-x);
+}
+
+.settings-screen :is(input, textarea)::placeholder,
+.ui-field :is(input, textarea)::placeholder {
+  color: var(--text-secondary);
+}
+
+.settings-screen option,
+.ui-field option {
+  background: #0a1730;
+}
+
+/* 拡張機能のウィジェット・画面が落ちたときの知らせ（ErrorBoundary） */
+.error-boundary {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: var(--group-padding);
+  color: var(--text-secondary);
+  font-size: var(--font-label);
+}
+
+.error-boundary p {
+  margin: 0;
+}
+
+/* 選ぶ項目の一覧（設定の「一般」）。選んでいない行も印の場所を空けて、行の高さをそろえる */
+.settings-choice__off {
+  visibility: hidden;
+}
+
+/* --- 文字の読みやすさ --- */
+
+/* 壁紙の上にじかに置く文字（画面の見出し・区画の見出し・注記・ホームの時計など）に淡い影を付ける。
+   ガラスの入れ物の中は、後ろが暗くしてあるので影を付けない（付けると文字のまわりがにじんで見える） */
+.screen__inner,
+.settings-screen__inner,
+.main-info,
+.widget-rail__empty {
+  text-shadow: var(--text-halo);
+}
+
+:is(
+    .widget-card,
+    .ui-group,
+    .ui-list--boxed,
+    .settings-list--boxed,
+    .ui-list-item--on,
+    .settings-list__row--static,
+    .ui-stat,
+    .ui-chat__bubble,
+    .ui-chat__input,
+    .ui-button,
+    .pill-menu,
+    .connection-settings__section,
+    .media__panel,
+    .wallpaper-settings__badge,
+    .voice-mcp__list,
+    .persona-manager__notice,
+    input,
+    select,
+    textarea,
+    button
+  ) {
+  text-shadow: none;
+}
+
+/* 影は文字の外へ 20px ほど広がるので、はみ出しを切る入れ物（スクロールする区画・省略で切る1行）の縁で切れて見える。
+   影の広がる分だけ内側に余白を取り、外側を同じだけ詰める（並びと文字の位置は変わらない） */
+:root {
+  --halo-room: 22px;
+}
+
+.settings-detail {
+  margin: calc(-1 * var(--halo-room));
+  padding: var(--halo-room) calc(0.25rem + var(--halo-room)) var(--halo-room) var(--halo-room);
+}
+
+.ui-chat__list {
+  margin-top: calc(-1 * var(--halo-room));
+  padding-top: var(--halo-room);
+}
+
+:is(.media__title, .media__artist, .ui-chat__title h2, .ui-chat__list .ui-list-item__name) {
+  margin: calc(-1 * var(--halo-room));
+  padding: var(--halo-room);
+}
+
+/* 小さな薄い文字は少しだけ太くする（細い線は後ろの色に溶けやすい） */
+.ui-list-item__detail,
+.settings-list__detail,
+.ui-note,
+.ui-stat__note,
+.ui-chat__meta,
+.connection-settings__note,
+.screen__notice,
+.weather-hourly__time {
+  font-weight: 500;
+}
+
+/*
+ * --- 動き ---
+ * 時間と曲線は :root の --motion-* と --ease-* だけを使う（docs/design-system.md の「動き」）。
+ * - 出てくるもの（画面・小窓・メニュー・知らせ・吹き出し）は、下から --motion-rise だけ上がりながら現れる。消えるときは動かさずにすぐ消す
+ *   （閉じた操作への返事を待たせない。消えるものは目で追わなくてよい）
+ * - 押せるものは、色を --motion-fast で変え、押している間だけ少し縮む
+ * - 動かすのは transform と opacity だけ（大きさ・位置・ぼかしは動かさない。ガラスのぼかしの描き直しが重くなる）
+ */
+
+@keyframes motion-enter {
+  from {
+    opacity: 0;
+    transform: translateY(var(--motion-rise));
+  }
+}
+
+@keyframes motion-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes motion-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+
+@keyframes motion-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+}
+
+/* 画面を開いたとき（サイドバーで切り替える・ホームに戻る）。中身の区画を少しずつずらして出す */
+.screen__inner > *,
+.settings-screen__inner > *,
+.main-screen:not([hidden]) > * {
+  animation: motion-enter var(--motion-slow) var(--ease-out) backwards;
+}
+
+.screen__inner > :nth-child(2),
+.settings-screen__inner > :nth-child(2),
+.main-screen:not([hidden]) > :nth-child(2) {
+  animation-delay: 40ms;
+}
+
+.screen__inner > :nth-child(3),
+.main-screen:not([hidden]) > :nth-child(3) {
+  animation-delay: 80ms;
+}
+
+.screen__inner > :nth-child(n + 4) {
+  animation-delay: 120ms;
+}
+
+/* 設定の項目を選んだとき・一覧から詳細へ進んだとき（中身が入れ替わる） */
+.settings-detail > * {
+  animation: motion-enter var(--motion-base) var(--ease-out) backwards;
+}
+
+/* 小窓（Dialog・ウィジェットの追加・詳細・設定）。下敷きは薄く、面は少し大きくなりながら出る */
+.widget-picker-overlay,
+.widget-detail-overlay {
+  animation: motion-fade var(--motion-base) var(--ease-out);
+}
+
+.widget-picker,
+.widget-detail-panel {
+  animation: motion-pop var(--motion-slow) var(--ease-out);
+}
+
+/* 画面の右上のメニュー（PillMenu）。上から落ちてくるように出し、山形の印を回す */
+.pill-menu__menu {
+  transform-origin: top right;
+  animation: motion-drop var(--motion-base) var(--ease-out);
+}
+
+.pill-menu__chevron {
+  transition: transform var(--motion-base) var(--ease-standard);
+}
+
+.pill-menu__button--open .pill-menu__chevron {
+  transform: rotate(180deg);
+}
+
+/* ウィジェットを並べ替える・外すときの操作帯 */
+.widget-edit-bar {
+  animation: motion-enter var(--motion-base) var(--ease-out);
+}
+
+.widget-host__edit {
+  animation: motion-fade var(--motion-base) var(--ease-out);
+}
+
+/* 知らせ・結果・吹き出しが新しく出たとき */
+.ui-message,
+.ui-notice,
+.screen__notice,
+.screen__error {
+  animation: motion-fade var(--motion-base) var(--ease-out);
+}
+
+.ui-chat__log > :last-child {
+  animation: motion-enter var(--motion-base) var(--ease-out);
+}
+
+/* 音声のパネルは、自分で開け閉めするので、閉じるときだけ薄くなってから消える（VoiceOverlay.tsx の closing） */
+@keyframes motion-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+.voice-overlay--closing {
+  animation: motion-fade-out var(--motion-base) var(--ease-in) forwards;
+  pointer-events: none;
+}
+
+/* 押せるものの色の変わり方と、押している間の縮み */
+:is(
+    .ui-button,
+    .pill-menu__button,
+    .pill-menu__item,
+    .settings-nav__item,
+    .ui-list-item--action,
+    .ui-back,
+    .widget-picker__item,
+    .home-button,
+    .home-icon-button,
+    .home-chip,
+    .ui-chat__send,
+    .settings-panel__close,
+    .widget-detail-panel__close,
+    .widget-edit-bar__button
+  ) {
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard),
+    box-shadow var(--motion-fast) var(--ease-standard),
+    opacity var(--motion-fast) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-standard);
+}
+
+:is(
+    .ui-button,
+    .pill-menu__button,
+    .nav-button,
+    .home-button,
+    .home-icon-button,
+    .home-chip,
+    .ui-chat__send,
+    .widget-edit-bar__button,
+    .widget-picker__item
+  ):active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+/* 一覧の行・設定の項目は、幅が広いので縮みを小さくする */
+:is(.ui-list-item--action, .settings-nav__item, .pill-menu__item):active:not(:disabled) {
+  transform: scale(0.985);
+}
+
+/* 動きを減らす設定では、動きを全部止める（時間を 0 にし、出てくるときの動きを消す） */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-fast: 0ms;
+    --motion-base: 0ms;
+    --motion-slow: 0ms;
+    --motion-reveal: 0ms;
+    --motion-rise: 0px;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/*
+ * --- 重さを抑える（見た目は変えない） ---
+ * - ガラスの中のガラスはぼかさない（後ろはもうぼけて暗いので、ぼかしても見た目はほぼ同じで、描く手間だけ増える）
+ * - ほぼ不透明に塗るもの（明るい塗り・点いている家電）もぼかさない
+ * - ウィジェットの列は、読み込んだとき・サイドバーの幅を変えたときに大きさを動かさない（並べ替えの動きだけ残す）
+ */
+:is(.widget-card, .ui-group, .connection-settings__section, .home-lock, .home-climate, .media__panel)
+  :is(.ui-button, .home-chip, .home-button, .home-icon-button, .ha-entity, .persona-preview__buttons button),
+:is(
+    .ui-button--primary,
+    .home-button--primary,
+    .home-icon-button--on,
+    .home-chip--on,
+    .nav-button--active
+  ),
+/* 拡張機能の CSS は後から読まれるので、クラスを重ねて強くする */
+.home-toggle.home-toggle--on,
+.ha-entity.ha-entity--on {
+  backdrop-filter: none;
+}
+
+.react-grid-layout,
+.react-grid-item {
+  transition: none;
+}
+
+.widget-rail--editing .react-grid-item.cssTransforms {
+  transition: transform var(--motion-base) var(--ease-out);
 }

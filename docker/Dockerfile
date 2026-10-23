@@ -25,9 +25,11 @@ COPY --from=build /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY --from=build /app/package.json ./package.json
 COPY --from=build /app/apps/server ./apps/server
 COPY --from=build /app/apps/web/dist ./apps/web/dist
-COPY --from=build /app/config ./config
+# 本体に入っている拡張機能（Spotify・Home Assistant など）。サーバーはそれぞれの dist/ を読む
+COPY --from=build /app/extensions ./extensions
 
-RUN mkdir -p /app/data
+# config/ は実行時にマウントする（イメージには入れない。.dockerignore）
+RUN mkdir -p /app/data /app/config
 
 EXPOSE 8787
 CMD ["node", "apps/server/dist/index.js"]

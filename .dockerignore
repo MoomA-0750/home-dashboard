@@ -2,12 +2,14 @@ node_modules
 **/node_modules
 **/dist
 .git
-data/*.json
-config/homelab-hosts.json
+# 実行時のデータと秘密はイメージに入れない（data/ は実行時にマウントし、.env は compose の env_file で渡す）
+data
+**/.env
+**/.env.bak*
 *.log
 # 音声エージェントはホスト上で動かす（マイク・スピーカーとclaudeコマンドを使うため）。イメージには入れない
 apps/voice-agent
-# VRMアバターはイメージに焼き込まず、実行時にマウントした config/ から読む（再配布禁止のモデルを含めないため）
-config/*.vrm
-# キャラクター（プロンプト・VRM）も実行時にマウントした config/ から読む
-config/voice-personas
+# config/ はイメージに入れず、実行時にマウントしたものを読む（docker-compose.yml の ./config:/app/config）。
+# VRM（再配布禁止のモデル）・キャラクター・家の機械の一覧など、この家だけのものを焼き込まないため。
+# 「!」で見本だけ戻す書き方はしない（Docker が data/ など全部のフォルダを覗きに行き、読めないフォルダで止まる）
+config

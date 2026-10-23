@@ -5,8 +5,8 @@ build/
 .env
 .env.*
 !.env.example
-data/*.json
-data/*.bak-*
+# 実行中のデータ（アカウント・会話の記録・添付・壁紙・拡張機能のデータ）は全部リポジトリに入れない
+data/**
 !data/.gitkeep
 config/homelab-hosts.json
 config/homeassistant.json
@@ -24,3 +24,7 @@ apps/web/public/background.jpg
 apps/voice-agent/.venv/
 __pycache__/
 *.egg-info/
+
+# 拡張機能のビルド道具が作る ZIP（scripts/build-extension.mjs --zip）
+extensions/*/*.zip
+examples/extensions/*/*.zip

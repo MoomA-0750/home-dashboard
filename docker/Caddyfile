@@ -1,0 +1,24 @@
+# ダッシュボードを LAN の IP でも https で開けるようにする（前に置く中継）。
+# 証明書は家の認証局（general-console の step-ca。ルートは ~/.step/certs/root_ca.crt）から ACME で取り、期限前に自動で更新する。
+# 端末に「MoomA Home Root CA」を入れておけば、https://<IP>/ を警告なしで開ける（Obsidian の「LAN用の認証局（step-ca）」）。
+#
+# - 待ち受けは HTTPS_BIND の IP の 443 と 80 だけ（tailnet の IP の 443 は tailscale serve が使っている）
+# - 80 は https へ送るのと、ACME の http-01 の受け口
+# - 中身は今までどおり http://127.0.0.1:8787 のダッシュボード（音声エージェントなどはそちらを直接呼ぶ）
+{
+	default_bind {$HTTPS_BIND:192.168.1.10}
+	# Caddy の管理用の口はホストの外に出さない
+	admin 127.0.0.1:2019
+}
+
+https://{$HTTPS_BIND:192.168.1.10} {
+	tls {
+		issuer acme {
+			dir {$ACME_DIRECTORY:https://192.168.1.10:9000/acme/acme/directory}
+			trusted_roots /etc/caddy/home-root-ca.crt
+		}
+	}
+	encode zstd gzip
+	# X-Forwarded-Proto: https を添える（ダッシュボードはこれでログインの cookie に Secure を付ける）
+	reverse_proxy 127.0.0.1:8787
+}

@@ -16,7 +16,8 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      "/api": apiTarget,
+      // Host を書き換えない（サーバーは Origin と Host を比べて、別のサイトからの書き込みを断る）
+      "/api": { target: apiTarget, changeOrigin: false },
       "/ws": {
         target: apiTarget.replace(/^http/, "ws"),
         ws: true,

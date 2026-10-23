@@ -1,5 +1,16 @@
-import { usePolling, type WidgetRuntimeContext } from "@home-dashboard/widget-sdk";
-import { Icon, type IconName } from "./Icon";
+import {
+  defineMessages,
+  formatClock,
+  useDateFormat,
+  useDisplay,
+  useLocale,
+  useTemperature,
+  usePolling,
+  weatherConditionText,
+  weatherIcon,
+  type WidgetRuntimeContext,
+} from "@home-dashboard/widget-sdk";
+import { Icon } from "./Icon";
 
 /**
  * 設計図でメイン画面の左側に固定表示されている「時刻・天気・日付」のブロック。
@@ -7,8 +18,10 @@ import { Icon, type IconName } from "./Icon";
  * ウィジェットではなくコンポーネントとして直接描画している。
  */
 
-/** 設計図の表記（"Sun Nov 24"）に合わせる */
-const DATE_LOCALE = "en-US";
+const messages = defineMessages({
+  ja: { currentTime: "現在時刻" },
+  en: { currentTime: "Current time" },
+});
 
 const WEATHER_POLL_INTERVAL_MS = 10 * 60 * 1000;
 
@@ -16,22 +29,9 @@ interface WeatherResponse {
   current: { temperatureC: number; condition: string; code: number; isDay: boolean };
 }
 
-/** WMO weather code を Fluent のアイコンに割り当てる（夜は昼夜別のアイコンに差し替える） */
-function weatherIcon(code: number, isDay: boolean): IconName {
-  if (code === 0) return isDay ? "weather-sunny" : "weather-moon";
-  if (code === 1 || code === 2) return isDay ? "weather-partly-cloudy-day" : "weather-partly-cloudy-night";
-  if (code === 3) return "weather-cloudy";
-  if (code === 45 || code === 48) return "weather-fog";
-  if (code >= 51 && code <= 67) return "weather-rain";
-  if (code === 77) return "weather-snowflake";
-  if ((code >= 71 && code <= 75) || code === 85 || code === 86) return "weather-snow";
-  if (code >= 80 && code <= 82) return "weather-rain-showers-day";
-  if (code >= 95) return "weather-thunderstorm";
-  return "unknown";
-}
-
+// 天気は拡張機能（extensions/weather）。切ってあると 404 になり、天気だけ出さない
 async function fetchWeather(apiBaseUrl: string): Promise<WeatherResponse> {
-  const res = await fetch(`${apiBaseUrl}/api/weather`);
+  const res = await fetch(`${apiBaseUrl}/api/ext/weather/current`);
   if (!res.ok) throw new Error(`weather API error: ${res.status}`);
   return res.json();
 }
@@ -41,17 +41,23 @@ interface MainInfoProps {
 }
 
 export function MainInfo({ ctx }: MainInfoProps) {
+  const t = messages.useT();
+  const locale = useLocale();
+  const date = useDateFormat();
+  const display = useDisplay();
+  const temperature = useTemperature();
   const { data } = usePolling(() => fetchWeather(ctx.apiBaseUrl), WEATHER_POLL_INTERVAL_MS);
 
-  const hh = ctx.now.getHours().toString().padStart(2, "0");
+  // 時刻の設定が12時間なら、時は1〜12（大きな時計なので午前・午後は付けず、時刻の読み上げ名に入れる）
+  const hours = ctx.now.getHours();
+  const hh = display.clock === "12" ? String(hours % 12 || 12) : String(hours).padStart(2, "0");
   const mm = ctx.now.getMinutes().toString().padStart(2, "0");
-  // 設計図の表記は "Sun Nov 24"。まとめて指定すると "Sun, Nov 24" とカンマが入るので分けて組む。
-  const weekday = ctx.now.toLocaleDateString(DATE_LOCALE, { weekday: "short" });
-  const monthDay = ctx.now.toLocaleDateString(DATE_LOCALE, { month: "short", day: "numeric" });
+  // 短い形（10月21日(水) / Wed Oct 21）。略さない英語の日付は、スマホの幅に入りきらない
+  const dateText = date(ctx.now, "monthDayWeekday");
 
   return (
     <div className="main-info">
-      <div className="time-grid" aria-label="現在時刻">
+      <div className="time-grid" aria-label={`${t("currentTime")} ${formatClock(ctx.now, locale)}`}>
         <span className="time-part time-part--hour">
           <b>{hh}</b>
         </span>
@@ -63,12 +69,12 @@ export function MainInfo({ ctx }: MainInfoProps) {
         <div className="meta-weather">
           {data && (
             <>
-              <Icon name={weatherIcon(data.current.code, data.current.isDay)} label={data.current.condition} />
-              <strong>{Math.round(data.current.temperatureC)}℃</strong>
+              <Icon name={weatherIcon(data.current.code, data.current.isDay)} label={weatherConditionText(data.current.code, data.current.condition, locale)} />
+              <strong>{temperature(data.current.temperatureC, { unit: true })}</strong>
             </>
           )}
         </div>
-        <p className="meta-date">{`${weekday} ${monthDay}`}</p>
+        <p className="meta-date">{dateText}</p>
       </div>
     </div>
   );
