@@ -36,6 +36,7 @@ extensions/   本体に入っている拡張機能（連携と画面の機能）
   homelab/          ホームラボのホスト死活監視
   accounts/         カレンダー・メール。インターネットアカウント（Google・iCloud・Microsoft・一般）を人ごとに置き、
                     Calendar・Mail の画面と予定・メールのウィジェット、音声アシスタントの予定とメール
+  sticky-notes/     付箋（家にいる人への伝言）のウィジェット。文字の揃えと iMessage のような効果（ドン・紙吹雪など）を付けられる
 examples/extensions/memo/  外で作る拡張機能の見本（伝言メモ）。本体には入らない
 scripts/build-extension.mjs  拡張機能をビルドして ZIP にする道具（pnpm build:extension）
 scripts/new-extension.mjs    拡張機能のひな形を作る道具（pnpm new:extension）
