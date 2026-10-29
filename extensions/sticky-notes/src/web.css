@@ -341,67 +341,103 @@
   }
 }
 
-/* --- 画面いっぱいの効果（iMessage の画面効果にならう）。押すのは邪魔しない --- */
+/* --- 付箋の中で起こる効果（iMessage の画面効果にならうが、付箋の枠の外には出さない） --- */
 
-.sticky-notes-burst {
-  position: fixed;
+/* 文字と書いた人の行は、効果の粒より手前に出す（伝言は効果の間も読める） */
+.sticky-note__text,
+.sticky-note__meta,
+.sticky-note__ink-hint,
+.sticky-note__peel {
+  position: relative;
+  z-index: 1;
+}
+
+.sticky-note__burst {
+  position: absolute;
   inset: 0;
-  /* 詳細の小窓で効果を選んだときにも見えるよう、小窓（modal）の上、音声のパネル（voice）の下に出す */
-  z-index: calc(var(--z-modal) + 1);
   overflow: hidden;
   pointer-events: none;
 }
 
-.sticky-notes-burst__piece {
+/* 粒の通り道。付箋と同じ大きさなので、translateY の % が付箋の高さになる */
+.sticky-note__lane {
+  position: absolute;
+  inset: 0;
+  will-change: transform;
+  animation: var(--dur) var(--delay) both;
+}
+
+.sticky-note__piece {
   position: absolute;
   left: var(--x);
-  will-change: transform;
 }
 
-.sticky-notes-burst--confetti .sticky-notes-burst__piece {
-  top: -2rem;
-  width: 0.55rem;
-  height: 0.9rem;
-  border-radius: 0.1rem;
+.sticky-note__burst--confetti .sticky-note__lane {
+  animation-name: sticky-notes-fall;
+  animation-timing-function: var(--ease-in);
+}
+
+.sticky-note__burst--confetti .sticky-note__piece {
+  top: -0.8rem;
+  width: 0.35rem;
+  height: 0.6rem;
+  border-radius: 0.08rem;
   background: var(--color);
-  animation: sticky-notes-fall var(--fall) var(--ease-in) var(--delay) both;
+  animation: sticky-notes-spin var(--dur) linear var(--delay) both;
 }
 
-.sticky-notes-burst--balloons .sticky-notes-burst__piece {
-  bottom: calc(var(--size) * -1.6);
+.sticky-note__burst--balloons .sticky-note__lane {
+  animation-name: sticky-notes-rise;
+  animation-timing-function: var(--ease-standard);
+}
+
+.sticky-note__burst--balloons .sticky-note__piece {
+  bottom: calc(var(--size) * -1.3);
   width: var(--size);
   height: calc(var(--size) * 1.2);
   border-radius: 50% 50% 48% 48% / 55% 55% 45% 45%;
   background: radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.55), transparent 32%), var(--color);
-  animation: sticky-notes-rise var(--rise) var(--ease-standard) var(--delay) both;
+  opacity: 0.85;
 }
 
 /* 風船のひも */
-.sticky-notes-burst--balloons .sticky-notes-burst__piece::after {
+.sticky-note__burst--balloons .sticky-note__piece::after {
   content: "";
   position: absolute;
   top: 100%;
   left: 50%;
   width: 1px;
-  height: calc(var(--size) * 0.9);
-  background: rgba(255, 255, 255, 0.6);
+  height: calc(var(--size) * 0.8);
+  background: rgba(43, 36, 16, 0.35);
 }
 
-.sticky-notes-burst--hearts .sticky-notes-burst__piece {
-  bottom: -3rem;
+.sticky-note__burst--hearts .sticky-note__lane {
+  animation-name: sticky-notes-hearts;
+  animation-timing-function: var(--ease-out);
+}
+
+.sticky-note__burst--hearts .sticky-note__piece {
+  bottom: -1.2rem;
   color: #f43f5e;
   font-size: var(--size);
   line-height: 1;
-  text-shadow: 0 0.2rem 0.6rem rgba(var(--shade-rgb), 0.35);
-  animation: sticky-notes-hearts var(--rise) var(--ease-out) var(--delay) both;
 }
 
 @keyframes sticky-notes-fall {
   from {
-    transform: translate(0, 0) rotate(0deg);
+    transform: translate(0, 0);
   }
   to {
-    transform: translate(var(--drift), 110vh) rotate(var(--spin));
+    transform: translate(var(--drift), 115%);
+  }
+}
+
+@keyframes sticky-notes-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(var(--spin));
   }
 }
 
@@ -410,10 +446,10 @@
     transform: translate(0, 0) rotate(-4deg);
   }
   50% {
-    transform: translate(calc(var(--drift) * 0.5), -60vh) rotate(4deg);
+    transform: translate(calc(var(--drift) * 0.5), -60%) rotate(4deg);
   }
   100% {
-    transform: translate(var(--drift), -125vh) rotate(-4deg);
+    transform: translate(var(--drift), -135%) rotate(-4deg);
   }
 }
 
@@ -421,439 +457,14 @@
   0% {
     opacity: 0;
     transform: translate(0, 0) scale(0.4);
-  }
-  15% {
-    opacity: 1;
-    transform: translate(0, -10vh) scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(var(--drift), -80vh) scale(1.1);
-  }
-}
-
-/* --- 詳細 --- */
-
-.sticky-notes-detail {
-  width: min(52rem, 88vw);
-}
-
-.sticky-notes-form {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 13rem;
-  gap: var(--space-4) var(--space-6);
-  margin-bottom: var(--space-6);
-}
-
-.sticky-notes-form > .ui-message,
-.sticky-notes-form > .ui-button-row {
-  grid-column: 1 / -1;
-}
-
-.sticky-notes-form__fields {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  min-width: 0;
-}
-
-.sticky-notes-form textarea {
-  width: 100%;
-  resize: vertical;
-}
-
-.sticky-notes-form__row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-3);
-}
-
-.sticky-notes-form__colors {
-  display: flex;
-  gap: var(--space-3);
-}
-
-.sticky-notes-form__swatch {
-  width: 40px;
-  height: 40px;
-  border-radius: 0.3rem;
-  border: 2px solid transparent;
-  background: var(--sticky-paper);
-  cursor: pointer;
-}
-
-.sticky-notes-form__swatch[aria-checked="true"] {
-  border-color: var(--text-primary);
-  box-shadow: 0 0 0 2px rgba(var(--shade-rgb), 0.5);
-}
-
-.sticky-notes-choices {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
-
-.sticky-notes-choices__chip {
-  min-height: 40px;
-  padding: 0 var(--space-4);
-  border-radius: 999px;
-  color: var(--text-primary);
-  font: inherit;
-  font-size: var(--font-small);
-  cursor: pointer;
-  transition:
-    background var(--motion-fast) var(--ease-standard),
-    color var(--motion-fast) var(--ease-standard);
-}
-
-.sticky-notes-choices__chip--on {
-  border-color: transparent;
-  background: var(--fill);
-  color: var(--on-fill);
-}
-
-.sticky-notes-form__preview {
-  /* 背の低い壁掛けの画面では小窓の中をスクロールするので、見本は見えるところに残す */
-  position: sticky;
-  top: 0;
-  align-self: start;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  align-items: stretch;
-}
-
-.sticky-notes-form__preview-label {
-  font-size: var(--font-note);
-  color: var(--text-secondary);
-}
-
-.sticky-notes-form__preview .sticky-note {
-  height: 11rem;
-  cursor: default;
-}
-
-.sticky-notes-detail__board {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
-  gap: var(--space-4);
-}
-
-.sticky-note--large {
-  min-height: 8rem;
-}
-
-.sticky-note--large .sticky-note__text {
-  -webkit-mask-image: none;
-  mask-image: none;
-}
-
-.sticky-note--large .sticky-note__words {
-  font-size: var(--font-title);
-}
-
-.sticky-note__peel {
-  align-self: flex-end;
-  min-height: 32px;
-  padding: 0 var(--space-3);
-  border: 1px solid rgba(43, 36, 16, 0.25);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.4);
-  color: inherit;
-  font: inherit;
-  font-size: var(--font-caption);
-  cursor: pointer;
-}
-
-.sticky-note__peel--armed {
-  border-color: var(--danger-strong);
-  background: var(--danger-strong);
-  color: #fff;
-}
-
-@media (max-width: 620px) {
-  .sticky-notes-detail {
-    width: auto;
-  }
-
-  /* 1 列のときは見本が下の付箋に重ならないよう、貼り付けない */
-  .sticky-notes-form__preview {
-    position: static;
-  }
-
-  .sticky-notes-form {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .sticky-notes-form__row {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-/* 動きを減らす設定では、見えないインクの粒も止める（ぼかしはそのまま残る） */
-@media (prefers-reduced-motion: reduce) {
-  .sticky-note--ink .sticky-note__text::after {
-    animation: none;
-  }
-}.sticky-note__meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1) var(--space-2);
-  font-size: var(--font-micro);
-  color: rgba(43, 36, 16, 0.65);
-}
-
-.sticky-note--x-center .sticky-note__meta {
-  justify-content: center;
-}
-
-.sticky-note--x-end .sticky-note__meta {
-  justify-content: flex-end;
-}
-
-.sticky-note__from {
-  font-weight: 600;
-}
-
-.sticky-note__until {
-  padding: 0 var(--space-1);
-  border-radius: 999px;
-  background: rgba(0, 0, 0, 0.08);
-}
-
-/* --- 付箋の動き（iMessage の吹き出しの効果にならう）。動きを減らす設定では JS が付けない --- */
-
-.sticky-note--fx-slam {
-  z-index: 1;
-  animation: sticky-notes-slam 700ms var(--ease-out) both;
-}
-
-.sticky-note--fx-loud {
-  z-index: 1;
-  animation: sticky-notes-loud 1400ms var(--ease-standard) both;
-}
-
-.sticky-note--fx-loud .sticky-note__words {
-  font-weight: 600;
-}
-
-.sticky-note--fx-gentle {
-  animation: sticky-notes-gentle 1600ms var(--ease-out) both;
-}
-
-.sticky-note--fx-gentle .sticky-note__words {
-  animation: sticky-notes-gentle-words 1600ms var(--ease-out) both;
-}
-
-@keyframes sticky-notes-slam {
-  0% {
-    opacity: 0;
-    transform: translateY(-30%) scale(1.6) rotate(calc(var(--sticky-tilt) - 8deg));
-  }
-  55% {
-    opacity: 1;
-    transform: translateY(0) scale(0.94) rotate(var(--sticky-tilt));
-  }
-  65% {
-    transform: translate(-3px, 1px) scale(1.03) rotate(var(--sticky-tilt));
-  }
-  75% {
-    transform: translate(3px, -1px) scale(1) rotate(var(--sticky-tilt));
-  }
-  85% {
-    transform: translate(-1px, 0) rotate(var(--sticky-tilt));
-  }
-  100% {
-    transform: rotate(var(--sticky-tilt));
-  }
-}
-
-@keyframes sticky-notes-loud {
-  0% {
-    transform: scale(1) rotate(var(--sticky-tilt));
   }
   20% {
-    transform: scale(1.12) rotate(var(--sticky-tilt));
-  }
-  28% {
-    transform: scale(1.12) rotate(calc(var(--sticky-tilt) - 3deg));
-  }
-  36% {
-    transform: scale(1.12) rotate(calc(var(--sticky-tilt) + 3deg));
-  }
-  44% {
-    transform: scale(1.12) rotate(calc(var(--sticky-tilt) - 3deg));
-  }
-  52% {
-    transform: scale(1.12) rotate(calc(var(--sticky-tilt) + 3deg));
-  }
-  60% {
-    transform: scale(1.12) rotate(calc(var(--sticky-tilt) - 2deg));
-  }
-  68% {
-    transform: scale(1.12) rotate(var(--sticky-tilt));
-  }
-  100% {
-    transform: scale(1) rotate(var(--sticky-tilt));
-  }
-}
-
-@keyframes sticky-notes-gentle {
-  0% {
-    opacity: 0.4;
-    transform: scale(0.85) rotate(var(--sticky-tilt));
-  }
-  100% {
     opacity: 1;
-    transform: scale(1) rotate(var(--sticky-tilt));
-  }
-}
-
-@keyframes sticky-notes-gentle-words {
-  0% {
-    opacity: 0.5;
-    transform: scale(0.7);
-  }
-  40% {
-    opacity: 0.6;
-    transform: scale(0.7);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-/* 見えないインク。押すまで文字をぼかし、上で砂のような粒がゆっくり動く */
-.sticky-note--ink .sticky-note__words {
-  filter: blur(6px);
-  user-select: none;
-}
-
-.sticky-note--ink .sticky-note__text::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background-image:
-    radial-gradient(circle, rgba(43, 36, 16, 0.35) 0.06rem, transparent 0.08rem),
-    radial-gradient(circle, rgba(255, 255, 255, 0.7) 0.05rem, transparent 0.07rem);
-  background-size:
-    0.55rem 0.55rem,
-    0.8rem 0.8rem;
-  animation: sticky-notes-ink 2.4s linear infinite;
-}
-
-.sticky-note--ink .sticky-note__text {
-  position: relative;
-}
-
-.sticky-note__ink-hint {
-  font-size: var(--font-micro);
-  color: rgba(43, 36, 16, 0.6);
-}
-
-@keyframes sticky-notes-ink {
-  from {
-    background-position:
-      0 0,
-      0 0;
-  }
-  to {
-    background-position:
-      0.55rem -0.55rem,
-      -0.8rem 0.8rem;
-  }
-}
-
-/* --- 画面いっぱいの効果（iMessage の画面効果にならう）。押すのは邪魔しない --- */
-
-.sticky-notes-burst {
-  position: fixed;
-  inset: 0;
-  /* 詳細の小窓で効果を選んだときにも見えるよう、小窓（modal）の上、音声のパネル（voice）の下に出す */
-  z-index: calc(var(--z-modal) + 1);
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.sticky-notes-burst__piece {
-  position: absolute;
-  left: var(--x);
-  will-change: transform;
-}
-
-.sticky-notes-burst--confetti .sticky-notes-burst__piece {
-  top: -2rem;
-  width: 0.55rem;
-  height: 0.9rem;
-  border-radius: 0.1rem;
-  background: var(--color);
-  animation: sticky-notes-fall var(--fall) var(--ease-in) var(--delay) both;
-}
-
-.sticky-notes-burst--balloons .sticky-notes-burst__piece {
-  bottom: calc(var(--size) * -1.6);
-  width: var(--size);
-  height: calc(var(--size) * 1.2);
-  border-radius: 50% 50% 48% 48% / 55% 55% 45% 45%;
-  background: radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.55), transparent 32%), var(--color);
-  animation: sticky-notes-rise var(--rise) var(--ease-standard) var(--delay) both;
-}
-
-/* 風船のひも */
-.sticky-notes-burst--balloons .sticky-notes-burst__piece::after {
-  content: "";
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  width: 1px;
-  height: calc(var(--size) * 0.9);
-  background: rgba(255, 255, 255, 0.6);
-}
-
-.sticky-notes-burst--hearts .sticky-notes-burst__piece {
-  bottom: -3rem;
-  color: #f43f5e;
-  font-size: var(--size);
-  line-height: 1;
-  text-shadow: 0 0.2rem 0.6rem rgba(var(--shade-rgb), 0.35);
-  animation: sticky-notes-hearts var(--rise) var(--ease-out) var(--delay) both;
-}
-
-@keyframes sticky-notes-fall {
-  from {
-    transform: translate(0, 0) rotate(0deg);
-  }
-  to {
-    transform: translate(var(--drift), 110vh) rotate(var(--spin));
-  }
-}
-
-@keyframes sticky-notes-rise {
-  0% {
-    transform: translate(0, 0) rotate(-4deg);
-  }
-  50% {
-    transform: translate(calc(var(--drift) * 0.5), -60vh) rotate(4deg);
-  }
-  100% {
-    transform: translate(var(--drift), -125vh) rotate(-4deg);
-  }
-}
-
-@keyframes sticky-notes-hearts {
-  0% {
-    opacity: 0;
-    transform: translate(0, 0) scale(0.4);
-  }
-  15% {
-    opacity: 1;
-    transform: translate(0, -10vh) scale(1);
+    transform: translate(0, -20%) scale(1);
   }
   100% {
     opacity: 0;
-    transform: translate(var(--drift), -80vh) scale(1.1);
+    transform: translate(var(--drift), -110%) scale(1.1);
   }
 }
 

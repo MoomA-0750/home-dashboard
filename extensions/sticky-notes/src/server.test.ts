@@ -32,16 +32,16 @@ async function host(dataDir?: string) {
 
 test("揃えと効果を保存し、知らない値は既定に戻す", async () => {
   const { add } = await host();
-  const note = await add({ text: " 牛乳を買って\r\n ", alignX: "center", alignY: "bottom", bubble: "slam", screen: "hearts", repeat: true });
+  const note = await add({ text: " 牛乳を買って\r\n ", alignX: "center", alignY: "bottom", bubble: "slam", burst: "hearts", repeat: true });
   assert.equal(note.text, "牛乳を買って");
   assert.deepEqual(
-    { alignX: note.alignX, alignY: note.alignY, bubble: note.bubble, screen: note.screen, repeat: note.repeat },
-    { alignX: "center", alignY: "bottom", bubble: "slam", screen: "hearts", repeat: true },
+    { alignX: note.alignX, alignY: note.alignY, bubble: note.bubble, burst: note.burst, repeat: note.repeat },
+    { alignX: "center", alignY: "bottom", bubble: "slam", burst: "hearts", repeat: true },
   );
-  const odd = await add({ text: "x", color: "red", alignX: "diagonal", bubble: "explode", screen: "lasers", repeat: "yes" });
+  const odd = await add({ text: "x", color: "red", alignX: "diagonal", bubble: "explode", burst: "lasers", repeat: "yes" });
   assert.deepEqual(
-    { color: odd.color, alignX: odd.alignX, alignY: odd.alignY, bubble: odd.bubble, screen: odd.screen, repeat: odd.repeat },
-    { color: "yellow", alignX: "start", alignY: "top", bubble: "none", screen: "none", repeat: false },
+    { color: odd.color, alignX: odd.alignX, alignY: odd.alignY, bubble: odd.bubble, burst: odd.burst, repeat: odd.repeat },
+    { color: "yellow", alignX: "start", alignY: "top", bubble: "none", burst: "none", repeat: false },
   );
 });
 
@@ -92,7 +92,7 @@ test("期限の切れた付箋と、前の版で保存した付箋を読む", as
   const notes = await (await host(first.dir)).list();
   assert.deepEqual(notes.map((n) => n.text), ["残る", "前の版"]);
   const old = notes.find((n) => n.id === "old")!;
-  assert.deepEqual([old.color, old.alignX, old.alignY, old.bubble, old.screen, old.repeat], ["pink", "start", "top", "none", "none", false]);
+  assert.deepEqual([old.color, old.alignX, old.alignY, old.bubble, old.burst, old.repeat], ["pink", "start", "top", "none", "none", false]);
 });
 
 test("音声アシスタントの道具は、引数の形と危なさを本体に渡せる", async () => {

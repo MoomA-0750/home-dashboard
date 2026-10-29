@@ -2,7 +2,7 @@
   "id": "sticky-notes",
   "name": "付箋",
   "version": "1.0.0",
-  "description": "家にいる人に向けた伝言を付箋のように貼る。文字の揃え（横・縦）と、iMessage のような効果（ドン・大声・そっと・見えないインク、紙吹雪・風船・ハート）を付けられる。どの端末からも貼ったりはがしたりでき、音声アシスタントからも貼れる（add_sticky_note）",
+  "description": "家にいる人に向けた伝言を付箋のように貼る。文字の揃え（横・縦）と、iMessage のような効果（ドン・大声・そっと・見えないインク、付箋の中で起こる紙吹雪・風船・ハート）を付けられる。どの端末からも貼ったりはがしたりでき、音声アシスタントからも貼れる（add_sticky_note）",
   "apiVersion": 1,
   "settingsNote": "「今日中」「明日まで」の区切りに使うタイムゾーンです。Docker の中は UTC のことが多いので、家の場所に合わせます。",
   "settings": [
@@ -18,7 +18,7 @@
   "locales": {
     "en": {
       "name": "Sticky notes",
-      "description": "Leave notes for whoever is at home, like sticky notes. Align the text (horizontal and vertical) and add iMessage-style effects (slam, loud, gentle, invisible ink; confetti, balloons, hearts). Stick or peel them from any device, or ask the voice assistant (add_sticky_note)",
+      "description": "Leave notes for whoever is at home, like sticky notes. Align the text (horizontal and vertical) and add iMessage-style effects (slam, loud, gentle, invisible ink; confetti, balloons and hearts inside the note). Stick or peel them from any device, or ask the voice assistant (add_sticky_note)",
       "settingsNote": "The time zone that decides when \"today\" and \"tomorrow\" end. Docker containers often run in UTC, so set it to where your home is.",
       "settings": {
         "timeZone": {

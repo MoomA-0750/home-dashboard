@@ -22,9 +22,12 @@ export type NoteAlignY = (typeof NOTE_ALIGN_Y)[number];
 export const NOTE_BUBBLES = ["none", "slam", "loud", "gentle", "ink"] as const;
 export type NoteBubble = (typeof NOTE_BUBBLES)[number];
 
-/** 画面いっぱいの効果（iMessage の画面効果にならう）。貼られたときに、ウィジェットを置いた画面で 1 回出る */
-export const NOTE_SCREENS = ["none", "confetti", "balloons", "hearts"] as const;
-export type NoteScreen = (typeof NOTE_SCREENS)[number];
+/**
+ * 付箋の中で起こる効果（iMessage の画面効果にならうが、画面全体ではなくその付箋の枠の中だけで起こす。
+ * 貼られた瞬間に画面じゅうへ広がると、見ている人の邪魔になるため）。貼られたときに、それぞれの画面で 1 回起こる
+ */
+export const NOTE_BURSTS = ["none", "confetti", "balloons", "hearts"] as const;
+export type NoteBurst = (typeof NOTE_BURSTS)[number];
 
 export interface StickyNote {
   id: string;
@@ -35,8 +38,8 @@ export interface StickyNote {
   alignX: NoteAlignX;
   alignY: NoteAlignY;
   bubble: NoteBubble;
-  screen: NoteScreen;
-  /** 付箋の動きを、貼った後もときどき（REPEAT_MS ごとに）繰り返す。だれも見ていない間に貼られても気付けるように */
+  burst: NoteBurst;
+  /** 付箋の動きと中の効果を、貼った後もときどき（REPEAT_MS ごとに）繰り返す。だれも見ていない間に貼られても気付けるように */
   repeat: boolean;
   createdAt: string;
   /** この時刻を過ぎたら出さない。null は期限なし */
@@ -58,7 +61,7 @@ export function noteStyle(raw: Record<string, unknown>) {
     alignX: pick(NOTE_ALIGN_X, raw.alignX, "start"),
     alignY: pick(NOTE_ALIGN_Y, raw.alignY, "top"),
     bubble: pick(NOTE_BUBBLES, raw.bubble, "none"),
-    screen: pick(NOTE_SCREENS, raw.screen, "none"),
+    burst: pick(NOTE_BURSTS, raw.burst, "none"),
     repeat: raw.repeat === true,
   };
 }

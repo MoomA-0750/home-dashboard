@@ -25,16 +25,16 @@ import {
   NOTE_BUBBLES,
   NOTE_COLORS,
   NOTE_EXPIRES,
-  NOTE_SCREENS,
+  NOTE_BURSTS,
   type NoteAlignX,
   type NoteAlignY,
   type NoteBubble,
   type NoteColor,
   type NoteExpires,
-  type NoteScreen,
+  type NoteBurst,
   type StickyNote,
 } from "./notes";
-import { ScreenEffects, playScreenEffect, useArrivals, useBubbleFlash } from "./effects";
+import { NoteBurstLayer, hasMotion, useArrivals, useBubbleFlash } from "./effects";
 
 interface StickyNotesConfig {
   pollIntervalMs: number;
@@ -61,7 +61,7 @@ const messages = defineMessages({
     alignX: "横の揃え",
     alignY: "縦の揃え",
     bubble: "付箋の動き",
-    screen: "画面の効果",
+    burst: "付箋の中の効果",
     repeat: "ときどき繰り返して目立たせる（5分ごと）",
     expires: "はがす時期",
     expires_none: "はがすまで",
@@ -83,10 +83,10 @@ const messages = defineMessages({
     bubble_loud: "大声",
     bubble_gentle: "そっと",
     bubble_ink: "見えないインク",
-    screen_none: "なし",
-    screen_confetti: "紙吹雪",
-    screen_balloons: "風船",
-    screen_hearts: "ハート",
+    burst_none: "なし",
+    burst_confetti: "紙吹雪",
+    burst_balloons: "風船",
+    burst_hearts: "ハート",
     inkHint: "押すと読めます",
     posting: "貼っています…",
     peel: "はがす",
@@ -120,7 +120,7 @@ const messages = defineMessages({
     alignX: "Horizontal alignment",
     alignY: "Vertical alignment",
     bubble: "Note effect",
-    screen: "Screen effect",
+    burst: "Effect inside the note",
     repeat: "Repeat now and then to stand out (every 5 min)",
     expires: "Peel off",
     expires_none: "When peeled",
@@ -142,10 +142,10 @@ const messages = defineMessages({
     bubble_loud: "Loud",
     bubble_gentle: "Gentle",
     bubble_ink: "Invisible ink",
-    screen_none: "None",
-    screen_confetti: "Confetti",
-    screen_balloons: "Balloons",
-    screen_hearts: "Hearts",
+    burst_none: "None",
+    burst_confetti: "Confetti",
+    burst_balloons: "Balloons",
+    burst_hearts: "Hearts",
     inkHint: "Tap to read",
     posting: "Sticking…",
     peel: "Peel off",
@@ -229,7 +229,7 @@ function useUntilText(t: T) {
   };
 }
 
-type NoteLook = Pick<StickyNote, "color" | "alignX" | "alignY" | "bubble">;
+type NoteLook = Pick<StickyNote, "color" | "alignX" | "alignY" | "bubble" | "burst">;
 
 function noteClass(note: NoteLook, index: number, extra: { large?: boolean; playing?: boolean; inked?: boolean }) {
   return [
@@ -246,9 +246,23 @@ function noteClass(note: NoteLook, index: number, extra: { large?: boolean; play
     .join(" ");
 }
 
-function NoteBody({ text, meta, inked, t }: { text: string; meta?: ReactNode; inked: boolean; t: T }) {
+function NoteBody({
+  text,
+  meta,
+  inked,
+  burst,
+  t,
+}: {
+  text: string;
+  meta?: ReactNode;
+  inked: boolean;
+  /** 動いている間だけ渡す（紙吹雪などを付箋の中で起こす） */
+  burst?: NoteBurst;
+  t: T;
+}) {
   return (
     <>
+      {burst && <NoteBurstLayer effect={burst} />}
       <span className="sticky-note__text">
         <span className="sticky-note__words">{text}</span>
       </span>
@@ -288,7 +302,6 @@ function StickyNotesView({ ctx, config, size, openDetail }: WidgetProps<StickyNo
 
   return (
     <WidgetCard className="sticky-notes" label={t("title")}>
-      <ScreenEffects />
       {/* 付箋にカードの高さを全部使わせるため、見出しは置かず、＋と枚数を右の縦の列にまとめる */}
       <div className="sticky-notes__side">
         <button type="button" className="sticky-notes__add ui-glass" onClick={openDetail} aria-label={t("add")}>
@@ -316,7 +329,13 @@ function StickyNotesView({ ctx, config, size, openDetail }: WidgetProps<StickyNo
                 // 見えないインクは、1 回目に押したらその場で読めるようにする（詳細は 2 回目から）
                 onClick={inked ? () => reveal(note.id) : openDetail}
               >
-                <NoteBody text={note.text} inked={inked} t={t} meta={<NoteMeta note={note} t={t} />} />
+                <NoteBody
+                  text={note.text}
+                  inked={inked}
+                  burst={playing.has(note.id) ? note.burst : undefined}
+                  t={t}
+                  meta={<NoteMeta note={note} t={t} />}
+                />
               </button>
             );
           })}
@@ -377,7 +396,7 @@ function NoteForm({ ctx, t }: { ctx: WidgetRuntimeContext; t: T }) {
   const [alignX, setAlignX] = useState<NoteAlignX>("start");
   const [alignY, setAlignY] = useState<NoteAlignY>("top");
   const [bubble, setBubble] = useState<NoteBubble>("none");
-  const [screen, setScreen] = useState<NoteScreen>("none");
+  const [burst, setBurst] = useState<NoteBurst>("none");
   const [repeat, setRepeat] = useState(false);
   const [expires, setExpires] = useState<NoteExpires>("none");
   const [busy, setBusy] = useState(false);
@@ -389,16 +408,15 @@ function NoteForm({ ctx, t }: { ctx: WidgetRuntimeContext; t: T }) {
   const chooseBubble = (value: NoteBubble) => {
     setBubble(value);
     setInkRevealed(false);
-    if (value !== "none" && value !== "ink") flash([PREVIEW_ID]);
+    if (hasMotion({ bubble: value, burst })) flash([PREVIEW_ID]);
   };
-  const chooseScreen = (value: NoteScreen) => {
-    setScreen(value);
-    playScreenEffect(value);
+  const chooseBurst = (value: NoteBurst) => {
+    setBurst(value);
+    if (hasMotion({ bubble, burst: value })) flash([PREVIEW_ID]);
   };
   const replay = () => {
     setInkRevealed(false);
-    if (bubble !== "none" && bubble !== "ink") flash([PREVIEW_ID]);
-    playScreenEffect(screen);
+    if (hasMotion({ bubble, burst })) flash([PREVIEW_ID]);
   };
 
   const submit = async (event: FormEvent) => {
@@ -408,7 +426,7 @@ function NoteForm({ ctx, t }: { ctx: WidgetRuntimeContext; t: T }) {
     try {
       await request(ctx, "/notes", {
         method: "POST",
-        json: { text, from, color, alignX, alignY, bubble, screen, repeat, expires },
+        json: { text, from, color, alignX, alignY, bubble, burst, repeat: repeat && hasMotion({ bubble, burst }), expires },
       });
       try {
         localStorage.setItem(FROM_KEY, from.trim());
@@ -424,7 +442,7 @@ function NoteForm({ ctx, t }: { ctx: WidgetRuntimeContext; t: T }) {
     }
   };
 
-  const preview: NoteLook = { color, alignX, alignY, bubble };
+  const preview: NoteLook = { color, alignX, alignY, bubble, burst };
   const inked = bubble === "ink" && !inkRevealed;
 
   return (
@@ -480,10 +498,10 @@ function NoteForm({ ctx, t }: { ctx: WidgetRuntimeContext; t: T }) {
         <Field label={t("bubble")}>
           <Choices label={t("bubble")} values={NOTE_BUBBLES} value={bubble} onChange={chooseBubble} text={(v) => t(`bubble_${v}`)} />
         </Field>
-        <Field label={t("screen")}>
-          <Choices label={t("screen")} values={NOTE_SCREENS} value={screen} onChange={chooseScreen} text={(v) => t(`screen_${v}`)} />
+        <Field label={t("burst")}>
+          <Choices label={t("burst")} values={NOTE_BURSTS} value={burst} onChange={chooseBurst} text={(v) => t(`burst_${v}`)} />
         </Field>
-        <Check checked={repeat} disabled={bubble === "none" || bubble === "ink"} onChange={setRepeat}>
+        <Check checked={repeat} disabled={!hasMotion({ bubble, burst })} onChange={setRepeat}>
           {t("repeat")}
         </Check>
       </div>
@@ -493,9 +511,14 @@ function NoteForm({ ctx, t }: { ctx: WidgetRuntimeContext; t: T }) {
           className={noteClass(preview, 0, { large: true, playing: playing.has(PREVIEW_ID), inked })}
           onClick={inked ? () => setInkRevealed(true) : undefined}
         >
-          <NoteBody text={text.trim() || t("previewPlaceholder")} inked={inked} t={t} />
+          <NoteBody
+            text={text.trim() || t("previewPlaceholder")}
+            inked={inked}
+            burst={playing.has(PREVIEW_ID) ? burst : undefined}
+            t={t}
+          />
         </div>
-        <Button icon="arrow-sync" onClick={replay} disabled={bubble === "none" && screen === "none"}>
+        <Button icon="arrow-sync" onClick={replay} disabled={!hasMotion({ bubble, burst })}>
           {t("replay")}
         </Button>
       </div>
@@ -536,8 +559,7 @@ function StickyNotesDetail({ ctx, config }: WidgetDetailProps<StickyNotesConfig>
   // 貼ってある付箋を押すと、その効果をもう一度見られる
   const replay = (note: StickyNote) => {
     if (note.bubble === "ink" && !revealed.has(note.id)) return reveal(note.id);
-    if (note.bubble !== "none" && note.bubble !== "ink") flash([note.id]);
-    playScreenEffect(note.screen);
+    if (hasMotion(note)) flash([note.id]);
   };
 
   return (
@@ -554,7 +576,13 @@ function StickyNotesDetail({ ctx, config }: WidgetDetailProps<StickyNotesConfig>
                 className={noteClass(note, i, { large: true, playing: playing.has(note.id), inked })}
                 onClick={() => replay(note)}
               >
-                <NoteBody text={note.text} inked={inked} t={t} meta={<NoteMeta note={note} t={t} />} />
+                <NoteBody
+                  text={note.text}
+                  inked={inked}
+                  burst={playing.has(note.id) ? note.burst : undefined}
+                  t={t}
+                  meta={<NoteMeta note={note} t={t} />}
+                />
                 <button
                   type="button"
                   className={`sticky-note__peel ${armed === note.id ? "sticky-note__peel--armed" : ""}`}

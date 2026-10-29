@@ -1,18 +1,24 @@
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
-import { createPortal } from "react-dom";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { reducedMotion } from "@home-dashboard/widget-sdk";
-import { REPEAT_MS, type NoteScreen, type StickyNote } from "./notes";
+import { REPEAT_MS, type NoteBubble, type NoteBurst, type StickyNote } from "./notes";
 
-/** 付箋の動き（web.css の sticky-note--fx-*）の長さ。これが過ぎたら class を外す */
-const BUBBLE_MS = 1700;
-/** 画面いっぱいの効果の長さ（粒がいちばん遅く出て消えるまで） */
-const SCREEN_MS = 4200;
+/**
+ * 付箋が動いている長さ。付箋の動き（web.css の sticky-note--fx-*、長くて 1.6 秒）と、
+ * 中の効果（紙吹雪など、粒がいちばん遅く出て消えるまで）の長いほう。これが過ぎたら外す
+ */
+const PLAY_MS = 3200;
 
 /** 軽い表示（弱い端末向け、本体の lib/lite.ts）では粒を減らす */
 const isLite = () => typeof document !== "undefined" && document.documentElement.hasAttribute("data-lite");
 
+/** 押すまで読めない見えないインクは、動きではなく状態なので「動かす」ものに数えない */
+const movesBubble = (bubble: NoteBubble) => bubble !== "none" && bubble !== "ink";
+
+/** 貼られたときや繰り返すときに、動かすものがあるか */
+export const hasMotion = (note: Pick<StickyNote, "bubble" | "burst">) => movesBubble(note.bubble) || note.burst !== "none";
+
 /**
- * 動いている付箋の id。flash(id) で動かし始め、BUBBLE_MS 後に外す。
+ * 動いている付箋の id。flash(id) で動かし始め、PLAY_MS 後に外す。
  * 「動きを減らす」設定では何もしない（見えないインクは動きではないので web.css 側でそのまま出る）
  */
 export function useBubbleFlash() {
@@ -22,7 +28,7 @@ export function useBubbleFlash() {
 
   const flash = useCallback((ids: string[]) => {
     if (ids.length === 0 || reducedMotion()) return;
-    // いったん外してから付け直すと、同じ付箋でも動きが頭から始まる
+    // いったん外してから付け直すと、同じ付箋でも動きが頭から始まる（中の効果の粒も作り直す）
     setPlaying((prev) => new Set([...prev].filter((id) => !ids.includes(id))));
     requestAnimationFrame(() => setPlaying((prev) => new Set([...prev, ...ids])));
     for (const id of ids) {
@@ -32,28 +38,12 @@ export function useBubbleFlash() {
         setTimeout(() => {
           timers.current.delete(id);
           setPlaying((prev) => new Set([...prev].filter((p) => p !== id)));
-        }, BUBBLE_MS),
+        }, PLAY_MS),
       );
     }
   }, []);
 
   return { playing, flash };
-}
-
-/** 画面いっぱいの効果は、同じ付箋につき 1 画面で 1 回だけ（ウィジェットを 2 つ置いても重ねない） */
-const screenPlayed = new Set<string>();
-
-type ScreenListener = (effect: NoteScreen) => void;
-const screenListeners = new Set<ScreenListener>();
-
-/**
- * 画面いっぱいの効果を出す。ScreenEffects はウィジェットごとに置かれるが、出すのはそのうち 1 つだけ
- * （ウィジェットを 2 つ置いても重ねない。先に置いたものが外れたら、次のものが出す）
- */
-export function playScreenEffect(effect: NoteScreen) {
-  if (effect === "none" || reducedMotion()) return;
-  const [first] = screenListeners;
-  first?.(effect);
 }
 
 /**
@@ -67,21 +57,15 @@ export function useArrivals(notes: StickyNote[] | null, flash: (ids: string[]) =
     if (!notes) return;
     if (seen.current === null) {
       seen.current = new Set(notes.map((n) => n.id));
-      notes.forEach((n) => screenPlayed.add(n.id));
       return;
     }
     const known = seen.current;
     const fresh = notes.filter((n) => !known.has(n.id));
     fresh.forEach((n) => known.add(n.id));
-    flash(fresh.filter((n) => n.bubble !== "none" && n.bubble !== "ink").map((n) => n.id));
-    for (const note of fresh) {
-      if (screenPlayed.has(note.id)) continue;
-      screenPlayed.add(note.id);
-      playScreenEffect(note.screen);
-    }
+    flash(fresh.filter(hasMotion).map((n) => n.id));
   }, [notes, flash]);
 
-  const repeating = notes?.filter((n) => n.repeat && n.bubble !== "none" && n.bubble !== "ink").map((n) => n.id).join(",") ?? "";
+  const repeating = notes?.filter((n) => n.repeat && hasMotion(n)).map((n) => n.id).join(",") ?? "";
   useEffect(() => {
     if (!repeating) return;
     const id = setInterval(() => flash(repeating.split(",")), REPEAT_MS);
@@ -89,77 +73,52 @@ export function useArrivals(notes: StickyNote[] | null, flash: (ids: string[]) =
   }, [repeating, flash]);
 }
 
-interface Particle {
-  key: number;
-  style: CSSProperties;
-  glyph?: string;
-}
-
-const CONFETTI_COLORS = ["#f87171", "#fbbf24", "#34d399", "#60a5fa", "#c084fc", "#f472b6"];
+const CONFETTI_COLORS = ["#ef4444", "#f59e0b", "#10b981", "#3b82f6", "#8b5cf6", "#ec4899"];
 const BALLOON_COLORS = ["#ef4444", "#f59e0b", "#22c55e", "#3b82f6", "#a855f7", "#ec4899"];
 
 const between = (min: number, max: number) => min + Math.random() * (max - min);
 
-function particlesFor(effect: NoteScreen): Particle[] {
-  const count = { none: 0, confetti: 70, balloons: 16, hearts: 26 }[effect];
-  const n = Math.round(count * (isLite() ? 0.35 : 1));
+function particlesFor(effect: NoteBurst): CSSProperties[] {
+  const count = { none: 0, confetti: 22, balloons: 6, hearts: 9 }[effect];
+  const n = Math.max(effect === "none" ? 0 : 3, Math.round(count * (isLite() ? 0.5 : 1)));
   return Array.from({ length: n }, (_, i) => {
+    // 位置と横のずれは付箋の幅に対して決める（付箋の大きさが変わっても枠の中に収まる）
     const vars: Record<string, string> = {
-      "--x": `${between(0, 100).toFixed(1)}vw`,
-      "--delay": `${between(0, effect === "confetti" ? 900 : 1400).toFixed(0)}ms`,
-      "--drift": `${between(-12, 12).toFixed(1)}vw`,
+      "--x": `${between(4, 92).toFixed(1)}%`,
+      "--delay": `${between(0, effect === "confetti" ? 700 : 1000).toFixed(0)}ms`,
+      "--drift": `${between(-1.2, 1.2).toFixed(2)}rem`,
     };
     if (effect === "confetti") {
       vars["--color"] = CONFETTI_COLORS[i % CONFETTI_COLORS.length];
-      vars["--spin"] = `${between(360, 1080).toFixed(0)}deg`;
-      vars["--fall"] = `${between(2200, 3200).toFixed(0)}ms`;
+      vars["--spin"] = `${between(360, 900).toFixed(0)}deg`;
+      vars["--dur"] = `${between(1500, 2300).toFixed(0)}ms`;
     } else if (effect === "balloons") {
       vars["--color"] = BALLOON_COLORS[i % BALLOON_COLORS.length];
-      vars["--size"] = `${between(3.5, 5.5).toFixed(2)}rem`;
-      vars["--rise"] = `${between(2600, 3400).toFixed(0)}ms`;
+      vars["--size"] = `${between(1.2, 1.8).toFixed(2)}rem`;
+      vars["--dur"] = `${between(1800, 2200).toFixed(0)}ms`;
     } else {
-      vars["--size"] = `${between(1.6, 3.2).toFixed(2)}rem`;
-      vars["--rise"] = `${between(2000, 3000).toFixed(0)}ms`;
+      vars["--size"] = `${between(0.8, 1.4).toFixed(2)}rem`;
+      vars["--dur"] = `${between(1500, 2100).toFixed(0)}ms`;
     }
-    return { key: i, style: vars as CSSProperties, glyph: effect === "hearts" ? "❤" : undefined };
+    return vars as CSSProperties;
   });
 }
 
 /**
- * 画面いっぱいの効果を body の直下に出す（ウィジェットのカードは transform で置かれ、はみ出しも切られるため）。
- * 押した所を邪魔しないよう pointer-events は通す
+ * 付箋の中で起こる効果（紙吹雪・風船・ハート）。付箋の枠からははみ出さず、文字の後ろで起こる（伝言は読めたまま）。
+ * 粒は付箋の高さいっぱいの「通り道」を transform で動かし、その中の粒を描く（付箋の高さに合わせて動くよう、
+ * 通り道の translateY の % が付箋の高さになる）
  */
-export function ScreenEffects() {
-  const [bursts, setBursts] = useState<{ id: number; effect: NoteScreen; particles: Particle[] }[]>([]);
-  const next = useRef(0);
-
-  useEffect(() => {
-    const timers: ReturnType<typeof setTimeout>[] = [];
-    const listener: ScreenListener = (effect) => {
-      const id = next.current++;
-      setBursts((prev) => [...prev, { id, effect, particles: particlesFor(effect) }]);
-      timers.push(setTimeout(() => setBursts((prev) => prev.filter((b) => b.id !== id)), SCREEN_MS));
-    };
-    screenListeners.add(listener);
-    return () => {
-      screenListeners.delete(listener);
-      timers.forEach(clearTimeout);
-    };
-  }, []);
-
-  if (bursts.length === 0) return null;
-  return createPortal(
-    <>
-      {bursts.map((burst) => (
-        <div key={burst.id} className={`sticky-notes-burst sticky-notes-burst--${burst.effect}`} aria-hidden="true">
-          {burst.particles.map((p) => (
-            <span key={p.key} className="sticky-notes-burst__piece" style={p.style}>
-              {p.glyph}
-            </span>
-          ))}
-        </div>
+export function NoteBurstLayer({ effect }: { effect: NoteBurst }) {
+  const particles = useMemo(() => particlesFor(effect), [effect]);
+  if (effect === "none") return null;
+  return (
+    <span className={`sticky-note__burst sticky-note__burst--${effect}`} aria-hidden="true">
+      {particles.map((style, i) => (
+        <span key={i} className="sticky-note__lane" style={style}>
+          <span className="sticky-note__piece">{effect === "hearts" ? "❤" : null}</span>
+        </span>
       ))}
-    </>,
-    document.body,
+    </span>
   );
 }

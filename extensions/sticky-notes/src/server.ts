@@ -11,7 +11,7 @@ import {
   NOTE_BUBBLES,
   NOTE_COLORS,
   NOTE_EXPIRES,
-  NOTE_SCREENS,
+  NOTE_BURSTS,
   noteExpires,
   noteStyle,
   type NoteExpires,
@@ -200,8 +200,8 @@ export default defineServerExtension({
           .enum(NOTE_BUBBLES)
           .optional()
           .describe("付箋の動き。slam は叩きつける、loud は大きく震える、gentle はそっと、ink は押すまで読めない"),
-        screen: z.enum(NOTE_SCREENS).optional().describe("画面いっぱいの効果。confetti は紙吹雪、balloons は風船、hearts はハート"),
-        repeat: z.boolean().optional().describe("付箋の動きを5分ごとに繰り返して目立たせる"),
+        burst: z.enum(NOTE_BURSTS).optional().describe("付箋の中で起こる効果。confetti は紙吹雪、balloons は風船、hearts はハート"),
+        repeat: z.boolean().optional().describe("付箋の動きと中の効果を5分ごとに繰り返して目立たせる"),
       }),
       // 貼るだけで、はがせばすぐ戻せる
       risk: "low",
