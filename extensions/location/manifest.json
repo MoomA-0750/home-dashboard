@@ -1,0 +1,109 @@
+{
+  "id": "location",
+  "name": "位置",
+  "version": "1.0.0",
+  "description": "icloud-locate（iCloud の「探す」）から、自分の Apple 端末の位置と家からの距離を出す。位置のウィジェット・音声アシスタントの get_location・家に着いた／出たときの Webhook（knot などのオートメーション向け）",
+  "apiVersion": 1,
+  "settingsTest": "/test",
+  "settingsGroups": [
+    {
+      "id": "connection",
+      "title": "icloud-locate",
+      "note": "icloud-locate の常駐 API（server.py）につなぎます。端末の側には何も入れません。",
+      "fields": ["url", "token"],
+      "steps": [
+        "icloud-locate の機械で、常駐 API（systemd の icloud-locate）と tailscale-serve.sh を動かす",
+        "URL に tailnet の https のアドレス（例: https://<機械>.<tailnet>.ts.net:8765）を入れる",
+        "トークンに ~/.config/icloud-locate/token の中身を入れる"
+      ]
+    },
+    {
+      "id": "devices",
+      "title": "端末と家",
+      "note": "家の場所は、詳しい画面の「ここを家にする」でも決められます。",
+      "fields": ["devices", "homeLat", "homeLon", "homeRadius"]
+    },
+    {
+      "id": "automation",
+      "title": "オートメーション",
+      "note": "決めた間隔で位置を見て（端末は起こさない）、家に着いた・出たら Webhook を呼びます。knot ならサーバーが見張る Webhook のきっかけの URL を入れます。",
+      "fields": ["watchMinutes", "webhookUrl", "presenceToken"],
+      "steps": [
+        "Webhook には JSON で {source, type: \"arrived\" | \"left\", device, label, at, distanceM} を POST する",
+        "合言葉を入れると、GET /api/ext/location/presence に Authorization: Bearer <合言葉> を付けて、今の在宅の様子（座標なし）を読める"
+      ]
+    }
+  ],
+  "settings": [
+    {
+      "key": "url",
+      "label": "URL",
+      "kind": "url",
+      "env": "ICLOUD_LOCATE_URL",
+      "placeholder": "https://machine.tailnet.ts.net:8765"
+    },
+    { "key": "token", "label": "トークン", "kind": "secret", "env": "ICLOUD_LOCATE_TOKEN" },
+    {
+      "key": "devices",
+      "label": "見る端末（登録名=呼び名 を , で区切る。最初が自分の持ち歩く端末。空なら位置のある端末すべて）",
+      "kind": "text",
+      "env": "LOCATION_DEVICES",
+      "placeholder": "iPhone=自分, iPad"
+    },
+    { "key": "homeLat", "label": "家の緯度", "kind": "number", "min": -90, "max": 90 },
+    { "key": "homeLon", "label": "家の経度", "kind": "number", "min": -180, "max": 180 },
+    { "key": "homeRadius", "label": "家とみなす半径（m）", "kind": "number", "default": 150, "min": 30, "max": 5000, "integer": true },
+    {
+      "key": "watchMinutes",
+      "label": "在宅を見る間隔（分。0 で見ない）",
+      "kind": "number",
+      "default": 5,
+      "min": 0,
+      "max": 120,
+      "integer": true
+    },
+    { "key": "webhookUrl", "label": "着いた・出たときの Webhook", "kind": "secret", "env": "LOCATION_WEBHOOK_URL" },
+    { "key": "presenceToken", "label": "在宅の様子を外へ出す合言葉", "kind": "secret", "env": "LOCATION_PRESENCE_TOKEN" }
+  ],
+  "locales": {
+    "en": {
+      "name": "Location",
+      "description": "Your Apple devices' locations and distance from home via icloud-locate (iCloud Find My). The location widget, the voice assistant's get_location, and a webhook when someone arrives home or leaves (for automations such as knot)",
+      "settingsGroups": {
+        "connection": {
+          "note": "Connects to the icloud-locate API server (server.py). Nothing is installed on the devices.",
+          "steps": [
+            "On the icloud-locate machine, run the API server (the icloud-locate systemd service) and tailscale-serve.sh",
+            "Enter the tailnet https address as the URL (e.g. https://<machine>.<tailnet>.ts.net:8765)",
+            "Enter the contents of ~/.config/icloud-locate/token as the token"
+          ]
+        },
+        "devices": {
+          "title": "Devices and home",
+          "note": "You can also set home with “Set as home” in the detail view."
+        },
+        "automation": {
+          "title": "Automation",
+          "note": "Checks locations at the interval you choose (without waking devices) and calls the webhook on arriving home or leaving. For knot, enter the URL of a server-watched webhook trigger.",
+          "steps": [
+            "The webhook receives a JSON POST: {source, type: \"arrived\" | \"left\", device, label, at, distanceM}",
+            "With a passphrase set, GET /api/ext/location/presence with Authorization: Bearer <passphrase> returns current presence (no coordinates)"
+          ]
+        }
+      },
+      "settings": {
+        "url": { "label": "URL" },
+        "token": { "label": "Token" },
+        "devices": {
+          "label": "Devices to show (registered name=nickname, comma-separated; the first is the one you carry; empty shows every device with a location)"
+        },
+        "homeLat": { "label": "Home latitude" },
+        "homeLon": { "label": "Home longitude" },
+        "homeRadius": { "label": "Home radius (m)" },
+        "watchMinutes": { "label": "Presence check interval (minutes; 0 turns it off)" },
+        "webhookUrl": { "label": "Webhook on arrive / leave" },
+        "presenceToken": { "label": "Passphrase for sharing presence" }
+      }
+    }
+  }
+}

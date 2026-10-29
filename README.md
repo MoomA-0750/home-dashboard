@@ -37,6 +37,8 @@ extensions/   本体に入っている拡張機能（連携と画面の機能）
   accounts/         カレンダー・メール。インターネットアカウント（Google・iCloud・Microsoft・一般）を人ごとに置き、
                     Calendar・Mail の画面と予定・メールのウィジェット、音声アシスタントの予定とメール
   sticky-notes/     付箋（家にいる人への伝言）のウィジェット。文字の揃えと iMessage のような効果（ドン・付箋の中の紙吹雪など）を付けられる
+  location/         位置。icloud-locate（iCloud の「探す」）から自分の Apple 端末の位置と家からの距離を出す。
+                    位置のウィジェット・音声アシスタントの get_location・家に着いた／出たときの Webhook
 examples/extensions/memo/  外で作る拡張機能の見本（伝言メモ）。本体には入らない
 scripts/build-extension.mjs  拡張機能をビルドして ZIP にする道具（pnpm build:extension）
 scripts/new-extension.mjs    拡張機能のひな形を作る道具（pnpm new:extension）
@@ -326,6 +328,35 @@ Google・iCloud・Microsoft・一般（IMAP・CalDAV・公開カレンダー）�
 
 > iMessageは今回見送った。tailnet上にMacはあるので原理的には可能だが、`~/Library/Messages/chat.db` を
 > 読むエージェントをMac側に常駐させ、フルディスクアクセスを与える必要があり、このダッシュボード単体では完結しない。
+
+## 位置（icloud-locate）
+
+自分の Apple 端末の位置を、別のリポジトリ [icloud-locate](../icloud-locate)（`~/Documents/git-cloned/icloud-locate`）の
+常駐 API から読む。端末の側には何も入れない（iCloud の「探す」を使う）。拡張機能は `extensions/location`。
+
+1. icloud-locate の機械で、常駐 API（systemd の `icloud-locate`）と `tailscale-serve.sh` を動かす（icloud-locate の README）
+2. 設定画面の「拡張機能 → 位置」で、URL（`https://<機械>.<tailnet>.ts.net:8765`）とトークン（`~/.config/icloud-locate/token` の中身）を入れる。
+   コンテナからは tailnet の URL で届く（`127.0.0.1:8765` はコンテナの中を指すので使えない）
+3. 「見る端末」に `登録名=呼び名` を `,` で区切って書く（最初が自分の持ち歩く端末）。iCloud には手放した端末も残っているので、
+   空のままだと位置のある端末がすべて出る
+4. 位置のウィジェットの詳しい画面で、家にいるときに「ここを家にする」を押す（設定画面で緯度・経度を入れてもよい）
+
+- 一覧は端末を起こさずに iCloud にある位置を読む。「今の位置を測る」と音声アシスタントの `refresh` だけが端末に測位を頼む（最大45秒・電池を使う）
+- iCloud のセッションが切れると「再認証が要ります」と出る。icloud-locate の機械で `locate.sh` を対話で動かして 2FA を通す（ダッシュボードは何もしなくてよい）
+- ダッシュボードは座標を保存しない。在宅の様子もメモリの中だけで、起動し直すと最初の1回は変わり目として扱わない
+
+### オートメーション（knot など）
+
+「在宅を見る間隔」（既定5分）ごとに位置を見て、見る端末が家に着いた・出たら、
+
+- 画面へ `ext:location:presence` を知らせる
+- 「着いた・出たときの Webhook」に JSON を POST する: `{"source":"home-dashboard/location","type":"arrived"|"left","device":"<登録名>","label":"<呼び名>","at":"<ISO8601>","distanceM":<家からの距離>}`。
+  knot なら、サーバーが見張る Webhook のきっかけ（`POST /hook/<札>`）の URL を入れると、本文がショートカットの入力になる
+- 「在宅の様子を外へ出す合言葉」を入れると、`GET /api/ext/location/presence` に `Authorization: Bearer <合言葉>` を付けて、
+  今の在宅の様子（座標なし）を読める（knot の HTTP のアクションから「誰か家にいるか」を確かめるなど）
+
+判定は、30分以内・精度500m以内の測位だけを使う（古い・粗い測位では前の判定を変えない）。端末を起こさないので、
+iPhone が自分で iCloud に位置を送るまで変わり目に気づかない（数分〜十数分遅れることがある）。
 
 ## push前のチェック（public-safe）
 
