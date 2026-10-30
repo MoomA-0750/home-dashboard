@@ -3,7 +3,7 @@ import type { CSSProperties } from "react";
 /**
  * Fluent UI System Icons を CSS マスクとして描画する。
  * SVG の塗りではなく currentColor のマスクなので、親の color をそのまま継承できる。
- * アイコン本体は apps/web/public/icons/*.svg（追加するときはそこに置いてこの一覧に足す）。
+ * アイコン本体は packages/ui/public/icons/*.svg（追加するときはそこに置いてこの一覧に足す）。
  * 拡張機能が自分で持っているアイコンは src に URL を渡す（/api/extensions/<id>/files/... など）。
  */
 const ICON_FILES = {

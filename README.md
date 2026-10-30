@@ -88,7 +88,7 @@ react-grid-layout を1カラム（`rowHeight=200` / `margin=[0,30]`）で使っ�
 
 サイドバーは Home・Media・Home Control・Settings（設定で選んだ端末では Chat も）で、
 間のハンドルをドラッグすると80〜240pxの範囲で広がり、広げるとアイコンの横にラベルが出る（幅は localStorage に保存される）。
-Toolbox は中身が決まるまで外している（アイコンは `public/icons` に残してある）。
+Toolbox は中身が決まるまで外している（アイコンは `packages/ui/public/icons` に残してある）。
 
 - **Media**（再生アイコン）: 再生中の曲・操作・次に再生する曲と、歌詞・プレイリスト・おすすめのタブ。
   音楽アプリはいまは Spotify を仮の連携先にしていて（`apps/server/src/music/`）、wave と連携できるようになったら
