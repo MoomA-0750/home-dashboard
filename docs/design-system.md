@@ -3,7 +3,7 @@
 ダッシュボードの見た目と動きの決まり。本体（apps/web）も拡張機能（extensions/*）も、ここに沿って作る。
 
 - 値（色・字の大きさ・余白・角丸・影・重なり・動き）は `packages/ui/src/theme.css` の `:root` のトークンにある。新しい値を直書きしない。合う段が無いときは、まずトークンを足す
-- 部品（ボタン・一覧・入れ物・小窓・バー…）は `packages/ui`（`ui.tsx` など。`@home-dashboard/ui`）にある。拡張機能からは `@home-dashboard/widget-sdk` から今までどおり使える。同じ見た目を使う別の画面（Yorine の管理画面など）も、この包みと theme.css をそのまま使う。拡張機能は部品を組み合わせ、自分で色や角丸を決めない
+- 部品（ボタン・一覧・入れ物・小窓・バー…）は `packages/ui`（`ui.tsx` など。`@home-dashboard/ui`）にある。拡張機能からは `@home-dashboard/widget-sdk` から今までどおり使える。同じ見た目を使う別の画面（Yorine の管理画面など）も、この包みと theme.css をそのまま使う。画面全体の枠（サイドバー・幅のつまみ・`AppShell`）と設定画面の形（`SettingsLayout`）は `@home-dashboard/ui/shell` にある。拡張機能は部品を組み合わせ、自分で色や角丸を決めない
 - 設計図は Figma（theme.css の冒頭のリンク）。トークンの値を変えるときは、設計図にも同じ値を置く
 
 ## 1. 考え方

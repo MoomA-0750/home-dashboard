@@ -33,6 +33,7 @@ import type { LoadedExtensions } from "../lib/extensions";
 import type { Account } from "../lib/auth";
 import { Icon, type IconName } from "./Icon";
 import { WallpaperSettings } from "./WallpaperSettings";
+import { SettingsLayout } from "@home-dashboard/ui/shell";
 import type { WallpaperInfo } from "../lib/useWallpaper";
 
 interface SettingsPanelProps {
@@ -334,131 +335,97 @@ export function SettingsPanel({
   }, [link]);
 
   return (
-    <section className="screen settings-screen" aria-label={t("settings")}>
-      <div className="screen__inner settings-screen__inner">
-        <header className="screen__header">
-          <h1>{t("settings")}</h1>
-        </header>
-
-        <div className={`settings-panel__columns${pageOpen ? " settings-panel__columns--page-open" : ""}`}>
-          {/* 左: 大きな項目の一覧（macOS の設定のように、選ぶと右に中身が出る） */}
-          <nav className="settings-nav" aria-label={t("settingsNav")}>
-            <ul>
-              {navItems.map((item) => (
-                <li key={item.id}>
-                  <button
-                    type="button"
-                    className={`settings-nav__item${item.id === page ? " settings-nav__item--on" : ""}`}
-                    aria-current={item.id === page ? "page" : undefined}
-                    onClick={() => {
-                      setPage(item.id);
-                      setPageOpen(true);
-                    }}
-                  >
-                    <span className="settings-nav__icon">
-                      <Icon name={item.icon} />
-                    </span>
-                    <span className="settings-nav__label">{item.label}</span>
-                    <Icon name="chevron-right" className="settings-nav__chevron" />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </nav>
-
-          {/* 右: 選んだ項目の中身。狭い画面では一覧と入れ替わり、「設定」で一覧に戻る */}
-          <div className="settings-detail">
-            <button
-              type="button"
-              className="settings-detail__back settings-detail__back--page"
-              onClick={() => setPageOpen(false)}
-            >
-              <Icon name="chevron-left" />
-              <span>{t("settings")}</span>
-            </button>
-            <h3 className="settings-detail__title">{navItems.find((item) => item.id === page)?.label}</h3>
-            {extensionPage && (
-              <ErrorBoundary key={extensionPage.key} name={navItems.find((item) => item.id === page)?.label ?? ""}>
-                <extensionPage.Component ctx={ctx} account={account} />
+    <SettingsLayout
+      title={t("settings")}
+      navLabel={t("settingsNav")}
+      items={navItems}
+      page={page}
+      pageOpen={pageOpen}
+      onSelect={(id) => {
+        setPage(id as SettingsPage);
+        setPageOpen(true);
+      }}
+      onBack={() => setPageOpen(false)}
+    >
+      {extensionPage && (
+        <ErrorBoundary key={extensionPage.key} name={navItems.find((item) => item.id === page)?.label ?? ""}>
+          <extensionPage.Component ctx={ctx} account={account} />
+        </ErrorBoundary>
+      )}
+      {page === "general" && <GeneralSettings apiBaseUrl={apiBaseUrl} />}
+      {page === "widgets" && (
+        <section className="settings-panel__widget-actions">
+          <p className="connection-settings__note">{t("widgetsNote")}</p>
+          <button
+            type="button"
+            className={`settings-panel__edit-toggle${editMode ? " settings-panel__edit-toggle--on" : ""}`}
+            aria-pressed={editMode}
+            onClick={onToggleEditMode}
+          >
+            <Icon name="edit" />
+            <span>{editMode ? t("exitEditMode") : t("editWidgets")}</span>
+          </button>
+          <button type="button" className="settings-panel__edit-toggle" onClick={onOpenWidgetPicker}>
+            <Icon name="add" />
+            <span>{t("addWidget")}</span>
+          </button>
+        </section>
+      )}
+      {page === "wallpaper" && (
+        <WallpaperSettings
+          apiBaseUrl={apiBaseUrl}
+          wallpaper={wallpaper}
+          isAdmin={account.role === "admin"}
+          onChange={onWallpaperChange}
+        />
+      )}
+      {page === "account" && (
+        <>
+          <AccountSettings
+            apiBaseUrl={apiBaseUrl}
+            account={account}
+            sessionId={sessionId}
+            onSignedOut={onSignedOut}
+          />
+          {sectionsOf("account").map((section) => (
+            <section key={section.key} className="settings-panel__extension-section">
+              <h4 className="settings-detail__subtitle">{textFor(section.label, locale)}</h4>
+              <ErrorBoundary name={textFor(section.label, locale)}>
+                <section.Component ctx={ctx} account={account} />
               </ErrorBoundary>
-            )}
-            {page === "general" && <GeneralSettings apiBaseUrl={apiBaseUrl} />}
-            {page === "widgets" && (
-              <section className="settings-panel__widget-actions">
-                <p className="connection-settings__note">{t("widgetsNote")}</p>
-                <button
-                  type="button"
-                  className={`settings-panel__edit-toggle${editMode ? " settings-panel__edit-toggle--on" : ""}`}
-                  aria-pressed={editMode}
-                  onClick={onToggleEditMode}
-                >
-                  <Icon name="edit" />
-                  <span>{editMode ? t("exitEditMode") : t("editWidgets")}</span>
-                </button>
-                <button type="button" className="settings-panel__edit-toggle" onClick={onOpenWidgetPicker}>
-                  <Icon name="add" />
-                  <span>{t("addWidget")}</span>
-                </button>
-              </section>
-            )}
-            {page === "wallpaper" && (
-              <WallpaperSettings
-                apiBaseUrl={apiBaseUrl}
-                wallpaper={wallpaper}
-                isAdmin={account.role === "admin"}
-                onChange={onWallpaperChange}
-              />
-            )}
-            {page === "account" && (
-              <>
-                <AccountSettings
-                  apiBaseUrl={apiBaseUrl}
-                  account={account}
-                  sessionId={sessionId}
-                  onSignedOut={onSignedOut}
-                />
-                {sectionsOf("account").map((section) => (
-                  <section key={section.key} className="settings-panel__extension-section">
-                    <h4 className="settings-detail__subtitle">{textFor(section.label, locale)}</h4>
-                    <ErrorBoundary name={textFor(section.label, locale)}>
-                      <section.Component ctx={ctx} account={account} />
-                    </ErrorBoundary>
-                  </section>
-                ))}
-              </>
-            )}
-            {page === "extensions" && (
-              <ExtensionSettings
-                apiBaseUrl={apiBaseUrl}
-                extensions={extensions}
-                isAdmin={account.role === "admin"}
-                link={link?.page === "extensions" ? link : null}
-              />
-            )}
-            {(page === "voice" || page === "connectors") && (
-              <VoiceSection
-                part={page}
-                voice={voice}
-                onSetPersonaEnabled={onSetPersonaEnabled}
-                personas={personas}
-                onSelectDefaultPersona={onSelectDefaultPersona}
-                onImportPersona={onImportPersona}
-                onDeletePersona={onDeletePersona}
-                personaExportUrl={personaExportUrl}
-                avatarUrlFor={avatarUrlFor}
-                apiBaseUrl={apiBaseUrl}
-                avatarAvailable={avatarAvailable}
-                avatarEnabled={avatarEnabled}
-                onToggleAvatar={onToggleAvatar}
-                mcp={mcp}
-                guard={guard}
-                isAdmin={account.role === "admin"}
-              />
-            )}
-          </div>
-        </div>
-      </div>
-    </section>
+            </section>
+          ))}
+        </>
+      )}
+      {page === "extensions" && (
+        <ExtensionSettings
+          apiBaseUrl={apiBaseUrl}
+          extensions={extensions}
+          isAdmin={account.role === "admin"}
+          link={link?.page === "extensions" ? link : null}
+        />
+      )}
+      {(page === "voice" || page === "connectors") && (
+        <VoiceSection
+          part={page}
+          voice={voice}
+          onSetPersonaEnabled={onSetPersonaEnabled}
+          personas={personas}
+          onSelectDefaultPersona={onSelectDefaultPersona}
+          onImportPersona={onImportPersona}
+          onDeletePersona={onDeletePersona}
+          personaExportUrl={personaExportUrl}
+          avatarUrlFor={avatarUrlFor}
+          apiBaseUrl={apiBaseUrl}
+          avatarAvailable={avatarAvailable}
+          avatarEnabled={avatarEnabled}
+          onToggleAvatar={onToggleAvatar}
+          mcp={mcp}
+          guard={guard}
+          isAdmin={account.role === "admin"}
+        />
+      )}
+    </SettingsLayout>
   );
 }
 

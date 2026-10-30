@@ -8,6 +8,7 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
+    "./shell": "./src/Shell.tsx",
     "./wallpaper": "./src/wallpaper.ts",
     "./theme.css": "./src/theme.css"
   },
