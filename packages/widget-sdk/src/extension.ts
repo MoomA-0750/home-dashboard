@@ -1,7 +1,7 @@
 import type { ComponentType } from "react";
 import type { FeatureProvision } from "./features";
-import type { IconName } from "./Icon";
-import type { LocalizedText } from "./i18n";
+import type { IconName } from "@home-dashboard/ui";
+import type { LocalizedText } from "@home-dashboard/ui";
 import type { WidgetDefinition, WidgetRuntimeContext } from "./types";
 
 /**

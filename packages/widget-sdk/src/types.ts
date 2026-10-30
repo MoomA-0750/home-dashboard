@@ -1,4 +1,4 @@
-import type { LocalizedText } from "./i18n";
+import type { LocalizedText } from "@home-dashboard/ui";
 import type { ComponentType } from "react";
 
 /** ウィジェットのグリッド上でのサイズ（単位はキャンバス側のグリッドセル数） */

@@ -16,7 +16,8 @@ apps/
   server/   Fastify製のAPIサーバー（レイアウト永続化・外部サービス連携・静的配信）
   voice-agent/  Python製の音声アシスタント（ウェイクワード → Claude Code → 読み上げ）。ホスト上で常駐させる
 packages/
-  widget-sdk/       ウィジェット・拡張機能の画面側の型と本体の部品（Button・List・Field・WidgetCard・Icon・ScreenFrame・取得フック・機能の口）
+  ui/               画面の部品とデザイン（theme.css・Button・List・Field・WidgetCard・Icon・ScreenFrame・小窓・言葉・動き・壁紙に合わせた色）。同じ見た目を使う別の画面とも共有する
+  widget-sdk/       ウィジェット・拡張機能の画面側の型と取得フック・機能の口。ui の部品も、ここから今までどおり使える
   extension-sdk/    拡張機能のサーバー側の型（manifest・道・音声アシスタントのツール・機能の口）
   widgets/
     clock/            時計（本体に入っている唯一のウィジェット）
@@ -55,7 +56,7 @@ docker/     Dockerfile
 - `icons/` — Fluent UI System Icons（MIT）。CSSマスクとして読み込むので色は親から継承される
 - `background.jpg` — **Gitには含まれない。** 好きな画像をこのパスに置くと背景になり、
   置かなければ `--dash-background-fallback` のグラデーションが使われる
-- 壁紙（既定の写真・設定で選んだ写真）は、読み込んだときに画面が測る（`apps/web/src/lib/wallpaperTheme.ts`）
+- 壁紙（既定の写真・設定で選んだ写真）は、読み込んだときに画面が測る（`packages/ui/src/wallpaperTheme.ts`）
   - 明るさ: 画面の左・中ほど・右寄り・右端の明るい所に、文字が読めるだけの暗さを足す（暗い壁紙なら足さない。強さは設定の「壁紙」で変える）
   - 色合い: あざやかな所の色相を取り、選んでいる所・自分の吹き出し・明るいボタンなどのテーマの色をその色合いにする
     （明るさ・あざやかさは決めた値なので、読みやすさは変わらない。色の無い壁紙なら既定の青）

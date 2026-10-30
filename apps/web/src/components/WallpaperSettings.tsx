@@ -9,7 +9,7 @@ import {
   onAnalysis,
   TARGET_LUMINANCE,
   type ZoneAnalysis,
-} from "../lib/wallpaperTheme";
+} from "@home-dashboard/ui/wallpaper";
 import { Icon } from "./Icon";
 import { defineMessages, List, ListItem, Slider } from "@home-dashboard/widget-sdk";
 
@@ -106,7 +106,7 @@ async function prepareImage(file: File): Promise<Blob> {
 const percent = (value: number) => Math.round(value * 100);
 
 /**
- * 明るい所に足す暗さ（lib/wallpaperTheme.ts）を見て、強さを変える。プレビューの上に足している暗さを重ね、
+ * 明るい所に足す暗さ（@home-dashboard/ui の wallpaperTheme.ts）を見て、強さを変える。プレビューの上に足している暗さを重ね、
  * 場所ごとに「明るさ（足す前 → 足した後）」と「足す暗さ」、それに合わせた文字の影の濃さを出す。つまみを動かすと、画面全体にもすぐ当てて見せ、
  * 離したときに保存する（全部の端末に知らせる）
  */

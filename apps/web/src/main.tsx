@@ -3,9 +3,9 @@ import ReactDOM from "react-dom/client";
 import { App } from "./App";
 import { AuthGate } from "./components/AuthGate";
 import { LocaleProvider } from "./lib/locale";
-import { installScrollbarVisibility } from "./lib/scrollbars";
+import { installScrollbarVisibility } from "@home-dashboard/ui/wallpaper";
 import "react-grid-layout/css/styles.css";
-import "./styles/theme.css";
+import "@home-dashboard/ui/theme.css";
 
 installScrollbarVisibility();
 

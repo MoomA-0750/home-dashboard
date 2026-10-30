@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@home-dashboard/ui": "workspace:*",
     "@home-dashboard/widget-clock": "workspace:*",
     "@home-dashboard/widget-sdk": "workspace:*",
     "@pixiv/three-vrm": "^3.5.5",

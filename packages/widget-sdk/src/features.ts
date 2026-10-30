@@ -1,6 +1,6 @@
 import { createContext, useContext, type ComponentType, type ReactNode } from "react";
 import type { ScreenProps } from "./extension";
-import type { LocalizedText } from "./i18n";
+import type { LocalizedText } from "@home-dashboard/ui";
 
 /**
  * 機能の口（画面側）。口を持つ拡張機能（Media など）が、そこへ入っている拡張機能（wave・Spotify など）を知るのに使う。

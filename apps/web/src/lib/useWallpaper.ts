@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { WidgetRuntimeContext } from "@home-dashboard/widget-sdk";
-import { applyShading, applyTheme, getAnalysis, measureDims, measureHue, setAnalysis } from "./wallpaperTheme";
+import { applyShading, applyTheme, getAnalysis, measureDims, measureHue, setAnalysis } from "@home-dashboard/ui/wallpaper";
 
 /**
  * 壁紙（背景の写真）。設定画面で選んだ画像をサーバーから読み、theme.css の --dash-background-image を差し替える。
