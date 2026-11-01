@@ -72,3 +72,131 @@
     justify-content: flex-start;
   }
 }
+
+/* --- 位置の画面（地図） --- */
+
+.location-screen__actions .location-detail__actions {
+  justify-content: flex-start;
+}
+
+.location-map {
+  height: min(72svh, 760px);
+  min-height: 320px;
+  border-radius: var(--group-radius);
+  overflow: hidden;
+  background: var(--surface-input);
+  /* Leaflet の部品（拡大・縮小・出典）の z-index が本体のメニューより上にならないよう、ここで閉じる */
+  isolation: isolate;
+  font: inherit;
+}
+
+/* OpenStreetMap の明るい絵を、暗い画面に合わせて反転して沈める（自前のタイルには掛けない） */
+.location-map--standard .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.9) saturate(0.6);
+}
+
+.location-map .leaflet-control-attribution {
+  background: rgba(5, 14, 30, 0.7);
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.location-map .leaflet-control-attribution a {
+  color: var(--text-primary);
+}
+
+.location-map .leaflet-bar a {
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.location-map .leaflet-bar a:hover {
+  background: var(--surface-input);
+}
+
+.location-map__accuracy {
+  fill: rgb(var(--accent-rgb));
+  fill-opacity: 0.18;
+  stroke: rgb(var(--accent-rgb));
+  stroke-opacity: 0.6;
+  stroke-width: 1;
+}
+
+.location-map__home-area {
+  fill: #fff;
+  fill-opacity: 0.04;
+  stroke: #fff;
+  stroke-opacity: 0.6;
+  stroke-width: 1.5;
+  stroke-dasharray: 6 6;
+}
+
+/* divIcon の札。Leaflet の既定の白い箱を消し、点の真ん中が座標に来るようにする */
+.location-map__pin,
+.location-map__home {
+  background: none;
+  border: 0;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.location-map__dot {
+  position: absolute;
+  left: -8px;
+  top: -8px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: rgb(var(--accent-rgb));
+  border: 2px solid #fff;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
+}
+
+.location-map__pin--old .location-map__dot {
+  background: #8a94a6;
+}
+
+.location-map__pin--selected .location-map__dot {
+  left: -11px;
+  top: -11px;
+  width: 22px;
+  height: 22px;
+  border-width: 3px;
+}
+
+.location-map__label {
+  position: absolute;
+  left: 50%;
+  top: 12px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  font-size: 12px;
+  line-height: 1.3;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+}
+
+/* 家の札は点の上に出す（家にいる端末の点と札に重ならないように） */
+.location-map__label--home {
+  top: auto;
+  bottom: 14px;
+  color: var(--text-secondary);
+  cursor: default;
+}
+
+@media (max-width: 900px) {
+  .location-map {
+    height: 55svh;
+  }
+}
+
+.location-screen .ui-side-layout__side {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}

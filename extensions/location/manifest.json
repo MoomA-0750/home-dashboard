@@ -2,7 +2,7 @@
   "id": "location",
   "name": "位置",
   "version": "1.0.0",
-  "description": "icloud-locate（iCloud の「探す」）から、自分の Apple 端末の位置と家からの距離を出す。位置のウィジェット・音声アシスタントの get_location・家に着いた／出たときの Webhook（knot などのオートメーション向け）",
+  "description": "icloud-locate（iCloud の「探す」）から、自分の Apple 端末の位置と家からの距離を出す。位置のウィジェットと地図の画面・音声アシスタントの get_location・家に着いた／出たときの Webhook（knot などのオートメーション向け）",
   "apiVersion": 1,
   "settingsTest": "/test",
   "settingsGroups": [
@@ -22,6 +22,12 @@
       "title": "端末と家",
       "note": "家の場所は、詳しい画面の「ここを家にする」でも決められます。",
       "fields": ["devices", "homeLat", "homeLon", "homeRadius"]
+    },
+    {
+      "id": "map",
+      "title": "地図",
+      "note": "位置の画面の地図の絵（タイル）。空なら OpenStreetMap を使います。地図を開くと、見ている辺りのタイルをその配り元から読みます。",
+      "fields": ["mapTiles", "mapAttribution"]
     },
     {
       "id": "automation",
@@ -54,6 +60,13 @@
     { "key": "homeLon", "label": "家の経度", "kind": "number", "min": -180, "max": 180 },
     { "key": "homeRadius", "label": "家とみなす半径（m）", "kind": "number", "default": 150, "min": 30, "max": 5000, "integer": true },
     {
+      "key": "mapTiles",
+      "label": "タイルの URL（{z}/{x}/{y} を含む。空なら OpenStreetMap）",
+      "kind": "text",
+      "placeholder": "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+    },
+    { "key": "mapAttribution", "label": "タイルの出典の表記（HTML 可）", "kind": "text" },
+    {
       "key": "watchMinutes",
       "label": "在宅を見る間隔（分。0 で見ない）",
       "kind": "number",
@@ -68,7 +81,7 @@
   "locales": {
     "en": {
       "name": "Location",
-      "description": "Your Apple devices' locations and distance from home via icloud-locate (iCloud Find My). The location widget, the voice assistant's get_location, and a webhook when someone arrives home or leaves (for automations such as knot)",
+      "description": "Your Apple devices' locations and distance from home via icloud-locate (iCloud Find My). The location widget and map screen, the voice assistant's get_location, and a webhook when someone arrives home or leaves (for automations such as knot)",
       "settingsGroups": {
         "connection": {
           "note": "Connects to the icloud-locate API server (server.py). Nothing is installed on the devices.",
@@ -81,6 +94,10 @@
         "devices": {
           "title": "Devices and home",
           "note": "You can also set home with “Set as home” in the detail view."
+        },
+        "map": {
+          "title": "Map",
+          "note": "Map imagery (tiles) for the Location screen. Empty uses OpenStreetMap. Opening the map loads tiles for the area you view from that provider."
         },
         "automation": {
           "title": "Automation",
@@ -100,6 +117,8 @@
         "homeLat": { "label": "Home latitude" },
         "homeLon": { "label": "Home longitude" },
         "homeRadius": { "label": "Home radius (m)" },
+        "mapTiles": { "label": "Tile URL (with {z}/{x}/{y}; empty uses OpenStreetMap)" },
+        "mapAttribution": { "label": "Tile attribution (HTML allowed)" },
         "watchMinutes": { "label": "Presence check interval (minutes; 0 turns it off)" },
         "webhookUrl": { "label": "Webhook on arrive / leave" },
         "presenceToken": { "label": "Passphrase for sharing presence" }

@@ -129,8 +129,17 @@ test("道: 位置を読み、測位は登録名の同じ端末を選び、ここ
 
     await call("POST /home", { body: { device: "iPhone" } });
     assert.equal(api.settings.homeLat, Number((HOME.lat + 0.01).toFixed(6)));
-    const after = (await call("GET /places")) as { places: { atHome: boolean }[] };
+    const after = (await call("GET /places")) as {
+      places: { atHome: boolean }[];
+      homeArea: { radiusM: number };
+      map: { tiles: string; standard: boolean };
+    };
     assert.equal(after.places[0].atHome, true);
+    assert.equal(after.homeArea.radiusM, 150);
+    assert.deepEqual([after.map.standard, after.map.tiles.includes("openstreetmap")], [true, true]);
+    api.settings.mapTiles = "https://tiles.example/{z}/{x}/{y}.png";
+    const custom = (await call("GET /places")) as { map: { tiles: string; standard: boolean } };
+    assert.deepEqual(custom.map, { tiles: "https://tiles.example/{z}/{x}/{y}.png", attribution: "", standard: false });
   } finally {
     await fake.close();
   }

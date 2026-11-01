@@ -14,3 +14,4 @@
 
 # tailnet名の説明で使うプレースホルダ
 tailnet-name.ts.net
+machine.tailnet.ts.net

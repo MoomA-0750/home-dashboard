@@ -20,7 +20,7 @@ import {
 /**
  * 位置の拡張機能のサーバー側。icloud-locate（~/Documents/git-cloned/icloud-locate）の常駐 API から、
  * 自分の Apple 端末の位置を読む。端末側には何も入れない（iCloud の「探す」を使う）。
- * - GET  /places            … 見る端末の位置と家からの距離（端末を起こさない）
+ * - GET  /places            … 見る端末の位置と家からの距離、地図に描く家の円とタイル（端末を起こさない）
  * - POST /places/:name/locate … その端末に測位を頼んで、新しい位置を待つ（電池を使う）
  * - POST /home              … 端末の今の位置を家にする（管理者）
  * - GET  /presence          … 在宅の様子（座標なし）。外のプログラム（knot など）が Bearer の合言葉で読む
@@ -61,6 +61,9 @@ const messages = defineServerMessages({
 const LOCATE_TIMEOUT_S = 45;
 const LOCATE_HTTP_TIMEOUT_MS = 60_000;
 const QUICK_HTTP_TIMEOUT_MS = 15_000;
+
+const OSM_TILES = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+const OSM_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
 
 export default defineServerExtension({
   register(api) {
@@ -174,9 +177,26 @@ export default defineServerExtension({
     };
 
     // --- 画面の道 ---
+    /** 地図の絵（タイル）。既定は OpenStreetMap。家の機械で配るタイルなどに替えられる */
+    const mapView = () => {
+      const tiles = String(api.settings.mapTiles ?? "").trim();
+      return tiles
+        ? { tiles, attribution: String(api.settings.mapAttribution ?? ""), standard: false }
+        : { tiles: OSM_TILES, attribution: OSM_ATTRIBUTION, standard: true };
+    };
+
     api.route("GET", "/places", async ({ locale }) => {
       if (!configured()) return { configured: false, message: t(locale, "notConfigured"), places: [] };
-      return { configured: true, home: home() !== null, places: await readPlaces(locale), presence: presenceView() };
+      const area = home();
+      return {
+        configured: true,
+        home: area !== null,
+        // 家の円を地図に描くため（画面の中だけで使い、残さない）
+        homeArea: area,
+        map: mapView(),
+        places: await readPlaces(locale),
+        presence: presenceView(),
+      };
     });
 
     api.route("POST", "/places/:name/locate", async ({ params, locale }) => ({ place: await locate(params.name, locale) }));

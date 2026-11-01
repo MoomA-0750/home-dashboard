@@ -8,12 +8,14 @@
   },
   "dependencies": {
     "@home-dashboard/extension-sdk": "workspace:*",
-    "@home-dashboard/widget-sdk": "workspace:*"
+    "@home-dashboard/widget-sdk": "workspace:*",
+    "leaflet": "1.9.4"
   },
   "peerDependencies": {
     "react": "^18.3.0"
   },
   "devDependencies": {
+    "@types/leaflet": "1.9.20",
     "@types/node": "^22.10.10",
     "@types/react": "^18.3.18",
     "typescript": "^5.7.3",
