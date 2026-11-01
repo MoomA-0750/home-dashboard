@@ -505,3 +505,44 @@ export async function testConnection(locale: Locale = "ja"): Promise<{ ok: boole
     return { ok: false, message: messages.t(locale, "cannotConnect", { url: baseUrl() }) };
   }
 }
+
+// --- 夜の表示の条件（night.ts）に使う ---
+
+/** 夜の条件に選べる機器の種類。数値で比べるもの（照度などのセンサー）と、ついている・消えているで見るもの */
+const NIGHT_SWITCH_DOMAINS = ["light", "switch", "fan", "binary_sensor", "input_boolean", "media_player"];
+
+export interface NightCandidate {
+  entityId: string;
+  name: string;
+  state: string;
+  unit: string | null;
+  deviceClass: string | null;
+  /** "number" は未満・より上で、"switch" はついている・消えているで比べる */
+  type: "number" | "switch";
+}
+
+/** 夜の条件に選べる機器（照度のセンサーを先に、照明、ほかのスイッチの順） */
+export async function nightCandidates(): Promise<{ configured: boolean; entities: NightCandidate[] }> {
+  if (!isConfigured()) return { configured: false, entities: [] };
+  const states = await fetchStates();
+  const rank = (e: NightCandidate) =>
+    e.deviceClass === "illuminance" ? 0 : e.entityId.startsWith("light.") ? 1 : e.type === "number" ? 3 : 2;
+  const entities = states
+    .flatMap((s): NightCandidate[] => {
+      const domain = s.entity_id.split(".")[0];
+      const base = toEntity(s);
+      if (domain === "sensor" && Number.isFinite(Number(s.state)) && s.attributes.unit_of_measurement)
+        return [{ ...base, type: "number" }];
+      if (NIGHT_SWITCH_DOMAINS.includes(domain)) return [{ ...base, type: "switch" }];
+      return [];
+    })
+    .sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name));
+  return { configured: true, entities };
+}
+
+/** 決めた機器の今の状態 */
+export async function readEntityStates(entityIds: string[]) {
+  if (!isConfigured() || entityIds.length === 0) return new Map<string, ReturnType<typeof toEntity>>();
+  const wanted = new Set(entityIds);
+  return new Map((await fetchStates()).filter((s) => wanted.has(s.entity_id)).map((s) => [s.entity_id, toEntity(s)]));
+}

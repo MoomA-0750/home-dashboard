@@ -31,6 +31,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { WidgetEditBar, WidgetPicker } from "./components/WidgetEditBar";
 import { VoiceChat } from "./components/VoiceChat";
 import { useWallpaper } from "./lib/useWallpaper";
+import { useNight } from "./lib/useNight";
 import { VoiceLauncher } from "./components/VoiceLauncher";
 import { SnackbarHost } from "./components/SnackbarHost";
 import { VoiceOverlay } from "./components/VoiceOverlay";
@@ -157,6 +158,7 @@ export function App({ account, sessionId, onSignedOut }: AppProps) {
   const [editMode, setEditMode] = useState(false);
   const editBar = usePresence(editMode);
   const [wallpaper, setWallpaper] = useWallpaper(ctx);
+  const [night, setNight] = useNight(ctx);
   const screens = extensions.screens;
   const currentScreen = screens.find((screen) => screen.key === activeScreen) ?? null;
   const onHome = currentScreen === null && !chatScreenOpen && !settingsVisible;
@@ -426,6 +428,8 @@ export function App({ account, sessionId, onSignedOut }: AppProps) {
             extensions={extensions}
             wallpaper={wallpaper}
             onWallpaperChange={setWallpaper}
+            night={night}
+            onNightChange={setNight}
             onSignedOut={onSignedOut}
           />
         )}

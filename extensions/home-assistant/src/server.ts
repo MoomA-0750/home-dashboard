@@ -12,12 +12,14 @@ import {
   setSensorEnabled,
   testConnection,
 } from "./homeassistant";
+import { registerNightWatch } from "./nightWatch";
 
 /**
  * Home Assistant の拡張機能のサーバー側。
  * - /controls … 家電操作のウィジェット（家電と、室温・湿度などの平均）
  * - /overview … Home Control 画面（センサー・鍵・空調・照明とスイッチ）
  * - /call … 家電の操作（サービスはホワイトリスト。解錠はログインした画面からだけ）
+ * - /night … 夜の表示の条件（nightWatch.ts）
  * - 音声アシスタントの list_home_devices・control_home_device
  */
 
@@ -70,6 +72,8 @@ export default defineServerExtension({
     haSettings.current = api.settings;
     haSettings.configDir = api.configDir;
     haSettings.dataDir = api.dataDir;
+    // 夜の表示の条件（照度・照明・時間帯）を見張り、満たしたら本体へ知らせる
+    registerNightWatch(api);
 
     // allowUnlock は「この画面から解錠できるか」。ログインしていれば true になる
     api.route("GET", "/controls", ({ account, locale }) =>

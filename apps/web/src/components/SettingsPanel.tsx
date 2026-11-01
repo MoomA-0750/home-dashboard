@@ -33,6 +33,8 @@ import type { LoadedExtensions } from "../lib/extensions";
 import type { Account } from "../lib/auth";
 import { Icon, type IconName } from "./Icon";
 import { WallpaperSettings } from "./WallpaperSettings";
+import { NightSettings } from "./NightSettings";
+import type { NightState } from "../lib/useNight";
 import { SettingsLayout } from "@home-dashboard/ui/shell";
 import type { WallpaperInfo } from "../lib/useWallpaper";
 
@@ -65,6 +67,8 @@ interface SettingsPanelProps {
   extensions: LoadedExtensions;
   wallpaper: WallpaperInfo | null;
   onWallpaperChange: (info: WallpaperInfo) => void;
+  night: NightState | null;
+  onNightChange: (state: NightState) => void;
   onSignedOut: () => void;
 }
 
@@ -76,6 +80,7 @@ const messages = defineMessages({
     general: "一般",
     widgets: "ウィジェット",
     wallpaper: "壁紙",
+    night: "夜の表示",
     account: "アカウント",
     extensions: "拡張機能",
     voice: "音声アシスタント",
@@ -118,6 +123,7 @@ const messages = defineMessages({
     general: "General",
     widgets: "Widgets",
     wallpaper: "Wallpaper",
+    night: "Night display",
     account: "Account",
     extensions: "Extensions",
     voice: "Voice assistant",
@@ -162,6 +168,7 @@ const SETTINGS_PAGES: { id: SettingsPage; label: Parameters<ReturnType<typeof me
   { id: "general", label: "general", icon: "globe" },
   { id: "widgets", label: "widgets", icon: "grid" },
   { id: "wallpaper", label: "wallpaper", icon: "image" },
+  { id: "night", label: "night", icon: "weather-moon" },
   { id: "account", label: "account", icon: "person" },
   { id: "extensions", label: "extensions", icon: "puzzle-piece" },
   { id: "voice", label: "voice", icon: "mic" },
@@ -309,6 +316,8 @@ export function SettingsPanel({
   extensions,
   wallpaper,
   onWallpaperChange,
+  night,
+  onNightChange,
   onSignedOut,
 }: SettingsPanelProps) {
   const t = messages.useT();
@@ -378,6 +387,9 @@ export function SettingsPanel({
           isAdmin={account.role === "admin"}
           onChange={onWallpaperChange}
         />
+      )}
+      {page === "night" && (
+        <NightSettings apiBaseUrl={apiBaseUrl} night={night} isAdmin={account.role === "admin"} onChange={onNightChange} />
       )}
       {page === "account" && (
         <>

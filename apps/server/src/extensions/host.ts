@@ -26,6 +26,7 @@ import {
 } from "../connectionSettings.js";
 import { ServiceError } from "../serviceError.js";
 import { broadcast } from "../ws.js";
+import { setNightSignal } from "../nightMode.js";
 import { startSandbox } from "./sandbox.js";
 
 /**
@@ -292,6 +293,7 @@ function makeApi(ext: Extension): ServerExtensionApi {
     },
     providers: <T>(feature: string) => featureProviders<T>(feature),
     broadcast: (type, payload) => broadcast({ type: `ext:${manifest.id}:${type}`, payload }),
+    setNightSignal: (active, reason) => setNightSignal(manifest.id, active, reason),
     error: (statusCode, message) => new ServiceError(statusCode, message),
     redirect: (url) => new RouteResponse("redirect", url, 302),
     text: (body, statusCode = 200) => new RouteResponse("text", body, statusCode),
@@ -385,6 +387,7 @@ function deactivate(ext: Extension): void {
   ext.disposers = [];
   ext.active = false;
   unregisterSettingsSection(ext.manifest.id);
+  setNightSignal(ext.manifest.id, false);
 }
 
 async function readOrigin(dir: string): Promise<ExtensionOrigin> {

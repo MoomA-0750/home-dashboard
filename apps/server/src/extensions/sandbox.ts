@@ -156,6 +156,9 @@ export async function startSandbox(
       case "broadcast":
         api.broadcast(message.type, message.payload);
         return;
+      case "night":
+        api.setNightSignal(message.active, message.reason);
+        return;
       case "log":
         api.log[message.level](message.message, message.detail ?? undefined);
         return;

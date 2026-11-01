@@ -118,6 +118,8 @@
   --z-modal: 30;
   --z-voice: 40;
   --z-guard: 50;
+  /* 夜の表示の暗幕（いちばん上。押す操作は下へ通す） */
+  --z-night: 100;
 
   /*
    * 状態の色と、浮かせる面・入力欄の地。
@@ -303,6 +305,33 @@ button {
     ),
     radial-gradient(circle at 74% 42%, rgba(var(--accent-rgb), 0.13), transparent 34%),
     linear-gradient(180deg, rgba(var(--shade-rgb), 0.18), rgba(var(--shade-rgb), 0.55));
+}
+
+/*
+ * 夜の表示（本体の lib/useNight.ts が <html data-night> と --night-darkness を付ける）。
+ * 壁紙はほぼ黒まで沈め、その上で画面全体（文字・ウィジェット・音声アシスタントも）に暗幕を重ねる。
+ * 暗幕は押す操作を下へ通すので、暗いまま普段どおり触れる
+ */
+[data-night] .app-shell {
+  background-image:
+    linear-gradient(rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.85)),
+    var(--dash-background-image),
+    var(--dash-background-fallback);
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-night);
+  pointer-events: none;
+  background: #000;
+  opacity: 0;
+  transition: opacity 1.2s ease;
+}
+
+[data-night] body::after {
+  opacity: var(--night-darkness, 0.75);
 }
 
 .app-loading {
@@ -3540,6 +3569,33 @@ label.ui-field {
   flex-shrink: 0;
   font-size: var(--font-label);
   color: var(--text-secondary);
+}
+
+/* 設定の「夜の表示」 */
+.night-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.night-settings__now {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.night-settings__now--on {
+  color: var(--accent);
+}
+
+.night-settings__conditions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
 }
 
 .wallpaper-dim__strength {

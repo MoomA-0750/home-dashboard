@@ -14,6 +14,7 @@ import { registerWebSocket } from "./ws.js";
 import { registerAuth } from "./routes/auth.js";
 import { registerExtensionRoutes } from "./routes/extensions.js";
 import { registerWallpaperRoutes } from "./routes/wallpaper.js";
+import { registerNightRoutes } from "./routes/night.js";
 import { loadExtensions } from "./extensions/host.js";
 import { announceSetupCode } from "./accounts.js";
 import { startExtensionSources } from "./extensions/sources.js";
@@ -47,6 +48,7 @@ await registerVoiceGuardRoutes(app);
 await registerConnectionSettingsRoutes(app);
 await registerExtensionRoutes(app);
 await registerWallpaperRoutes(app);
+await registerNightRoutes(app);
 
 if (existsSync(config.webDistDir)) {
   await app.register(fastifyStatic, {

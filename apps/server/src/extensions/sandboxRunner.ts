@@ -53,6 +53,7 @@ export type FromChild =
     }
   | { t: "provide"; ref: number; feature: string; methods: string[] }
   | { t: "broadcast"; type: string; payload: unknown }
+  | { t: "night"; active: boolean; reason: string | null }
   | { t: "log"; level: "info" | "warn" | "error"; message: string; detail: unknown }
   | { t: "call"; id: number; kind: "updateSettings"; args: unknown[] }
   | { t: "result"; id: number; ok: boolean; value?: unknown; error?: SerializedError };
@@ -221,6 +222,7 @@ function makeApi(init: Extract<ToChild, { t: "init" }>): ServerExtensionApi {
       return [];
     },
     broadcast: (type, payload) => send({ t: "broadcast", type, payload }),
+    setNightSignal: (active, reason) => send({ t: "night", active: Boolean(active), reason: typeof reason === "string" ? reason : null }),
     error: (statusCode, message) => new HttpError(statusCode, message),
     redirect: (url) => new RouteResponse({ kind: "redirect", url }),
     text: (body, statusCode = 200) => new RouteResponse({ kind: "text", body, statusCode }),

@@ -225,6 +225,12 @@ export interface ServerExtensionApi {
   providers<T>(feature: string): FeatureProvider<T>[];
   /** つないでいるすべての画面に知らせる（WebSocket）。type には自動で "ext:<id>:" を付ける */
   broadcast(type: string, payload?: unknown): void;
+  /**
+   * 夜の表示（画面をぐっと暗くする）に入る条件を満たしたか・満たさなくなったかを本体へ知らせる。reason は設定画面に出す一言
+   * （「リビングの照度が 5 lx 未満」など）。設定の夜の表示が「自動」なら、どれかの拡張機能が満たしている間だけ夜にする。
+   * 止めたとき（拡張機能を切った・入れ替えた）は、満たしていないことになる
+   */
+  setNightSignal(active: boolean, reason?: string | null): void;
   /** 状態コードと、画面に出してよい理由を持つエラー */
   error(statusCode: number, message: string): Error;
   redirect(url: string): RouteResult;
