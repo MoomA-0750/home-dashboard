@@ -1,4 +1,5 @@
 import { useRef, useState, type AnchorHTMLAttributes, type ButtonHTMLAttributes, type KeyboardEvent, type ReactNode } from "react";
+import { cx } from "./cx";
 import { Icon, type IconName } from "./Icon";
 
 /**
@@ -20,20 +21,33 @@ import { Icon, type IconName } from "./Icon";
  *   </Group>
  */
 
-const cx = (...names: (string | false | null | undefined)[]) => names.filter(Boolean).join(" ");
-
 export type ButtonVariant = "default" | "primary" | "danger";
+/** md: ふつう（高さ 40px）。lg: 壁掛けで離れて押すもの（52px。Home Control の操作など） */
+export type ButtonSize = "md" | "lg";
 
 interface ButtonOwnProps {
   /** primary: その場でいちばん押すもの（保存など）。danger: 消すのを確かめるもの */
   variant?: ButtonVariant;
+  size?: ButtonSize;
   /** 文字の前に出すアイコン */
   icon?: IconName;
+}
+
+/** ボタンの見た目（Button と、リンクをボタンの形にする ButtonLink で同じものを使う） */
+export function buttonClass(variant: ButtonVariant = "default", size: ButtonSize = "md") {
+  return cx(
+    "glass press inline-flex items-center justify-center gap-2 rounded-full px-4 font-semibold leading-none whitespace-nowrap text-text no-underline cursor-pointer",
+    "hover:border-tint/30 disabled:cursor-default disabled:opacity-50 [&_.fluent-icon]:size-5",
+    size === "lg" ? "tap-xl px-6 text-body" : "tap text-label",
+    variant === "primary" && "fill-bright no-blur shadow-none",
+    variant === "danger" && "border-transparent bg-danger-strong text-on-danger",
+  );
 }
 
 /** ボタン。どれも丸い端の同じ高さ。type は既定で "button"（フォームを送るものだけ "submit" にする） */
 export function Button({
   variant = "default",
+  size = "md",
   icon,
   className,
   type = "button",
@@ -41,24 +55,71 @@ export function Button({
   ...rest
 }: ButtonOwnProps & ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
-    <button type={type} className={cx("ui-button", variant !== "default" && `ui-button--${variant}`, className)} {...rest}>
+    <button type={type} className={cx(buttonClass(variant, size), className)} {...rest}>
       {icon && <Icon name={icon} />}
       {children}
     </button>
   );
 }
 
-/** アイコンだけのボタン（閉じる・その他の操作）。押せる大きさは 44px の丸。label は読み上げと hover の説明に使う */
+/**
+ * アイコンだけのボタン（閉じる・その他の操作・家電の電源）。label は読み上げと hover の説明に使う。
+ * md は地の無い 44px の丸（hover で薄く浮かぶ）、lg は壁掛けで押す 52px のガラスの丸。selected は入っているもの（明るい塗り）
+ */
 export function IconButton({
   icon,
   label,
+  size = "md",
+  selected,
   className,
   type = "button",
   ...rest
-}: { icon: IconName; label: string } & Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children">) {
+}: { icon: IconName; label: string; size?: ButtonSize; selected?: boolean } & Omit<
+  ButtonHTMLAttributes<HTMLButtonElement>,
+  "children"
+>) {
   return (
-    <button type={type} className={cx("ui-icon-button", className)} aria-label={label} title={label} {...rest}>
+    <button
+      type={type}
+      className={cx(
+        "press grid shrink-0 cursor-pointer place-items-center rounded-full p-0 text-text disabled:cursor-default disabled:opacity-40",
+        size === "lg" ? "glass size-13" : "size-11 border-0 bg-transparent hover:bg-white/10 focus-visible:bg-white/10",
+        selected && "fill-bright no-blur",
+        className,
+      )}
+      aria-label={label}
+      title={label}
+      aria-pressed={selected}
+      {...rest}
+    >
       <Icon name={icon} />
+    </button>
+  );
+}
+
+/** 選べるものを並べる小さな丸いボタン（運転モード・大きさなど）。selected は選んでいるもの（明るい塗り） */
+export function Chip({
+  selected,
+  icon,
+  className,
+  type = "button",
+  children,
+  ...rest
+}: { selected?: boolean; icon?: IconName } & ButtonHTMLAttributes<HTMLButtonElement>) {
+  return (
+    <button
+      type={type}
+      aria-pressed={selected}
+      className={cx(
+        "glass press tap inline-flex cursor-pointer items-center gap-1.5 rounded-full px-4 text-small text-text",
+        "disabled:cursor-default disabled:opacity-40 [&_.fluent-icon]:size-4.5",
+        selected && "fill-bright no-blur",
+        className,
+      )}
+      {...rest}
+    >
+      {icon && <Icon name={icon} />}
+      {children}
     </button>
   );
 }
@@ -84,13 +145,14 @@ export function ProgressBar({ value, label, className }: { value: number; label?
 /** ボタンの形のリンク（書き出し・外のページを開くなど） */
 export function ButtonLink({
   variant = "default",
+  size = "md",
   icon,
   className,
   children,
   ...rest
 }: ButtonOwnProps & AnchorHTMLAttributes<HTMLAnchorElement>) {
   return (
-    <a className={cx("ui-button", variant !== "default" && `ui-button--${variant}`, className)} {...rest}>
+    <a className={cx(buttonClass(variant, size), className)} {...rest}>
       {icon && <Icon name={icon} />}
       {children}
     </a>
@@ -99,7 +161,7 @@ export function ButtonLink({
 
 /** ボタンを横に並べる（入りきらなければ折り返す） */
 export function ButtonRow({ children }: { children: ReactNode }) {
-  return <div className="ui-button-row">{children}</div>;
+  return <div className="flex flex-wrap items-center gap-2">{children}</div>;
 }
 
 /** 入れ物（区画）。中に入力欄やボタンを並べる。角丸と内側の余白は本体が決める */

@@ -1,5 +1,6 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
 import { uiAssets } from "@home-dashboard/ui/vite";
 
 // 開発時にAPIをプロキシする先。8787でDocker版が動いているホストでは別ポートの開発サーバーに向ける
@@ -7,7 +8,7 @@ const apiTarget = process.env.API_PROXY_TARGET ?? "http://localhost:8787";
 
 export default defineConfig({
   // アイコンと字体は @home-dashboard/ui の public/ にある（/icons/・/fonts/ に出す）
-  plugins: [react(), uiAssets()],
+  plugins: [react(), tailwindcss(), uiAssets()],
   build: {
     target: "es2018",
     outDir: "dist",

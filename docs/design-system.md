@@ -2,9 +2,55 @@
 
 ダッシュボードの見た目と動きの決まり。本体（apps/web）も拡張機能（extensions/*）も、ここに沿って作る。
 
-- 値（色・字の大きさ・余白・角丸・影・重なり・動き）は `packages/ui/src/theme.css` の `:root` のトークンにある。新しい値を直書きしない。合う段が無いときは、まずトークンを足す
-- 部品（ボタン・一覧・入れ物・小窓・バー…）は `packages/ui`（`ui.tsx` など。`@home-dashboard/ui`）にある。拡張機能からは `@home-dashboard/widget-sdk` から今までどおり使える。同じ見た目を使う別の画面（Yorine の管理画面など）も、この包みと theme.css をそのまま使う。画面全体の枠（サイドバー・幅のつまみ・`AppShell`）と設定画面の形（`SettingsLayout`）は `@home-dashboard/ui/shell` にある。拡張機能は部品を組み合わせ、自分で色や角丸を決めない
-- 設計図は Figma（theme.css の冒頭のリンク）。トークンの値を変えるときは、設計図にも同じ値を置く
+- スタイルは **Tailwind（v4）のクラス**で書く。CSS のファイルは足さない（`pnpm lint:style` が確かめる）
+- 値（色・字の大きさ・余白・角丸・影・重なり・動き）は Tailwind のテーマ（`packages/ui/src/tailwind-theme.css`）にあるものだけを使う。
+  Tailwind の既定の色（`text-red-500` など）・字の大きさ・角丸・ブレークポイントは消してあり、書いても何も出ない。
+  `[#123]`・`[13px]` のような、テーマを通さない値も書かない。合う段が無いときは、まずテーマに足す
+- 実行中に変わる値（壁紙に合わせた色・動きの時間）は `packages/ui/src/styles/tokens.css` の `:root` の変数が持ち、テーマはそれを指す
+- 部品（ボタン・一覧・入れ物・小窓・バー…）は `packages/ui`（`@home-dashboard/ui`）にある。拡張機能からは `@home-dashboard/widget-sdk` から使う。
+  拡張機能は部品を組み合わせ、並べ方（flex・grid・gap・余白）だけを自分のクラスで書く。自分で色・角丸・ガラスを決めない
+- 設計図は Figma（tokens.css の冒頭のリンク）。値を変えるときは、設計図にも同じ値を置く
+
+## 0. 書き方（Tailwind）
+
+### 道具
+
+- `pnpm lint:style [フォルダ]` … 決まりに沿っているか（CSS のファイル・効かないクラス・テーマを通さない値・色の直書き・部品で書くもの）
+- クラスをつなぐのは `cx()`（`@home-dashboard/ui`・widget-sdk）。ぶつかるクラスは後のものが勝つ（部品の `p-4` に `className="p-2"` を渡すと `p-2`）
+- 拡張機能の組み立て（`scripts/build-extension.mjs`）が、拡張機能の中で使ったクラスだけを `dist/web.css` に出す。テーマと全体の決まりは本体が出す
+- Tailwind のクラスで書けないもの（`@keyframes`・込み入った選び方）は、`packages/ui/src/theme/*.css` に `@utility` で足す（拡張機能からも使える）
+
+### テーマの名前
+
+| 何 | クラス | 例 |
+|---|---|---|
+| 文字の色 | `text-text`（本文）・`text-muted`（説明）・`text-accent`・`text-accent-soft`・`text-ok`・`text-warn`・`text-danger`・`text-success`・`text-on-fill`・`text-on-danger` | `text-muted` |
+| 地・縁の色 | `bg-*`・`border-*` に同じ名前。ほかに `bg-raised`（浮かせる面）・`bg-input`（入力欄）・`bg-fill`・`bg-backdrop`（小窓の後ろ）・`border-line`・`border-glass-border`・`bg-shade`・`bg-tint`。不透明度は `/40` | `bg-tint/10` |
+| 字の大きさ | `text-micro`・`text-caption`・`text-note`・`text-label`・`text-small`・`text-body`・`text-title`・`text-heading`、画面の見出し `text-screen`・大きな数値 `text-stat`・カードの見出し `text-card` | `text-caption` |
+| 太さ・行間 | `font-normal`（400）・`font-medium`（500）・`font-semibold`（600）・`font-bold`（700）／`leading-none`（1）・`leading-tight`（1.3）・`leading-normal`（1.5） | |
+| 余白 | Tailwind の既定（0.25rem 刻み。`p-4` ＝ 1rem）。入れ物の内側は `p-4`、入れ物のあいだは `gap-3` | `px-4 py-3` |
+| 角丸 | `rounded-card`（45px）・`rounded-inner`（15px）・`rounded-group`・`rounded-nav`・`rounded-art`（12px。小さな写真）・`rounded-full`（丸・ピル） | |
+| 影 | `shadow-widget`・`text-shadow-halo`（`halo` と同じ） | |
+| 動きの曲線 | `ease-out`（出てくる）・`ease-in`（消える）・`ease-standard`（その場で変わる）。時間は `duration-(--motion-fast)` など | |
+| 出る・消える動き | `animate-enter`・`animate-enter-slow`・`animate-fade`・`animate-pop`・`animate-drop`・`animate-fade-out`・`animate-exit`・`animate-pop-out`・`animate-drop-out`・`animate-reveal`・`animate-spin` | `closing:animate-fade-out` |
+| 画面の区切り | `phone:`（≤620px）・`tablet:`（≤900px）・`narrow:`（≤1100px）・`wide:`（≥1100px）・`triple:`（≥1500px。メールだけ）・`wall:`（壁掛けの横長で背の低い画面） | `phone:flex-col` |
+| 状態 | `lite:`（軽い表示）・`night:`（夜の表示）・`closing:`（閉じる動きの間。`.is-closing`）・`motion-reduce:`、選んでいるものは `aria-pressed:`・`aria-selected:`・`data-[…]:` | `aria-pressed:fill-bright` |
+
+### 本体が用意するクラス（`tailwind-theme.css` の `@utility`）
+
+| クラス | 何をするか |
+|---|---|
+| `glass` | ガラスの面（縁・光沢・暗い地・影・ぼかしの5つ1組）。入れ物・カード・ボタン |
+| `raised` | 浮かせる面（小窓・メニュー。ぼかさない） |
+| `fill-bright` | 明るい塗り（選んでいる項目・いちばん押すボタン） |
+| `no-blur` | ガラスの中のガラス・ほぼ不透明な塗りの、後ろのぼかしを切る |
+| `halo` | 壁紙にじかに置く文字の影 |
+| `press`・`press-wide` | 押せるもの（色を短く変え、押している間 96%・幅の広い行は 98.5% に縮む） |
+| `change` | その場で色や形が変わるもの（トグル・タブ・家電の入／切） |
+| `layer-base`〜`layer-guard` | 重なりの順（7章） |
+| `tap`・`tap-lg`・`tap-xl` | 押せる最小の高さ（40・44・52px） |
+| `ellipsis` | 省略（…）で切る1行（字の上下の余白も戻す） |
+| `untrim` | 字の上下の余白を戻す（折り返す文章・入力欄） |
 
 ## 1. 考え方
 
@@ -16,7 +62,7 @@
 
 ## 2. 色
 
-テーマの色は「r, g, b」の形で持ち、壁紙を読み込んだときに、壁紙の色合いに合わせて差し替える（`packages/ui/src/wallpaperTheme.ts`。`@home-dashboard/ui/wallpaper`）。直書きの色は差し替えに付いてこないので、テーマの色は必ずトークンで書く。
+テーマの色は「r, g, b」の形で持ち、壁紙を読み込んだときに、壁紙の色合いに合わせて差し替える（`packages/ui/src/wallpaperTheme.ts`。`@home-dashboard/ui/wallpaper`）。直書きの色は差し替えに付いてこないので、テーマの色は必ずトークン（Tailwind では `text-accent`・`bg-tint/10` など）で書く。
 
 | トークン | 役割 | 書き方 |
 |---|---|---|
@@ -75,7 +121,7 @@
 | 浮かせる面 | `--surface-raised`（ぼかさない） | 小窓（`Dialog`）・メニュー（`PillMenu`）・詳細 | 部品を使う |
 | 明るい塗り | `--fill` の地に `--on-fill` の文字 | 選んでいる項目・いちばん押すボタン（`Button variant="primary"`） | `background: var(--fill); color: var(--on-fill);` |
 
-**ガラスの5つ1組**（theme.css の「ガラスの面」の1か所だけに書く。本体の新しい部品はそこにクラスを足し、拡張機能は `ui-glass` を付ける）
+**ガラスの5つ1組**（`tailwind-theme.css` の `glass` の1か所だけに書く。部品も拡張機能も `glass` を付ける）
 
 ```css
 border: 1px solid var(--glass-border);
@@ -96,7 +142,7 @@ backdrop-filter: var(--widget-blur);
 - 壁紙の明るさを、画面の横の位置ごと（4か所）に測り、明るい所にだけ暗さを足す（`--wallpaper-dim-1〜4`）。強さは設定の「壁紙」で変える
 - 壁紙にじかに置く文字の影（`--text-halo`）の濃さは、暗さを足した後に残る明るさで自動で決まる（`--text-halo-strength`）
 - 影は文字の外へ 20px ほど広がる。はみ出しを切る入れ物（スクロールする区画・省略で切る1行）は、`--halo-room` だけ内側に余白を取り、外側を同じだけ詰める
-- ガラスの中では影を付けない（theme.css の「文字の読みやすさ」に入れ物のクラスを足す）
+- ガラスの中では影を付けない（`halo` は、壁紙にじかに置く文字にだけ付ける）
 
 ## 5. 寸法
 
@@ -132,7 +178,8 @@ backdrop-filter: var(--widget-blur);
 |---|---|---|
 | 画面を作る | `ScreenFrame`（見出し・右上の操作）、区画は `ScreenSection` | `<h2 className="screen__section-title">` を直に書く |
 | 画面の右上で選ぶ（音楽アプリ・部屋・場所） | `PillMenu` | 独自のドロップダウン |
-| 押す | `Button`（`variant="primary"` はその場でいちばん押すもの1つだけ、`"danger"` は消す確認） | 独自のピルボタン |
+| 押す | `Button`（`variant="primary"` はその場でいちばん押すもの1つだけ、`"danger"` は消す確認。壁掛けで離れて押すものは `size="lg"`） | 独自のピルボタン |
+| 選べるものを並べる（運転モード・大きさ・期間） | `Chip`（`selected` で明るい塗り） | 自前のピル |
 | ボタンを並べる | `ButtonRow` | |
 | 名前と説明の並び | `List` ＋ `ListItem`。読み比べる中身（予定・メール・天気の日ごと）は1つの入れ物にまとめる `List boxed`、左の欄で選ぶもの（受信箱・会話）は行ごとにガラスにする `List` | 自前の `ul` と線 |
 | 左で選んで右に出す（受信箱とメール、カレンダーと予定） | `SideLayout`（狭い画面で左の欄を消すなら `narrow="hide"` ＋ 右上に `NarrowOnly` で `PillMenu`、下に回すなら `"below"`） | 自前の2列の grid |
@@ -140,7 +187,7 @@ backdrop-filter: var(--widget-blur);
 | 値を大きく見せる | `StatTile`（`StatGrid` で並べる。押して詳しくするなら `onClick`、注意の値は `tone="warm"`・`"hot"`） | 自前のタイル |
 | 進み具合・使っている量 | `ProgressBar`（`value` は 0〜1、色は `--progress-color`） | 自前のバー |
 | 件数・状態の小さな印 | `Badge`（`tone`: on・warn・dim） | 自前のピル |
-| アイコンだけのボタン（閉じる・その他） | `IconButton`（44px の丸、`label` は必須） | 自前の丸いボタン |
+| アイコンだけのボタン（閉じる・その他・家電の電源） | `IconButton`（44px の丸、`label` は必須。壁掛けで押すものは `size="lg"`（52px のガラス）、入っているものは `selected`） | 自前の丸いボタン |
 | 入／切 | `ToggleSwitch` | チェックボックス（`Check` は、選ぶものが多い一覧だけ） |
 | 量を変える（音量・明るさ・再生位置・強さ） | `Slider`（動かしている間は `onInput`、離したら `onCommit` で保存） | `<input type="range">` |
 | 画面の上に重ねて出す | `Dialog` | 自前の下敷き |
@@ -182,7 +229,7 @@ backdrop-filter: var(--widget-blur);
 | `--ease-standard` | cubic-bezier(.2, 0, 0, 1) | その場で色や形が変わるもの |
 | `--motion-rise` | 10px | 出てくるときに上がる距離 |
 
-**動きの型**（theme.css の「動き」にまとめてある。部品を使えば付いてくる）
+**動きの型**（`animate-*` のクラス。部品を使えば付いてくる）
 
 | 何が | 動き | 型 |
 |---|---|---|
@@ -209,7 +256,7 @@ backdrop-filter: var(--widget-blur);
 - 画面の切り替えや、一覧から行が無くなるときは、消える動きを付けない（次の中身がすぐ出るので、目で追わなくてよい）
 - 繰り返す動き（回る・脈打つ）は、何かを待っている間だけにする。ウィジェットに常に動くものを置かない
 - `transition: all` は使わない。動かすプロパティを書く
-- ブラウザがタップした所に重ねる青い覆い（`-webkit-tap-highlight-color`）は、theme.css で全体を消してある。押した手応えは部品自身の縮み・色で出す（自前の部品も、押したときの見た目を付ける）
+- ブラウザがタップした所に重ねる青い覆い（`-webkit-tap-highlight-color`）は、`styles/base.css` で全体を消してある。押した手応えは部品自身の縮み・色で出す（自前の部品も、押したときの見た目を付ける）
 - 端末の「動きを減らす」設定では、時間を全部 0 にし、出てくるときの動きを消す（`:root` の `--motion-*` を 0 にするだけで全部止まる）
 - JS で動かすもの（スクロール・何秒後に外す）は、`@home-dashboard/ui` の `scrollBehavior()`・`motionMs("reveal")` を使って同じ決まりに合わせる
 
@@ -228,7 +275,7 @@ backdrop-filter: var(--widget-blur);
 | 字の大きさの直書き | 3章の段へ。例外は、入力欄（スマホで拡大されないよう 1rem）・アイコンの字・音声のパネル（px で設計）・グラフの目盛り |
 | 小窓・詳細の見出し | heading（`Dialog`・ウィジェットの追加・ウィジェットの設定・`DetailFrame` の `title`） |
 | 大きな数値の太さ | 600（700 は時計とカードの見出しだけ） |
-| ガラスを自前で書いている所 | theme.css の「ガラスの面」の1か所にまとめた。拡張機能は要素に `ui-glass` を付ける。Home Control のセンサーは `StatTile`（`onClick`・`tone`） |
+| ガラスを自前で書いている所 | `glass` の1か所にまとめた。Home Control のセンサーは `StatTile`（`onClick`・`tone`） |
 | ボタン | 高さは 40（`Button`）・44（`PillMenu`・`IconButton`）・52（壁掛けで押す Home Control と編集の操作帯）。閉じるボタンは全部 `IconButton` と同じ 44px の丸。危ないボタンは `--danger-strong` の地に `--on-danger` の文字 |
 | 明るい塗り | `--fill`（地）と `--on-fill`（文字） |
 | 浮かせる面 | `--surface-raised` |

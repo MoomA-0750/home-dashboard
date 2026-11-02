@@ -1,0 +1,307 @@
+/*
+ * Tailwind のテーマ（docs/design-system.md の値）。本体（tailwind.css）と拡張機能（tailwind-ext.css）の両方が読む。
+ *
+ * Tailwind の既定の色・字の大きさ・角丸・影・太さ・ブレークポイントは消し、ここに書いたものだけを選べるようにする。
+ * 決まりに無い値は、クラスを書いても何も出ない（pnpm lint:style が「効かないクラス」として知らせる）。
+ * 余白（p-4・gap-3 など）は Tailwind の既定（0.25rem 刻み）が、設計図の --space-* の段と同じなので、そのまま使う。
+ *
+ * 色の多くは、壁紙に合わせて実行中に差し替える :root の変数（styles/tokens.css）を指す（inline で、その場で読む）。
+ */
+
+/* 画面ごとの @utility・@keyframes（Tailwind のクラスで書けないもの。必要な分だけ） */
+@import "./theme/ui.css";
+@import "./theme/shell.css";
+@import "./theme/settings.css";
+@import "./theme/home-assistant.css";
+@import "./theme/media-accounts.css";
+@import "./theme/small.css";
+
+@theme {
+  --color-*: initial;
+  --text-*: initial;
+  --radius-*: initial;
+  --shadow-*: initial;
+  --inset-shadow-*: initial;
+  --drop-shadow-*: initial;
+  --text-shadow-*: initial;
+  --font-weight-*: initial;
+  --breakpoint-*: initial;
+  --container-*: initial;
+  --blur-*: initial;
+  --animate-*: initial;
+  --ease-*: initial;
+  --leading-*: initial;
+  --tracking-*: initial;
+
+  --font-sans: Murecho, "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
+
+  /* 太さは4つ（本文 400・小さな薄い文字 500・見出しと数値 600・時計とカードの見出し 700） */
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* 行間。1行の名前・数値は none（1）、複数行になる文章は normal（1.5） */
+  --leading-none: 1;
+  --leading-tight: 1.3;
+  --leading-normal: 1.5;
+
+  /* 動きの曲線（出てくる・消える・その場で変わる） */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+
+  /* 出てくる・消える動き（時間は :root の --motion-*。動きを減らす設定では 0 になる） */
+  --animate-enter: motion-enter var(--motion-base) var(--ease-out) backwards;
+  --animate-enter-slow: motion-enter var(--motion-slow) var(--ease-out) backwards;
+  --animate-fade: motion-fade var(--motion-base) var(--ease-out);
+  --animate-pop: motion-pop var(--motion-slow) var(--ease-out);
+  --animate-drop: motion-drop var(--motion-base) var(--ease-out);
+  --animate-fade-out: motion-fade-out var(--motion-base) var(--ease-in) forwards;
+  --animate-exit: motion-exit var(--motion-base) var(--ease-in) forwards;
+  --animate-pop-out: motion-pop-out var(--motion-base) var(--ease-in) forwards;
+  --animate-drop-out: motion-drop-out var(--motion-fast) var(--ease-in) forwards;
+  --animate-reveal: widget-reveal var(--motion-reveal) var(--ease-out);
+  --animate-spin: spin 1s linear infinite;
+
+  @keyframes motion-enter {
+    from {
+      opacity: 0;
+      transform: translateY(var(--motion-rise));
+    }
+  }
+  @keyframes motion-fade {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes motion-pop {
+    from {
+      opacity: 0;
+      transform: scale(0.97);
+    }
+  }
+  @keyframes motion-drop {
+    from {
+      opacity: 0;
+      transform: translateY(-6px) scale(0.98);
+    }
+  }
+  @keyframes motion-fade-out {
+    to {
+      opacity: 0;
+    }
+  }
+  @keyframes motion-exit {
+    to {
+      opacity: 0;
+      transform: translateY(var(--motion-rise));
+    }
+  }
+  @keyframes motion-pop-out {
+    to {
+      opacity: 0;
+      transform: scale(0.97);
+    }
+  }
+  @keyframes motion-drop-out {
+    to {
+      opacity: 0;
+      transform: translateY(-6px) scale(0.98);
+    }
+  }
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+}
+
+/* 実行中に差し替える値を指すもの（壁紙に合わせた色・サイドバーの幅で変わる字の大きさなど） */
+@theme inline {
+  /* テーマの色（壁紙に合わせて差し替える）。bg-accent/40 のように不透明度も付けられる */
+  --color-accent: rgb(var(--accent-rgb));
+  --color-accent-soft: rgb(var(--accent-soft-rgb));
+  --color-tint: rgb(var(--tint-rgb));
+  --color-ink: rgb(var(--ink-rgb));
+  --color-shade: rgb(var(--shade-rgb));
+  /* 文字・線 */
+  --color-text: var(--text-primary);
+  --color-muted: var(--text-secondary);
+  --color-line: var(--line);
+  --color-glass-border: var(--glass-border);
+  /* 状態 */
+  --color-ok: var(--accent-ok);
+  --color-warn: var(--accent-warn);
+  --color-danger: var(--danger);
+  --color-danger-strong: var(--danger-strong);
+  --color-on-danger: var(--on-danger);
+  --color-success: var(--success);
+  /* 面 */
+  --color-raised: var(--surface-raised);
+  --color-input: var(--surface-input);
+  --color-fill: var(--fill);
+  --color-on-fill: var(--on-fill);
+  --color-backdrop: var(--modal-backdrop);
+  --color-transparent: transparent;
+  --color-current: currentColor;
+  --color-white: #fff;
+  --color-black: #000;
+
+  /* 字の大きさの段（役割で選ぶ）。text-caption・text-body など */
+  --text-micro: var(--font-micro);
+  --text-caption: var(--font-caption);
+  --text-note: var(--font-note);
+  --text-label: var(--font-label);
+  --text-small: var(--font-small);
+  --text-body: var(--font-body);
+  --text-title: var(--font-title);
+  --text-heading: var(--font-heading);
+  /* 画面の見出しと大きな数値（画面の幅で伸び縮み） */
+  --text-screen: clamp(28px, 2.6vw, 44px);
+  --text-stat: clamp(32px, 2.6vw, 46px);
+  --text-card: clamp(21px, 2vw, 31px);
+
+  /* 角丸（外の角丸 ＝ 中の角丸 ＋ 内側の余白）。rounded-card・rounded-inner・rounded-group・rounded-full（丸・ピル） */
+  --radius-card: var(--card-radius);
+  --radius-inner: var(--inner-radius);
+  --radius-group: var(--group-radius);
+  --radius-nav: var(--nav-icon-radius);
+  --radius-art: 12px;
+  --radius-full: 9999px;
+
+  --shadow-widget: var(--widget-shadow);
+  --text-shadow-halo: var(--text-halo);
+}
+
+/*
+ * 画面の大きさの区切り（docs/design-system.md の7章）。新しく区切らず、この中から選ぶ。
+ * phone: スマホ / tablet: タブレット / narrow・wide: チャットの会話一覧・天気の横並び / triple: メールの3つ並び /
+ * wall: 壁掛けの横長で背の低い画面
+ */
+@custom-variant phone (@media (max-width: 620px));
+@custom-variant tablet (@media (max-width: 900px));
+@custom-variant narrow (@media (max-width: 1100px));
+@custom-variant wide (@media (min-width: 1100px));
+@custom-variant triple (@media (min-width: 1500px));
+@custom-variant wall (@media (min-aspect-ratio: 2/1) and (max-height: 820px));
+/* 軽い表示（弱い端末）・夜の表示のとき */
+@custom-variant lite (&:where(:root[data-lite] *));
+@custom-variant night (&:where(:root[data-night] *));
+/* 閉じる動きの間（usePresence・useClosing が付ける） */
+@custom-variant closing (&.is-closing);
+
+/* ガラスの面（5つ1組）。入れ物・カード・ボタンはこれを付ける（自分で縁や影を書かない） */
+@utility glass {
+  border: 1px solid var(--glass-border);
+  background: var(--widget-sheen), var(--widget-bg);
+  background-clip: padding-box;
+  box-shadow: var(--widget-shadow);
+  backdrop-filter: var(--widget-blur);
+}
+
+/* ガラスの中のガラス・ほぼ不透明な塗りは、後ろをぼかさない（見た目はほぼ同じで、描く手間だけ減る） */
+@utility no-blur {
+  backdrop-filter: none;
+}
+
+/* 明るい塗り（選んでいる項目・いちばん押すボタン） */
+@utility fill-bright {
+  border-color: transparent;
+  background: var(--fill);
+  color: var(--on-fill);
+}
+
+/* 浮かせる面（小窓・メニュー）。ぼかさず、ほぼ不透明 */
+@utility raised {
+  border: 1px solid var(--glass-border);
+  background: var(--surface-raised);
+  box-shadow: var(--widget-shadow);
+}
+
+/* 壁紙にじかに置く文字の影 */
+@utility halo {
+  text-shadow: var(--text-halo);
+}
+
+/* 押せるもの: 色を短く変え、押している間だけ少し縮む（幅の広い行は press-wide） */
+@utility press {
+  transition-property: background-color, border-color, color, box-shadow, opacity, transform;
+  transition-duration: var(--motion-fast);
+  transition-timing-function: var(--ease-standard);
+  &:active:not(:disabled) {
+    transform: scale(0.96);
+  }
+}
+
+@utility press-wide {
+  transition-property: background-color, border-color, color, box-shadow, opacity, transform;
+  transition-duration: var(--motion-fast);
+  transition-timing-function: var(--ease-standard);
+  &:active:not(:disabled) {
+    transform: scale(0.985);
+  }
+}
+
+/* その場で色や形が変わるもの（トグル・タブ・家電の入／切） */
+@utility change {
+  transition-property: background-color, border-color, color, opacity, transform;
+  transition-duration: var(--motion-base);
+  transition-timing-function: var(--ease-standard);
+}
+
+/* 重なりの順（docs/design-system.md の7章）。layer-modal など */
+@utility layer-base {
+  z-index: var(--z-base);
+}
+@utility layer-handle {
+  z-index: var(--z-handle);
+}
+@utility layer-tabbar {
+  z-index: var(--z-tabbar);
+}
+@utility layer-launcher {
+  z-index: var(--z-launcher);
+}
+@utility layer-popover {
+  z-index: var(--z-popover);
+}
+@utility layer-bar {
+  z-index: var(--z-bar);
+}
+@utility layer-snackbar {
+  z-index: var(--z-snackbar);
+}
+@utility layer-modal {
+  z-index: var(--z-modal);
+}
+@utility layer-voice {
+  z-index: var(--z-voice);
+}
+@utility layer-guard {
+  z-index: var(--z-guard);
+}
+
+/* 省略（…）で切る1行。字の上下の余白を戻す（text-box-trim を切る） */
+@utility ellipsis {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-box-trim: none;
+}
+
+/* 字の上下のフォント由来の余白を戻す（行を切るもの・折り返す文章） */
+@utility untrim {
+  text-box-trim: none;
+}
+
+/* 押せる最小の高さ（40px・44px・壁掛けで押す 52px） */
+@utility tap {
+  min-height: 40px;
+}
+@utility tap-lg {
+  min-height: 44px;
+}
+@utility tap-xl {
+  min-height: 52px;
+}

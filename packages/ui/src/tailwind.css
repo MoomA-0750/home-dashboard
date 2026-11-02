@@ -1,0 +1,19 @@
+/*
+ * 本体の画面のスタイルの入り口（apps/web の main.tsx が読む）。Tailwind の土台・テーマ・本体の部品と画面のクラスを出す。
+ * 拡張機能は tailwind-ext.css を使う（テーマと全体の決まりは本体が出すので、拡張機能は使ったクラスだけを持つ）。
+ *
+ * 層の順（下ほど強い）: theme（値）・base（全体の決まり）・legacy（Tailwind に移す前のクラス。移し終えたら消す）・utilities
+ */
+@layer theme, base, legacy, components, utilities;
+
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/preflight.css" layer(base);
+@import "tailwindcss/utilities.css" layer(utilities);
+@import "./tailwind-theme.css";
+@import "./styles/tokens.css" layer(base);
+@import "./styles/base.css" layer(base);
+@import "./theme.css" layer(legacy);
+
+/* クラスを探す所（本体の画面は Vite の根の apps/web から自動で探す） */
+@source "./";
+@source "../../widget-sdk/src";

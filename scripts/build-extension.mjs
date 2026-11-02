@@ -22,6 +22,8 @@ import { basename, dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import * as esbuild from "esbuild";
 import { zipSync } from "fflate";
+import { compile, optimize } from "@tailwindcss/node";
+import { Scanner } from "@tailwindcss/oxide";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const requireFromWeb = createRequire(join(ROOT, "apps/web/package.json"));
@@ -55,6 +57,34 @@ function hostModulesPlugin(exportsByName) {
       });
     },
   };
+}
+
+/** 拡張機能の Tailwind の入り口（テーマは本体が出すので参照だけにし、使ったクラスだけを出す） */
+const TAILWIND_EXT_ENTRY = join(ROOT, "packages/ui/src/tailwind-ext.css");
+
+/**
+ * 拡張機能の画面側（src/）で使っている Tailwind のクラスを集めて CSS にする。
+ * 本体と同じテーマ（packages/ui/src/tailwind-theme.css）なので、決まりに無い値のクラスは何も出ない
+ */
+export async function tailwindForExtension(srcDir) {
+  const compiler = await compile(`@import ${JSON.stringify(TAILWIND_EXT_ENTRY)};`, {
+    base: dirname(TAILWIND_EXT_ENTRY),
+    onDependency: () => {},
+  });
+  const scanner = new Scanner({ sources: [{ base: srcDir, pattern: "**/*", negated: false }] });
+  return optimize(compiler.build(scanner.scan()), { minify: false }).code;
+}
+
+/**
+ * 組み立てた web.css を仕上げる。Tailwind のクラスを前に置き、拡張機能が自分で書いた CSS は legacy の層に入れる
+ * （層に入れないと、Tailwind のクラスより強くなってしまう）
+ */
+async function finishWebCss(dir, out) {
+  const cssPath = join(out, "web.css");
+  const own = existsSync(cssPath) ? (await readFile(cssPath, "utf-8")).trim() : "";
+  const utilities = await tailwindForExtension(join(dir, "src"));
+  const css = [utilities.trim(), own && `@layer legacy {\n${own}\n}`].filter(Boolean).join("\n\n");
+  if (css) await writeFile(cssPath, `${css}\n`);
 }
 
 async function readManifest(dir) {
@@ -125,7 +155,17 @@ async function buildOne(dir, { zip, watch, exportsByName }) {
         target: "es2020",
         jsx: "automatic",
         loader: { ".svg": "file", ".png": "file" },
-        plugins: [hostModulesPlugin(exportsByName)],
+        plugins: [
+          hostModulesPlugin(exportsByName),
+          {
+            name: "home-dashboard-tailwind",
+            setup(build) {
+              build.onEnd(async (result) => {
+                if (result.errors.length === 0) await finishWebCss(dir, out);
+              });
+            },
+          },
+        ],
         logLevel: "warning",
       }),
     );

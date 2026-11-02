@@ -1,0 +1,10 @@
+/*
+ * 拡張機能のスタイルの入り口（scripts/build-extension.mjs が、拡張機能の CSS の頭に付けて組み立てる）。
+ * テーマ・全体の決まりは本体が出しているので、ここでは参照するだけにし、拡張機能の中で使ったクラスだけを出す。
+ * 層の名前は本体（tailwind.css）と同じにして、重なりの強さを揃える
+ */
+@layer theme, base, legacy, components, utilities;
+
+@import "tailwindcss/theme.css" layer(theme) theme(reference);
+@reference "./tailwind-theme.css";
+@import "tailwindcss/utilities.css" layer(utilities);

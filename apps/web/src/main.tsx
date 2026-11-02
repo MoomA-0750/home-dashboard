@@ -5,7 +5,7 @@ import { AuthGate } from "./components/AuthGate";
 import { LocaleProvider } from "./lib/locale";
 import { installScrollbarVisibility } from "@home-dashboard/ui/wallpaper";
 import "react-grid-layout/css/styles.css";
-import "@home-dashboard/ui/theme.css";
+import "@home-dashboard/ui/tailwind.css";
 
 installScrollbarVisibility();
 

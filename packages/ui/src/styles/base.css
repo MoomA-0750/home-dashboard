@@ -1,0 +1,45 @@
+/* 全体にかかる決まり（箱の大きさの数え方・本文の字体と色・スクロールバー・字の上下の余白） */
+* {
+  box-sizing: border-box;
+  /* タップしたときにブラウザが重ねる青い半透明の覆いを出さない（押したことは、ボタン自身が縮む・色が変わるので分かる）。
+     キーボードで動かしたときの枠（:focus-visible）は残す */
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  min-width: 320px;
+  color: var(--text);
+  background: #071226;
+  font-family: Murecho, "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
+  overflow: hidden;
+}
+
+button {
+  color: inherit;
+  font: inherit;
+}
+
+/* スクロールバーは、ふだんは隠し、スクロールしている間だけ細く出す（lib/scrollbars.ts が .is-scrolling を付け外しする）。
+   隠す間も幅は取っておくので、出し入れで中身がずれない */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.is-scrolling {
+  scrollbar-color: rgba(204, 237, 255, 0.65) transparent;
+}
+
+/* フォント由来の上下余白を取り除き、設計図どおりのベースライン整列にする */
+:where(h1, h2, h3, h4, h5, h6, p, span, strong, b, button) {
+  text-box-edge: cap alphabetic;
+  text-box-trim: trim-both;
+}
+
