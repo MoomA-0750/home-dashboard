@@ -65,6 +65,11 @@ export interface WidgetDefinition<TConfig = Record<string, unknown>> {
   DetailComponent?: ComponentType<WidgetDetailProps<TConfig>>;
   /** ウィジェットごとの設定（編集中に歯車から開く。省略時は設定なし） */
   SettingsComponent?: ComponentType<WidgetSettingsProps<TConfig>>;
+  /**
+   * ホームの見出しの所（時刻・今の天気）に本体が出しているものと同じウィジェット。ウィジェットの列には置かず、追加の一覧にも出さない
+   * （前の版で列に置いたものは、読み込むときに外す）
+   */
+  inHeader?: boolean;
 }
 
 /** キャンバス上の1配置（レイアウト情報＋インスタンス設定）。サーバー側の永続化データと対応する */

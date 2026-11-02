@@ -1,4 +1,4 @@
-import { defineWidget, intlLocale, useLocale, type WidgetProps } from "@home-dashboard/widget-sdk";
+import { defineWidget, intlLocale, useLocale, WidgetCard, type WidgetProps } from "@home-dashboard/widget-sdk";
 
 interface ClockConfig {
   /** 以前の版の設定（いまは画面の言語に合わせるので使わない） */
@@ -20,19 +20,21 @@ function ClockView({ ctx }: WidgetProps<ClockConfig>) {
   const locale = intlLocale(useLocale());
   const { hh, mm } = formatTime(ctx.now, locale);
   return (
-    <div className="widget-card widget-clock">
-      <div className="widget-clock__time">
-        <span className="widget-clock__hh">{hh}</span>
-        <span className="widget-clock__mm">{mm}</span>
+    <WidgetCard>
+      <div className="text-stat leading-none tabular-nums">
+        <span className="font-semibold">{hh}</span>
+        <span className="font-normal text-muted">{mm}</span>
       </div>
-      <div className="widget-clock__date">{formatDate(ctx.now, locale)}</div>
-    </div>
+      <div className="text-small text-muted">{formatDate(ctx.now, locale)}</div>
+    </WidgetCard>
   );
 }
 
 export default defineWidget<ClockConfig>({
   id: "clock",
   name: { ja: "時計", en: "Clock" },
+  // ホームの時刻（本体の MainInfo）と同じものなので、レールには置かない
+  inHeader: true,
   description: { ja: "現在時刻と日付を表示します", en: "Shows the current time and date" },
   defaultSize: { w: 3, h: 1 },
   minSize: { w: 2, h: 1 },

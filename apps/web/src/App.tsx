@@ -49,10 +49,6 @@ import {
   useVoicePersonas,
 } from "./lib/useVoiceAssistant";
 
-/**
- * 時刻・天気はメイン画面左側に固定表示（MainInfo）される画面の構成要素なので、
- * ウィジェットレールには出さない。レールに二重に出るのを防ぐためここで除外する。
- */
 const messages = defineMessages({
   ja: {
     assistant: "アシスタント",
@@ -69,8 +65,6 @@ const messages = defineMessages({
     settings: "Settings",
   },
 });
-
-const CHROME_WIDGET_IDS = ["clock", "weather"];
 
 const SIDEBAR_WIDTH_STORAGE_KEY = "home-dashboard:sidebar-width";
 
@@ -113,7 +107,8 @@ export function App({ account, sessionId, onSignedOut }: AppProps) {
   // 音声アシスタントのチャットは本体の音声アシスタント（返事の声・話している相手）と一緒に動くので、拡張機能の web.js ではなく本体に置く
   const locale = useLocale();
   const t = messages.useT();
-  const chatInstalled = extensions.extensions.some((ext) => ext.id === "chat" && ext.active);
+  // 音声アシスタントのチャットを出すかは、機能の口「chat」を持つ拡張機能が動いているかで決める（拡張機能の id では見ない）
+  const chatInstalled = extensions.extensions.some((ext) => ext.active && ext.features.some((feature) => feature.id === "chat"));
   const chatApps = (extensions.featureProviders.chat ?? []).filter((app) => app.Component);
   const [chatAppId, setChatAppId] = useChatApp();
   const chatOn = chatInstalled || chatApps.length > 0;
@@ -243,6 +238,16 @@ export function App({ account, sessionId, onSignedOut }: AppProps) {
     }
   };
 
+  // ホームの見出しの所（時刻・今の天気）に出しているものと同じウィジェット（定義の inHeader）。ウィジェットの列には置かない。
+  // 並べ替えの処理は描き直しても同じものを渡すので、今の一覧は ref で読む
+  const headerWidgetIds = useMemo(
+    () => extensions.registry.getAll().filter((def) => def.inHeader).map((def) => def.id),
+    [extensions.registry],
+  );
+  const headerWidgetIdsRef = useRef(headerWidgetIds);
+  headerWidgetIdsRef.current = headerWidgetIds;
+  const onRail = (instance: WidgetInstance) => !headerWidgetIdsRef.current.includes(instance.widgetId);
+
   const handleAdd = (widgetId: string) => {
     const def = extensions.registry.get(widgetId);
     if (!def) return;
@@ -250,7 +255,7 @@ export function App({ account, sessionId, onSignedOut }: AppProps) {
       const current = prev ?? [];
       // レールの末尾に置く（Infinity は JSON にすると null になり、読み直した端末で位置が壊れる）
       const bottom = current
-        .filter((i) => !CHROME_WIDGET_IDS.includes(i.widgetId))
+        .filter(onRail)
         .reduce((max, i) => Math.max(max, i.y + i.h), 0);
       const instance: WidgetInstance = {
         instanceId: newInstanceId(),
@@ -272,7 +277,7 @@ export function App({ account, sessionId, onSignedOut }: AppProps) {
   const handleMove = useCallback((instanceId: string, direction: -1 | 1) => {
     setInstances((prev) => {
       if (!prev) return prev;
-      const rail = prev.filter((i) => !CHROME_WIDGET_IDS.includes(i.widgetId)).sort((a, b) => a.y - b.y);
+      const rail = prev.filter((i) => !headerWidgetIdsRef.current.includes(i.widgetId)).sort((a, b) => a.y - b.y);
       const index = rail.findIndex((i) => i.instanceId === instanceId);
       const target = index + direction;
       if (index < 0 || target < 0 || target >= rail.length) return prev;
@@ -312,8 +317,8 @@ export function App({ account, sessionId, onSignedOut }: AppProps) {
     [],
   );
   const railInstances = useMemo(
-    () => (instances ?? []).filter((i) => !CHROME_WIDGET_IDS.includes(i.widgetId)),
-    [instances],
+    () => (instances ?? []).filter((i) => !headerWidgetIds.includes(i.widgetId)),
+    [instances, headerWidgetIds],
   );
 
   // チャットアプリが2つ以上あるときだけ、Chat 画面の右上に切り替えを出す（Media の音楽アプリと同じ部品）
@@ -430,7 +435,7 @@ export function App({ account, sessionId, onSignedOut }: AppProps) {
         {widgetPickerOpen && (
           <WidgetPicker
             registry={extensions.registry}
-            hiddenWidgetIds={CHROME_WIDGET_IDS}
+            hiddenWidgetIds={headerWidgetIds}
             placedWidgetIds={railInstances.map((i) => i.widgetId)}
             onAdd={handleAdd}
             onClose={() => setWidgetPickerOpen(false)}

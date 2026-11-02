@@ -40,7 +40,7 @@ const ALLOWED_HOOKS = new Set(["is-closing", "is-scrolling", "fluent-icon", "gla
 const ALLOWED_PREFIXES = ["react-grid-", "react-resizable", "leaflet-"];
 
 /** 調べるファイル（画面側のソース） */
-const SOURCE_DIRS = ["packages/ui/src", "packages/widget-sdk/src", "apps/web/src", "extensions", "examples/extensions"];
+const SOURCE_DIRS = ["packages/ui/src", "packages/widget-sdk/src", "packages/widgets", "apps/web/src", "extensions", "examples/extensions"];
 
 function trackedFiles() {
   const out = execFileSync("git", ["ls-files", "--cached", "--others", "--exclude-standard", ...SOURCE_DIRS], {

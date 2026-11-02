@@ -92,6 +92,8 @@ function WeatherDetail({ ctx, config }: WidgetDetailProps<WeatherConfig>) {
 export default defineWidget<WeatherConfig>({
   id: "weather",
   name: { ja: "天気", en: "Weather" },
+  // ホームの時刻の横の今の天気（header-weather）と同じものなので、レールには置かない
+  inHeader: true,
   description: {
     ja: "接続設定の地点の、今の天気と降水確率を表示します",
     en: "Shows the current weather and chance of rain for the location in the connection settings",

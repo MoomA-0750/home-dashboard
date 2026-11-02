@@ -82,7 +82,7 @@ export async function tailwindForExtension(srcDir) {
 let coreCandidateSet = null;
 async function coreCandidates() {
   if (coreCandidateSet) return coreCandidateSet;
-  const bases = ["packages/ui/src", "packages/widget-sdk/src", "apps/web/src", "apps/web/index.html"];
+  const bases = ["packages/ui/src", "packages/widget-sdk/src", "packages/widgets", "apps/web/src", "apps/web/index.html"];
   const sources = bases.map((base) => ({ base: join(ROOT, base), pattern: "**/*", negated: false }));
   for (const entry of await readdir(join(ROOT, "extensions"), { withFileTypes: true }))
     if (entry.isDirectory()) sources.push({ base: join(ROOT, "extensions", entry.name, "src"), pattern: "**/*", negated: false });

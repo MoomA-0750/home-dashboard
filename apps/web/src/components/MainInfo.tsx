@@ -3,14 +3,10 @@ import {
   formatClock,
   useDateFormat,
   useDisplay,
+  useFeatureProviders,
   useLocale,
-  useTemperature,
-  usePolling,
-  weatherConditionText,
-  weatherIcon,
   type WidgetRuntimeContext,
 } from "@home-dashboard/widget-sdk";
-import { Icon } from "./Icon";
 
 /**
  * 設計図でメイン画面の左側に固定表示されている「時刻・天気・日付」のブロック。
@@ -23,18 +19,8 @@ const messages = defineMessages({
   en: { currentTime: "Current time" },
 });
 
-const WEATHER_POLL_INTERVAL_MS = 10 * 60 * 1000;
-
-interface WeatherResponse {
-  current: { temperatureC: number; condition: string; code: number; isDay: boolean };
-}
-
-// 天気は拡張機能（extensions/weather）。切ってあると 404 になり、天気だけ出さない
-async function fetchWeather(apiBaseUrl: string): Promise<WeatherResponse> {
-  const res = await fetch(`${apiBaseUrl}/api/ext/weather/current`);
-  if (!res.ok) throw new Error(`weather API error: ${res.status}`);
-  return res.json();
-}
+// 今の天気は、本体の口「header-weather」に入っている拡張機能（天気の拡張機能など）が出す。入っていなければ天気だけ出さない
+const HEADER_WEATHER = "header-weather";
 
 interface MainInfoProps {
   ctx: WidgetRuntimeContext;
@@ -45,8 +31,7 @@ export function MainInfo({ ctx }: MainInfoProps) {
   const locale = useLocale();
   const date = useDateFormat();
   const display = useDisplay();
-  const temperature = useTemperature();
-  const { data } = usePolling(() => fetchWeather(ctx.apiBaseUrl), WEATHER_POLL_INTERVAL_MS);
+  const HeaderWeather = useFeatureProviders(HEADER_WEATHER).find((p) => p.Component)?.Component;
 
   // 時刻の設定が12時間なら、時は1〜12（大きな時計なので午前・午後は付けず、時刻の読み上げ名に入れる）
   const hours = ctx.now.getHours();
@@ -71,16 +56,7 @@ export function MainInfo({ ctx }: MainInfoProps) {
       <div className="flex flex-col items-start gap-2.5 self-center text-(length:--meta-size) leading-none font-(--clock-thin) whitespace-nowrap">
         {/* 天気の取得前でも行の高さを取っておき、日付が上にずれないようにする */}
         <div className="flex min-h-lh items-center text-white/70">
-          {data && (
-            <>
-              <Icon
-                name={weatherIcon(data.current.code, data.current.isDay)}
-                label={weatherConditionText(data.current.code, data.current.condition, locale)}
-                className="block size-cap overflow-visible"
-              />
-              <span>{temperature(data.current.temperatureC, { unit: true })}</span>
-            </>
-          )}
+          {HeaderWeather && <HeaderWeather ctx={ctx} />}
         </div>
         <p className="text-white">{dateText}</p>
       </div>

@@ -37,6 +37,15 @@ export interface ChatAppProps extends ScreenProps {
   switcher: ReactNode;
 }
 
+/**
+ * 本体の口「header-weather」（ホームの時刻の横の今の天気）に入る画面が受け取るもの。アイコンと気温だけを並べる
+ * （字の大きさ・色は本体が決める）。本体は入っているもののうち order の小さい1つを出す。画面側だけの口なので、
+ * manifest.json の provides と api.provide は要らない
+ */
+export interface HeaderWeatherProps {
+  ctx: ScreenProps["ctx"];
+}
+
 /** 口の id → 入っている拡張機能（order の順）。本体が渡す */
 export const FeatureProvidersContext = createContext<Record<string, FeatureProviderInfo[]>>({});
 
