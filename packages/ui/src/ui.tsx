@@ -618,6 +618,7 @@ export function StatTile({
   tone,
   onClick,
   ariaLabel,
+  bare,
   className,
   children,
 }: {
@@ -632,6 +633,8 @@ export function StatTile({
   onClick?: () => void;
   /** 押せるタイルの読み上げ（値と単位をまとめて伝えたいとき） */
   ariaLabel?: string;
+  /** 地を敷かずに、壁紙にじかに文字だけで出す（Home Control の上の帯など。文字に影を付ける） */
+  bare?: boolean;
   className?: string;
   children?: ReactNode;
 }) {
@@ -650,9 +653,11 @@ export function StatTile({
     </>
   );
   const classes = cx(
-    "glass flex min-w-0 flex-col gap-2.5 rounded-card px-6 py-5 text-left leading-tight text-text text-shadow-none tabular-nums",
-    tone && STAT_TONES[tone].tile,
-    onClick && "press cursor-pointer hover:border-tint/35",
+    "flex min-w-0 flex-col gap-2.5 text-left leading-tight text-text tabular-nums",
+    bare ? "halo gap-1 border-0 bg-transparent p-0 py-1.5" : "glass rounded-card px-6 py-5 text-shadow-none",
+    !bare && tone && STAT_TONES[tone].tile,
+    onClick && "press cursor-pointer",
+    onClick && !bare && "hover:border-tint/35",
     className,
   );
   if (onClick)

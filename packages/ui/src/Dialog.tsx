@@ -16,6 +16,7 @@ const messages = defineMessages({
  * - title を省くと見出しの行を出さず、閉じるボタンだけ右上に置く（中身が自分で見出しを持つとき。読み上げの名前は label で渡す）
  * - dismissible={false} は答えるまで閉じない確かめ（背景・Esc・× で閉じない。閉じるのは中身のボタン）
  * - layer は重なりの段（既定 modal。音声アシスタントの了承・許可は guard で、音声のパネルより上）
+ * - size="wide" は中身が広いもの（グラフ・表。幅 44rem まで）
  * - className は面に足すクラス（中身の並べ方など）
  */
 export function Dialog({
@@ -25,6 +26,7 @@ export function Dialog({
   dismissible = true,
   layer = "modal",
   role = "dialog",
+  size = "md",
   className,
   children,
 }: {
@@ -34,6 +36,7 @@ export function Dialog({
   dismissible?: boolean;
   layer?: "modal" | "guard";
   role?: "dialog" | "alertdialog";
+  size?: "md" | "wide";
   className?: string;
   children: ReactNode;
 }) {
@@ -59,7 +62,8 @@ export function Dialog({
     >
       <div
         className={cx(
-          "raised relative max-h-dialog w-full max-w-144 animate-pop overflow-y-auto rounded-card p-(--card-padding) in-[.is-closing]:animate-pop-out",
+          "raised relative max-h-dialog w-full animate-pop overflow-y-auto rounded-card p-(--card-padding) in-[.is-closing]:animate-pop-out",
+          size === "wide" ? "max-w-176" : "max-w-144",
           className,
         )}
         role={role}

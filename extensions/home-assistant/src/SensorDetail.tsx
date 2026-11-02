@@ -193,7 +193,7 @@ export function SensorDetail({
   };
 
   return (
-    <Dialog title={title} onClose={onClose}>
+    <Dialog title={title} onClose={onClose} size="wide">
       <div className="flex flex-col gap-3">
         <List boxed>
           {sensors.map((sensor, index) => {

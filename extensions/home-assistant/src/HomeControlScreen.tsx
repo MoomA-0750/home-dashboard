@@ -471,7 +471,8 @@ export function HomeControlScreen({ ctx }: ScreenProps) {
                     key={`${area}:${merged.key}`}
                     // センサーの値は、カードの地を敷かずに文字だけで出す（壁紙の上でも読めるよう、影を付ける）
                     // （StatTile のガラスより強くするため ! を付ける。StatTile に地を敷かない形ができたら、そちらに替える）
-                    className="halo! no-blur! flex-none gap-1 rounded-none border-0! bg-transparent! bg-none! px-0 py-1.5 shadow-none! [&>:first-child]:whitespace-nowrap"
+                    bare
+                    className="flex-none [&>:first-child]:whitespace-nowrap"
                     icon={known?.icon ?? "unknown"}
                     label={shownLabel}
                     value={value}
