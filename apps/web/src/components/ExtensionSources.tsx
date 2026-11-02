@@ -257,7 +257,7 @@ export function ExtensionSources({
 
   const updates = extensions.filter((ext) => ext.update);
   return (
-    <div className="extension-sources">
+    <div className="flex flex-col gap-1">
       <BackButton label={t("extensions")} onClick={onBack} />
       <Note>{t("intro")}</Note>
       {updates.length > 0 && (
@@ -366,31 +366,33 @@ function AddSourceForm({
     onSubmit({ url, branch, token, name });
   };
   return (
-    <form className="ui-group" onSubmit={submit}>
-      <fieldset className="extension-sources__fields" disabled={busy}>
-        <Field label="URL" hint={t("urlHint")}>
-          <input value={url} autoComplete="off" spellCheck={false} onChange={(e) => setUrl(e.target.value)} />
-        </Field>
-        <Field label={t("branch")} hint={t("branchHint")}>
-          <input value={branch} autoComplete="off" spellCheck={false} onChange={(e) => setBranch(e.target.value)} />
-        </Field>
-        <Field
-          label={t("tokenPrivate")}
-          hint={t("tokenHint")}
-        >
-          <input type="password" value={token} autoComplete="off" onChange={(e) => setToken(e.target.value)} />
-        </Field>
-        <Field label={t("nameOptional")}>
-          <input value={name} maxLength={40} onChange={(e) => setName(e.target.value)} />
-        </Field>
-        <ButtonRow>
-          <Button variant="primary" type="submit" disabled={!url.trim()}>
-            {busy ? t("fetching") : t("register")}
-          </Button>
-          <Button onClick={onCancel}>{t("cancel")}</Button>
-        </ButtonRow>
-      </fieldset>
-    </form>
+    <Group>
+      <form onSubmit={submit}>
+        <fieldset className="min-w-0" disabled={busy}>
+          <Field label="URL" hint={t("urlHint")}>
+            <input value={url} autoComplete="off" spellCheck={false} onChange={(e) => setUrl(e.target.value)} />
+          </Field>
+          <Field label={t("branch")} hint={t("branchHint")}>
+            <input value={branch} autoComplete="off" spellCheck={false} onChange={(e) => setBranch(e.target.value)} />
+          </Field>
+          <Field
+            label={t("tokenPrivate")}
+            hint={t("tokenHint")}
+          >
+            <input type="password" value={token} autoComplete="off" onChange={(e) => setToken(e.target.value)} />
+          </Field>
+          <Field label={t("nameOptional")}>
+            <input value={name} maxLength={40} onChange={(e) => setName(e.target.value)} />
+          </Field>
+          <ButtonRow>
+            <Button variant="primary" type="submit" disabled={!url.trim()}>
+              {busy ? t("fetching") : t("register")}
+            </Button>
+            <Button onClick={onCancel}>{t("cancel")}</Button>
+          </ButtonRow>
+        </fieldset>
+      </form>
+    </Group>
   );
 }
 
@@ -418,7 +420,7 @@ function SourceDetail({
   const [token, setToken] = useState("");
   const [removing, setRemoving] = useState(false);
   return (
-    <div className="extension-sources">
+    <div className="flex flex-col gap-1">
       <BackButton label={t("repositories")} onClick={onBack} />
       <SectionTitle>{source.name}</SectionTitle>
       <Note>
@@ -612,11 +614,13 @@ export function ExtensionTrustPanel({
   };
 
   return (
-    <div className="extension-trust">
+    <div>
       <List boxed label={t("trust")}>
         <ListItem
           title={t("trust")}
+          // 選ぶ前に読んでほしい説明なので、省略せず折り返す
           detail={t(trusted ? "trustTrusted" : "trustSandboxed")}
+              wrap
           trailing={
             <ToggleSwitch
               checked={trusted}

@@ -1,6 +1,5 @@
-import { defineMessages } from "@home-dashboard/widget-sdk";
+import { Button, defineMessages } from "@home-dashboard/widget-sdk";
 import { ACTIVE_VOICE_STATES, type VoicePersonas, type VoiceSnapshot } from "../lib/useVoiceAssistant";
-import { Icon } from "./Icon";
 
 const messages = defineMessages({
   ja: { talkTo: "{name}に話しかける", talkToAssistant: "音声アシスタントに話しかける", hint: "「{hint}」" },
@@ -25,14 +24,15 @@ export function VoiceLauncher({ snapshot, personas, onListen }: VoiceLauncherPro
   const hint = persona?.wakePhrase;
 
   return (
-    <button
-      type="button"
-      className="voice-launcher"
+    // 画面の左下（サイドバーの右）。タブレット幅より狭い画面では右上に置き、ウェイクワードの文は出さない
+    <Button
+      size="lg"
+      icon="mic"
+      className="fixed bottom-8 left-11 layer-launcher ml-(--sidebar-width) font-normal tablet:top-4 tablet:right-4 tablet:bottom-auto tablet:left-auto tablet:ml-0"
       onClick={onListen}
       aria-label={persona ? t("talkTo", { name: persona.name }) : t("talkToAssistant")}
     >
-      <Icon name="mic" />
-      {hint && <span className="voice-launcher__hint">{t("hint", { hint })}</span>}
-    </button>
+      {hint && <span className="tablet:hidden">{t("hint", { hint })}</span>}
+    </Button>
   );
 }

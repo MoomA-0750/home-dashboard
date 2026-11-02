@@ -1,1 +1,86 @@
 /* media-accounts の担当が足す @utility・@keyframes（Tailwind のクラスで書けないものだけ） */
+
+/* --- Media --- */
+
+/* 壁掛けの横長で背の低い画面で、Media の中身を画面の高さに収める（見出しと余白の分を引く） */
+@utility media-wall-height {
+  height: calc(100svh - var(--screen-header-space, 110px));
+}
+
+/* Media のタブの入れ物。中身が少なくても、画面の高さの7割は取る */
+@utility media-panel-height {
+  min-height: 70svh;
+}
+
+/* 歌詞の枠。中だけを送り、スクロールバーは出さず、上下の端を薄くする */
+@utility lyrics-scroll {
+  max-height: 70svh;
+  overflow-y: auto;
+  scrollbar-width: none;
+  mask-image: linear-gradient(transparent, #000 12%, #000 88%, transparent);
+}
+
+/* 歌詞の行の上下の余白（最初と最後の行も、枠の真ん中まで送れるように） */
+@utility lyrics-pad {
+  padding-block: 30svh;
+}
+
+/* ジャケット・プレイリストのタイルを、幅に合わせて並べる（1つ 10.5rem 以上） */
+@utility media-tiles {
+  grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr));
+}
+
+/* --- メール --- */
+
+/* 開いたメールの本文。長いものは中だけを送る */
+@utility reader-scroll {
+  max-height: 60svh;
+  overflow-y: auto;
+}
+
+/*
+ * 左の欄のメールボックスのツリー（MailFolders）。開くと、子が親の行の下から引き出される。いちばん下の子が先頭になって滑り出て
+ * （いちばん長く動く）、上の子がそれに引っ張られて順に続く。閉じると逆に、いちばん上の子から親の行の下へ戻り、下の子が引っ張られて
+ * 最後に入る。子はそれぞれ「親の行の位置」から出入りする（--i は何番目か、--n は子の数。1行の高さ（行 ＋ 行の間）は
+ * --mail-tree-pitch）。動いている間だけ子の欄の上端で切り、親の行の下から出入りして見せる。動かすのは transform と opacity だけ。
+ * 子の欄（List の ul）の中の、子の1つずつ（li）を動かす
+ */
+@keyframes mail-tree-in {
+  from {
+    opacity: 0;
+    transform: translateY(calc((var(--i, 0) + 1) * var(--mail-tree-pitch, 3.95rem) * -1));
+  }
+  30% {
+    opacity: 1;
+  }
+}
+
+@keyframes mail-tree-out {
+  70% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    transform: translateY(calc((var(--i, 0) + 1) * var(--mail-tree-pitch, 3.95rem) * -1));
+  }
+}
+
+@utility mail-tree-entering {
+  /* 上端だけ切る（左右と下は、選んだ行の影が切れないよう広げる） */
+  clip-path: inset(0 -32px -40px -32px);
+  & > ul > li {
+    animation: mail-tree-in var(--motion-slow) var(--ease-out) both;
+    /* 下の子から先に出る */
+    animation-delay: calc((var(--n, 1) - 1 - var(--i, 0)) * var(--stagger-in, 0ms));
+  }
+}
+
+@utility mail-tree-closing {
+  clip-path: inset(0 -32px -40px -32px);
+  & > ul > li {
+    animation: mail-tree-out var(--motion-base) var(--ease-in) forwards;
+    /* 上の子から先に戻る */
+    animation-delay: calc(var(--i, 0) * var(--stagger-out, 0ms));
+    pointer-events: none;
+  }
+}

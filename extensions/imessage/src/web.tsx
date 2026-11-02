@@ -1,6 +1,5 @@
 import { defineWebExtension } from "@home-dashboard/widget-sdk";
 import { MessagesScreen } from "./MessagesScreen";
-import "./web.css";
 
 // サイドバーには出さず、Chat 画面のチャットアプリ（機能の口「chat」）として入る
 export default defineWebExtension({

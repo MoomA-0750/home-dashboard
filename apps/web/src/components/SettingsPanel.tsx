@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import {
+  Button,
+  ButtonRow,
   defineMessages,
+  Field,
   formatDate,
   formatTime,
   List,
@@ -8,7 +11,10 @@ import {
   LOCALES,
   Message,
   Note,
+  SectionTitle,
+  StatusDot,
   textFor,
+  ToggleSwitch,
   useDisplay,
   useLocale,
   type DisplaySettings,
@@ -28,7 +34,8 @@ import { ErrorBoundary } from "./ErrorBoundary";
 import { PersonaManager } from "./PersonaManager";
 import { VoiceMcpManager } from "./VoiceMcpManager";
 import { AccountSettings } from "./AccountSettings";
-import { ExtensionSettings, ToggleSwitch } from "./ExtensionSettings";
+import { ExtensionSettings } from "./ExtensionSettings";
+import { choiceMark } from "./settingsStyles";
 import type { LoadedExtensions } from "../lib/extensions";
 import type { Account } from "../lib/auth";
 import { Icon, type IconName } from "./Icon";
@@ -195,7 +202,7 @@ function ChoiceList<T extends string | number>({
           title={option.label}
           detail={option.detail}
           selected={option.id === value}
-          trailing={<Icon name="checkmark" className={option.id === value ? undefined : "settings-choice__off"} />}
+          trailing={<Icon name="checkmark" className={choiceMark(option.id === value)} />}
           chevron={false}
           onClick={() => onChoose(option.id)}
         />
@@ -221,7 +228,7 @@ function GeneralSettings({ apiBaseUrl }: { apiBaseUrl: string }) {
     formatDate(sample, "fullWeekday", locale, { ...display, dateFormat });
   return (
     <section>
-      <h4 className="settings-detail__subtitle">{t("language")}</h4>
+      <SectionTitle>{t("language")}</SectionTitle>
       <Note>{t("languageNote")}</Note>
       <ChoiceList
         label={t("language")}
@@ -229,7 +236,7 @@ function GeneralSettings({ apiBaseUrl }: { apiBaseUrl: string }) {
         value={locale}
         onChoose={(id) => void chooseLocale(apiBaseUrl, id).catch(() => undefined)}
       />
-      <h4 className="settings-detail__subtitle">{t("calendar")}</h4>
+      <SectionTitle>{t("calendar")}</SectionTitle>
       <ChoiceList
         label={t("calendar")}
         options={[
@@ -239,7 +246,7 @@ function GeneralSettings({ apiBaseUrl }: { apiBaseUrl: string }) {
         value={display.calendar}
         onChoose={(calendar) => choose({ calendar })}
       />
-      <h4 className="settings-detail__subtitle">{t("dateFormat")}</h4>
+      <SectionTitle>{t("dateFormat")}</SectionTitle>
       <ChoiceList
         label={t("dateFormat")}
         options={[
@@ -251,7 +258,7 @@ function GeneralSettings({ apiBaseUrl }: { apiBaseUrl: string }) {
         value={display.dateFormat}
         onChoose={(dateFormat) => choose({ dateFormat })}
       />
-      <h4 className="settings-detail__subtitle">{t("clock")}</h4>
+      <SectionTitle>{t("clock")}</SectionTitle>
       <ChoiceList
         label={t("clock")}
         options={[
@@ -261,7 +268,7 @@ function GeneralSettings({ apiBaseUrl }: { apiBaseUrl: string }) {
         value={display.clock}
         onChoose={(clock) => choose({ clock })}
       />
-      <h4 className="settings-detail__subtitle">{t("weekStart")}</h4>
+      <SectionTitle>{t("weekStart")}</SectionTitle>
       <ChoiceList
         label={t("weekStart")}
         options={[
@@ -271,7 +278,7 @@ function GeneralSettings({ apiBaseUrl }: { apiBaseUrl: string }) {
         value={display.weekStart}
         onChoose={(weekStart) => choose({ weekStart: weekStart as 0 | 1 })}
       />
-      <h4 className="settings-detail__subtitle">{t("temperature")}</h4>
+      <SectionTitle>{t("temperature")}</SectionTitle>
       <ChoiceList
         label={t("temperature")}
         options={[
@@ -363,21 +370,16 @@ export function SettingsPanel({
       )}
       {page === "general" && <GeneralSettings apiBaseUrl={apiBaseUrl} />}
       {page === "widgets" && (
-        <section className="settings-panel__widget-actions">
-          <p className="connection-settings__note">{t("widgetsNote")}</p>
-          <button
-            type="button"
-            className={`settings-panel__edit-toggle${editMode ? " settings-panel__edit-toggle--on" : ""}`}
-            aria-pressed={editMode}
-            onClick={onToggleEditMode}
-          >
-            <Icon name="edit" />
-            <span>{editMode ? t("exitEditMode") : t("editWidgets")}</span>
-          </button>
-          <button type="button" className="settings-panel__edit-toggle" onClick={onOpenWidgetPicker}>
-            <Icon name="add" />
-            <span>{t("addWidget")}</span>
-          </button>
+        <section>
+          <Note>{t("widgetsNote")}</Note>
+          <ButtonRow>
+            <Button variant={editMode ? "primary" : "default"} icon="edit" aria-pressed={editMode} onClick={onToggleEditMode}>
+              {editMode ? t("exitEditMode") : t("editWidgets")}
+            </Button>
+            <Button icon="add" onClick={onOpenWidgetPicker}>
+              {t("addWidget")}
+            </Button>
+          </ButtonRow>
         </section>
       )}
       {page === "wallpaper" && (
@@ -400,8 +402,8 @@ export function SettingsPanel({
             onSignedOut={onSignedOut}
           />
           {sectionsOf("account").map((section) => (
-            <section key={section.key} className="settings-panel__extension-section">
-              <h4 className="settings-detail__subtitle">{textFor(section.label, locale)}</h4>
+            <section key={section.key}>
+              <SectionTitle>{textFor(section.label, locale)}</SectionTitle>
               <ErrorBoundary name={textFor(section.label, locale)}>
                 <section.Component ctx={ctx} account={account} />
               </ErrorBoundary>
@@ -502,11 +504,11 @@ function VoiceSection({
     );
 
   return (
-    <section className="settings-panel__voice">
+    <section>
       {!personaOpen && (
         <>
-          <p className="settings-panel__voice-status">
-            <span className={`status-dot${connected ? " status-dot--ok" : ""}`} aria-hidden="true" />
+          <p className="mb-3 flex items-center gap-2 text-label text-muted">
+            <StatusDot ok={connected} />
             {connected
               ? t("voiceStandby", {
                   phrases:
@@ -517,8 +519,7 @@ function VoiceSection({
               : t("voiceAgentDown")}
           </p>
           {enabledPersonas.length > 1 && (
-            <label className="settings-panel__voice-persona">
-              <span>{t("defaultPersona")}</span>
+            <Field label={t("defaultPersona")}>
               <select
                 value={personas!.defaultPersonaId}
                 disabled={!isAdmin}
@@ -534,29 +535,23 @@ function VoiceSection({
                   </option>
                 ))}
               </select>
-            </label>
+            </Field>
           )}
-          {error && <p className="settings-panel__voice-error">{error}</p>}
+          {error && <Message tone="error">{error}</Message>}
           {/* この端末だけの切り替え。ほかの一覧と同じく、行の右のスイッチで入／切する */}
           {avatarAvailable && (
-            <ul className="settings-list settings-list--boxed">
-              {avatarAvailable && (
-                <li>
-                  <div className="settings-list__row settings-list__row--plain">
-                    <span className="settings-list__text">
-                      <span className="settings-list__title">{t("showAvatar")}</span>
-                      <span className="settings-list__detail">{t("showAvatarDetail")}</span>
-                    </span>
-                    <ToggleSwitch checked={avatarEnabled} label={t("showAvatar")} onChange={onToggleAvatar} />
-                  </div>
-                </li>
-              )}
-            </ul>
+            <List boxed label={t("showAvatar")}>
+              <ListItem
+                title={t("showAvatar")}
+                detail={t("showAvatarDetail")}
+                trailing={<ToggleSwitch checked={avatarEnabled} label={t("showAvatar")} onChange={onToggleAvatar} />}
+              />
+            </List>
           )}
           <VoicePrivacySettings guard={guard} isAdmin={isAdmin} />
         </>
       )}
-      {!personaOpen && <h4 className="settings-detail__subtitle">{t("characters")}</h4>}
+      {!personaOpen && <SectionTitle>{t("characters")}</SectionTitle>}
       {!personaOpen && !isAdmin && <Note>{t("adminOnlyVoice")}</Note>}
       {personas ? (
         <PersonaManager
@@ -570,7 +565,7 @@ function VoiceSection({
           apiBaseUrl={apiBaseUrl}
         />
       ) : (
-        <p className="connection-settings__note">{t("loadingCharacters")}</p>
+        <Note>{t("loadingCharacters")}</Note>
       )}
     </section>
   );

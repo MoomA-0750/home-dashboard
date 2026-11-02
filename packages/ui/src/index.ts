@@ -1,4 +1,4 @@
-// 画面の部品とデザイン。見た目（クラス名・CSS 変数）は theme.css（"@home-dashboard/ui/theme.css"）と組で使う
+// 画面の部品とデザイン。見た目は部品が Tailwind のクラスで持つ（テーマは tailwind-theme.css、値は styles/tokens.css）
 export * from "./cx";
 export * from "./Icon";
 export * from "./ScreenFrame";

@@ -1,4 +1,4 @@
-/** 入／切のトグルスイッチ（iOS・macOS の設定と同じ見た目。スタイルは本体の theme.css の .toggle-switch）。押した行を開かないよう、押しは行へ伝えない */
+/** 入／切のトグルスイッチ（iOS・macOS の設定と同じ形。入は正常の印の色）。押した行を開かないよう、押しは行へ伝えない */
 export function ToggleSwitch({
   checked,
   disabled,
@@ -17,13 +17,13 @@ export function ToggleSwitch({
       aria-checked={checked}
       aria-label={label}
       disabled={disabled}
-      className={`toggle-switch${checked ? " toggle-switch--on" : ""}`}
+      className="switch-track change relative shrink-0 cursor-pointer rounded-full bg-white/18 p-0 aria-checked:bg-ok focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-soft disabled:cursor-default disabled:opacity-50"
       onClick={(event) => {
         event.stopPropagation();
         onChange(!checked);
       }}
     >
-      <span className="toggle-switch__knob" />
+      <span className="switch-knob knob-shadow change absolute rounded-full bg-white" />
     </button>
   );
 }

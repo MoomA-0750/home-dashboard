@@ -435,7 +435,7 @@ export function VoiceChat({ switcher, snapshot, personas, session, apiBaseUrl, o
               {uploading && <Note>{t("uploading")}</Note>}
               <ChatFileChips files={files} onRemove={(index) => setFiles(files.filter((_, i) => i !== index))} />
               {mentions.length > 0 && (
-                <div className="ui-button-row" role="listbox" aria-label={t("mentionList")}>
+                <div className="flex flex-wrap items-center gap-2" role="listbox" aria-label={t("mentionList")}>
                   {mentions.map((p, index) => (
                     <Button
                       key={p.id}

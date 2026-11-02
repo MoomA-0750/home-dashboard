@@ -6,7 +6,9 @@ import {
   type WidgetProps,
   Badge,
   DetailFrame,
+  Note,
   WidgetCard,
+  WidgetHint,
 } from "@home-dashboard/widget-sdk";
 
 const messages = defineMessages({
@@ -106,16 +108,19 @@ function relativeDate(iso: string | undefined, t: T): string {
   return t("monthsAgo", { n: Math.floor(days / 30) });
 }
 
+/** 未コミットの変更があるか（● 注意の色 / ○ 薄い色） */
+function DirtyMark({ dirty }: { dirty: boolean }) {
+  return <span className={dirty ? "text-warn" : "text-muted"}>{dirty ? "●" : "○"}</span>;
+}
+
 function RepoRow({ repo }: { repo: RepoStatus }) {
   const changes = changeCount(repo);
   return (
-    <li className="widget-git__item">
-      <span className={`widget-git__mark ${repo.dirty ? "widget-git__mark--dirty" : "widget-git__mark--clean"}`}>
-        {repo.dirty ? "●" : "○"}
-      </span>
-      <span className="widget-git__name">{repo.name}</span>
-      <span className="widget-git__branch">{repo.branch}</span>
-      <span className="widget-git__counts">
+    <li className="flex items-center gap-1.5 text-note">
+      <DirtyMark dirty={repo.dirty} />
+      <span className="ellipsis min-w-0 flex-1">{repo.name}</span>
+      <span className="text-micro text-muted">{repo.branch}</span>
+      <span className="flex gap-1">
         {changes > 0 && <Badge tone="warn">{changes}</Badge>}
         {repo.ahead > 0 && <Badge>↑{repo.ahead}</Badge>}
         {repo.behind > 0 && <Badge>↓{repo.behind}</Badge>}
@@ -128,12 +133,12 @@ function GitReposView({ ctx, config, openDetail }: WidgetProps<GitReposConfig>) 
   const t = messages.useT();
   const { data, loading } = usePolling(() => fetchRepos(ctx.apiBaseUrl), config.pollIntervalMs);
 
-  if (loading && !data) return <WidgetCard className="widget-git">{t("checking")}</WidgetCard>;
+  if (loading && !data) return <WidgetCard>{t("checking")}</WidgetCard>;
   if (data && !data.configured) {
     return (
-      <WidgetCard className="widget-git widget-git--unconfigured">
+      <WidgetCard>
         {t("noRepos")}
-        <span className="widget-hint">{data.reason}</span>
+        <WidgetHint>{data.reason}</WidgetHint>
       </WidgetCard>
     );
   }
@@ -143,19 +148,19 @@ function GitReposView({ ctx, config, openDetail }: WidgetProps<GitReposConfig>) 
   const hidden = sorted.length - visible.length;
 
   return (
-    <WidgetCard className="widget-git" onClick={openDetail}>
-      <span className="widget-git__header">
-        <span className="widget-git__title">git</span>
-        <span className="widget-git__summary">
+    <WidgetCard className="items-stretch justify-start gap-1.5" onClick={openDetail}>
+      <span className="flex items-baseline justify-between gap-2">
+        <span className="text-note text-muted">git</span>
+        <span className="text-caption text-muted tabular-nums">
           {t("summary", { dirty: data?.dirtyCount ?? 0, unpushed: data?.unpushedCount ?? 0 })}
         </span>
       </span>
-      <ul className="widget-git__list">
+      <ul className="flex flex-col gap-1">
         {visible.map((repo) => (
           <RepoRow key={repo.path} repo={repo} />
         ))}
       </ul>
-      {hidden > 0 && <span className="widget-git__more">{t("more", { n: hidden })}</span>}
+      {hidden > 0 && <span className="text-micro text-muted">{t("more", { n: hidden })}</span>}
     </WidgetCard>
   );
 }
@@ -166,22 +171,18 @@ function GitReposDetail({ ctx, config }: WidgetDetailProps<GitReposConfig>) {
   if (!data?.configured) return <DetailFrame>{t("loading")}</DetailFrame>;
 
   return (
-    <DetailFrame title={t("title")} className="widget-git-detail">
-      <p className="widget-note">{data.root}</p>
+    <DetailFrame title={t("title")}>
+      <Note>{data.root}</Note>
 
-      <ul className="widget-git-detail__list">
+      <ul className="mt-3 flex flex-col gap-3">
         {sortByAttention(data.repos).map((repo) => (
-          <li key={repo.path} className="widget-git-detail__item">
-            <div className="widget-git-detail__head">
-              <span
-                className={`widget-git__mark ${repo.dirty ? "widget-git__mark--dirty" : "widget-git__mark--clean"}`}
-              >
-                {repo.dirty ? "●" : "○"}
-              </span>
-              <span className="widget-git-detail__name">{repo.name}</span>
-              <span className="widget-git__branch">{repo.branch}</span>
+          <li key={repo.path} className="flex flex-col gap-1.5">
+            <div className="flex items-baseline gap-2">
+              <DirtyMark dirty={repo.dirty} />
+              <span className="font-semibold">{repo.name}</span>
+              <span className="text-micro text-muted">{repo.branch}</span>
               {repo.upstream ? (
-                <span className="widget-git__counts">
+                <span className="flex gap-1">
                   {repo.ahead > 0 && <Badge>↑{repo.ahead}</Badge>}
                   {repo.behind > 0 && <Badge>↓{repo.behind}</Badge>}
                 </span>
@@ -190,18 +191,18 @@ function GitReposDetail({ ctx, config }: WidgetDetailProps<GitReposConfig>) {
               )}
             </div>
             {repo.error ? (
-              <div className="widget-git-detail__error">{repo.error}</div>
+              <div className="pl-5 text-note text-warn">{repo.error}</div>
             ) : (
-              <div className="widget-git-detail__body">
+              <div className="flex flex-col gap-1 pl-5 text-note text-muted">
                 {repo.dirty && (
-                  <span className="widget-git-detail__changes">
+                  <span>
                     {t("changes", { staged: repo.staged, unstaged: repo.unstaged, untracked: repo.untracked })}
                   </span>
                 )}
                 {repo.lastCommit && (
-                  <span className="widget-git-detail__commit">
+                  <span>
                     <code>{repo.lastCommit.hash}</code> {repo.lastCommit.subject}
-                    <span className="widget-git-detail__date">{relativeDate(repo.lastCommit.date, t)}</span>
+                    <span className="ml-2">{relativeDate(repo.lastCommit.date, t)}</span>
                   </span>
                 )}
               </div>

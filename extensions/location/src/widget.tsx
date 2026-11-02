@@ -1,5 +1,6 @@
 import {
   Badge,
+  cx,
   DetailFrame,
   Icon,
   List,
@@ -30,8 +31,8 @@ function LocationView({ ctx, config, size, openDetail }: WidgetProps<Config>) {
   const others = size.h >= 2 ? rest.slice(0, size.h * 2 - 2) : [];
 
   return (
-    <WidgetCard className="location-widget" onClick={openDetail} label={t("title")}>
-      <span className="location-widget__title">
+    <WidgetCard className="items-start justify-center gap-1 text-left tabular-nums" onClick={openDetail} label={t("title")}>
+      <span className="inline-flex items-center gap-1.5 text-note text-muted">
         <Icon name="location" />
         {first?.label ?? t("title")}
       </span>
@@ -41,16 +42,16 @@ function LocationView({ ctx, config, size, openDetail }: WidgetProps<Config>) {
         <WidgetHint>{data.message}</WidgetHint>
       ) : first ? (
         <>
-          <span className={first.atHome ? "location-widget__where location-widget__where--home" : "location-widget__where"}>
+          <span className={cx("text-card leading-tight font-semibold", first.atHome && "text-accent")}>
             {whereText(first, t)}
           </span>
           <WidgetHint>{formatAge(first.ageSeconds, t)}</WidgetHint>
           {others.length > 0 && (
-            <ul className="location-widget__others">
+            <ul className="m-0 mt-3 flex w-full list-none flex-col gap-2.5 p-0 text-label">
               {others.map((place) => (
-                <li key={place.name}>
+                <li key={place.name} className="flex justify-between gap-2">
                   <span>{place.label}</span>
-                  <span>{whereText(place, t)}</span>
+                  <span className="text-muted">{whereText(place, t)}</span>
                 </li>
               ))}
             </ul>
@@ -71,7 +72,7 @@ function LocationDetail({ ctx, config }: WidgetDetailProps<Config>) {
   const places = data?.places ?? [];
 
   return (
-    <DetailFrame title={t("title")} className="location-detail">
+    <DetailFrame title={t("title")} className="location-rows-wrap">
       {Boolean(error) && !data && <Message tone="error">{(error as Error).message || t("loadFailed")}</Message>}
       {data && !data.configured && <Note>{data.message}</Note>}
       {data?.configured && !data.home && <Note>{t("noHomeNote")}</Note>}

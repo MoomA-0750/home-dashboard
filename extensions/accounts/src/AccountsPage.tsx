@@ -234,7 +234,7 @@ export function AccountsPage({ ctx, account }: ScreenProps) {
     ) : (
       <Button
         icon="warning"
-        className="accounts-page__needs-setup"
+        className="[&_.fluent-icon]:text-warn"
         aria-label={t(isAdmin ? "needsSetup" : "needsSetupMember", { provider: label })}
         title={t(isAdmin ? "needsSetup" : "needsSetupMember", { provider: label })}
         onClick={() =>
@@ -252,7 +252,7 @@ export function AccountsPage({ ctx, account }: ScreenProps) {
     [a.services.calendar && t("calendar"), a.services.mail && t("mail")].filter(Boolean).join(t("serviceSeparator")) || t("notInUse");
 
   return (
-    <div className="accounts-page">
+    <div className="flex flex-col gap-1">
       <Note>{t("intro")}</Note>
       {message && <Message tone={message.ok ? "ok" : "error"}>{message.text}</Message>}
       <SectionTitle>{t("myAccounts")}</SectionTitle>
@@ -356,14 +356,14 @@ function AddForm({
   };
 
   return (
-    <form className="accounts-page" onSubmit={(e) => void submit(e)}>
+    <form className="flex flex-col gap-1" onSubmit={(e) => void submit(e)}>
       <BackButton label={t("internetAccounts")} onClick={onBack} />
       <SectionTitle>{kind === "icloud" ? t("addICloud") : t("addAccount")}</SectionTitle>
       {kind === "icloud" && (
         <Note>{t("iCloudNote")}</Note>
       )}
       <Group>
-        <fieldset className="accounts-page__fields" disabled={busy}>
+        <fieldset className="m-0 border-0 p-0" disabled={busy}>
           {type === "other" && (
             <Field label={t("kind")}>
               <select value={kind} onChange={(e) => setKind(e.target.value as typeof kind)}>
@@ -484,7 +484,7 @@ function AccountDetail({
   ];
 
   return (
-    <div className="accounts-page">
+    <div className="flex flex-col gap-1">
       <BackButton label={t("internetAccounts")} onClick={onBack} />
       <SectionTitle>{account.label}</SectionTitle>
       <Note>

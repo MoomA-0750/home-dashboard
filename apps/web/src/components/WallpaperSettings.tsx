@@ -10,8 +10,13 @@ import {
   TARGET_LUMINANCE,
   type ZoneAnalysis,
 } from "@home-dashboard/ui/wallpaper";
-import { Icon } from "./Icon";
-import { defineMessages, List, ListItem, Slider } from "@home-dashboard/widget-sdk";
+import { Button, ButtonRow, cx, defineMessages, List, ListItem, Message, Note, SectionTitle, Slider } from "@home-dashboard/widget-sdk";
+import { SLIDER_ROW, SLIDER_ROW_LABEL, STACK } from "./settingsStyles";
+
+/** 壁紙の見本（画面と同じく、縁の角を丸めた枠に敷き詰める） */
+const PREVIEW = "relative w-full rounded-inner border border-glass-border bg-cover bg-center";
+/** 場所の番号（見本の上と、下の一覧の行の頭で同じ形にして、対応させる） */
+const ZONE_NUMBER = "inline-grid size-6 place-items-center rounded-full bg-shade/70 text-caption font-semibold";
 
 interface WallpaperSettingsProps {
   apiBaseUrl: string;
@@ -161,20 +166,21 @@ function DimSettings({
   const aspect = typeof window === "undefined" ? 16 / 9 : Math.min(2.4, Math.max(0.5, window.innerWidth / window.innerHeight));
 
   return (
-    <section className="wallpaper-dim">
-      <h4 className="settings-detail__subtitle">{t("dimTitle")}</h4>
-      <p className="connection-settings__note">{t("dimNote", { target: percent(TARGET_LUMINANCE) })}</p>
+    <section className="flex flex-col gap-2.5">
+      <SectionTitle>{t("dimTitle")}</SectionTitle>
+      <Note>{t("dimNote", { target: percent(TARGET_LUMINANCE) })}</Note>
+      {/* 画面と同じ縦横比で、高さは画面の4割まで（縦長のスマホでも、場所ごとの数字まで一度に見える） */}
       <div
-        className="wallpaper-settings__preview wallpaper-dim__preview"
+        className={cx(PREVIEW, "wallpaper-preview-fit aspect-(--preview-aspect) overflow-hidden")}
         style={{ backgroundImage: `${overlay}, url("${imageUrl}")`, "--preview-aspect": String(aspect) } as CSSProperties}
       >
         {zones?.map((zone, index) => (
           <span
             key={zone.from}
-            className="wallpaper-dim__zone"
+            className="absolute inset-y-0 flex items-end border-l border-dashed border-tint/45"
             style={{ left: `${zone.from * 100}%`, width: `${(zone.to - zone.from) * 100}%` }}
           >
-            <span className="wallpaper-dim__chip">{index + 1}</span>
+            <span className={cx(ZONE_NUMBER, "mb-2 ml-2")}>{index + 1}</span>
           </span>
         ))}
       </div>
@@ -183,14 +189,14 @@ function DimSettings({
           {zones.map((zone, index) => (
             <ListItem
               key={zone.from}
-              leading={<span className="wallpaper-dim__chip wallpaper-dim__chip--static">{index + 1}</span>}
+              leading={<span className={cx(ZONE_NUMBER, "border border-glass-border")}>{index + 1}</span>}
               title={t("zone", { from: percent(zone.from), to: percent(zone.to) })}
               detail={t("brightness", {
                 before: percent(zone.bright),
                 after: percent(dimmedBrightness(zone.bright, dims[index] ?? 0)),
               })}
               trailing={
-                <span className="wallpaper-dim__amount">
+                <span className="shrink-0 text-label text-muted">
                   {(dims[index] ?? 0) > 0 ? t("added", { dim: percent(dims[index]) }) : t("nothing")}
                 </span>
               }
@@ -199,11 +205,12 @@ function DimSettings({
           ))}
         </List>
       )}
-      {zones && <p className="connection-settings__note">{t("halo", { value: percent(haloFor(zones, dims)) })}</p>}
-      {!zones && <p className="connection-settings__note">{t("measuring")}</p>}
-      <div className="wallpaper-dim__strength">
-        <span>{t("strength", { value: percent(strength) })}</span>
+      {zones && <Note>{t("halo", { value: percent(haloFor(zones, dims)) })}</Note>}
+      {!zones && <Note>{t("measuring")}</Note>}
+      <div className={SLIDER_ROW}>
+        <span className={SLIDER_ROW_LABEL}>{t("strength", { value: percent(strength) })}</span>
         <Slider
+          className="flex-1"
           value={strength}
           max={1.5}
           step={0.05}
@@ -217,8 +224,8 @@ function DimSettings({
           }}
         />
       </div>
-      {!isAdmin && <p className="connection-settings__note">{t("dimAdminOnly")}</p>}
-      {error && <p className="connection-settings__message connection-settings__message--error">{error}</p>}
+      {!isAdmin && <Note>{t("dimAdminOnly")}</Note>}
+      {error && <Message tone="error">{error}</Message>}
     </section>
   );
 }
@@ -264,32 +271,23 @@ export function WallpaperSettings({ apiBaseUrl, wallpaper, isAdmin, onChange }: 
   const current = wallpaperImageUrl(apiBaseUrl, wallpaper ?? { custom: false, version: null });
 
   return (
-    <section className="wallpaper-settings">
-      <p className="connection-settings__note">{t("note")}</p>
-      <div className="wallpaper-settings__preview" style={{ backgroundImage: `url("${current}")` }}>
-        <span className="wallpaper-settings__badge">{wallpaper?.custom ? t("custom") : t("default")}</span>
+    <section className={STACK}>
+      <Note>{t("note")}</Note>
+      <div className={cx(PREVIEW, "aspect-video")} style={{ backgroundImage: `url("${current}")` }}>
+        {/* 角の丸みを見本とそろえる（見本の丸み ＝ 札の丸み ＋ 余白） */}
+        <span className="glass absolute top-1 left-1 rounded-art px-3 py-1.5 text-note">
+          {wallpaper?.custom ? t("custom") : t("default")}
+        </span>
       </div>
       {isAdmin ? (
-        <div className="wallpaper-settings__actions">
-          <button
-            type="button"
-            className="settings-panel__edit-toggle"
-            disabled={busy}
-            onClick={() => fileRef.current?.click()}
-          >
-            <Icon name="image" />
-            <span>{busy ? t("sending") : t("choose")}</span>
-          </button>
+        <ButtonRow>
+          <Button icon="image" disabled={busy} onClick={() => fileRef.current?.click()}>
+            {busy ? t("sending") : t("choose")}
+          </Button>
           {wallpaper?.custom && (
-            <button
-              type="button"
-              className="settings-panel__edit-toggle"
-              disabled={busy}
-              onClick={() => void send({ method: "DELETE" }, t("restored"))}
-            >
-              <Icon name="arrow-sync" />
-              <span>{t("restore")}</span>
-            </button>
+            <Button icon="arrow-sync" disabled={busy} onClick={() => void send({ method: "DELETE" }, t("restored"))}>
+              {t("restore")}
+            </Button>
           )}
           <input
             ref={fileRef}
@@ -298,16 +296,12 @@ export function WallpaperSettings({ apiBaseUrl, wallpaper, isAdmin, onChange }: 
             hidden
             onChange={(event) => void handleFile(event)}
           />
-        </div>
+        </ButtonRow>
       ) : (
-        <p className="connection-settings__note">{t("adminOnly")}</p>
+        <Note>{t("adminOnly")}</Note>
       )}
-      {message && (
-        <p className={`connection-settings__message${message.ok ? "" : " connection-settings__message--error"}`}>
-          {message.text}
-        </p>
-      )}
-      <p className="connection-settings__note">{t("formats")}</p>
+      {message && <Message tone={message.ok ? "ok" : "error"}>{message.text}</Message>}
+      <Note>{t("formats")}</Note>
       <DimSettings apiBaseUrl={apiBaseUrl} wallpaper={wallpaper} imageUrl={current} isAdmin={isAdmin} onChange={onChange} />
     </section>
   );

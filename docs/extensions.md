@@ -36,7 +36,7 @@ pnpm dev:extensions                                                       # exte
 my-thing/
   manifest.json     id・名前・版・説明・接続設定の項目・機能の口（下の「manifest.json」）
   src/server.ts     サーバー側（無くてもよい）。npm の依存も server.js に1つにまとまる
-  src/web.tsx       画面側（無くてもよい）。import した .css は web.css にまとまる
+  src/web.tsx       画面側（無くてもよい）。見た目は Tailwind のクラスで書く（使ったクラスのうち本体に無いものが web.css にまとまる）
   assets/           画面に配るファイル（アイコンなど。/api/extensions/<id>/files/assets/... で読める）
 ```
 
@@ -108,10 +108,35 @@ export default defineServerExtension({
 - `api.dataDir`（この拡張機能だけの書ける置き場）・`api.configDir`（本体の config/）
 - `api.broadcast(type, payload)` … つないでいる画面へ知らせる（画面には `ext:<id>:<type>` で届く）
 - `api.provide(feature, implementation)`・`api.providers(feature)` … 機能の口（下）
+- `api.provideStates({ list, read })` … 本体が読める「家の状態」の値を差し出す（下の「家の状態の値」）
+- `api.setNightSignal(active, reason?)` … 自分で判定して「夜の表示に入る条件を満たした」を本体へ知らせる（どれかが立っていれば夜）。
+  ふつうは値を差し出し（provideStates）、条件は家の人が本体の設定で決める形にする
 - `api.onDispose(fn)` … 切ったとき・入れ替えたときの後片付け（タイマーを止めるなど）
 - `api.log.info/warn/error`
 - 道の `handler` に渡る `bearer` … ログインの要らない道（`public: true`）に `Authorization: Bearer <値>` で添えられた値。
   外のプログラムに合言葉を持たせて確かめるときに使う（Claude の拡張機能の `POST /limits` など）。ほかの道では常に null
+
+### 家の状態の値（provideStates）
+
+照度・室温・照明のオンオフ・家に人がいるか、のように、連携先の「今の値」を本体へ差し出す。本体の機能（夜の表示の条件など）は、
+どの拡張機能が差し出した値でも同じに扱う（家の人が設定の「夜の表示」で、値と比べ方を選ぶ）。1つの拡張機能につき1つ。
+
+```ts
+api.provideStates({
+  // 選べる値の一覧（並べたい順に）。設定画面で条件を足すときに出す
+  list: async () => [
+    { id: "lux", name: "リビングの明るさ", kind: "number", value: 120, unit: "lx" },
+    { id: "light", name: "リビングの照明", kind: "onoff", value: true },
+  ],
+  // 決めた id の今の値（30 秒ごとに読まれる。見つからないものは返さなくてよい）
+  read: async (ids) => (await currentValues()).filter((v) => ids.includes(v.id)),
+});
+```
+
+- `kind` は `"number"`（未満・より上で比べる）か `"onoff"`（ついている・消えている）。読めないとき（応答なし）は `value: null`。
+  読めない値は条件を満たさない扱いになる（壊れたセンサーで暗いまま戻れなくならないように）
+- `id` はその拡張機能の中で変わらないもの（Home Assistant なら entity_id）。家の人が選んだ条件は、拡張機能の id と組で覚える
+- 別のプロセスで動く拡張機能からも使える（関数は Promise を返す形で本体から呼ばれる）
 
 ### 別のプロセスで動くとき
 
@@ -134,7 +159,6 @@ import { defineWebExtension } from "@home-dashboard/widget-sdk";
 import { myWidget } from "./widget";
 import { MyScreen } from "./screen";
 import { MySettings } from "./MySettings";
-import "./web.css";
 
 export default defineWebExtension({
   widgets: [myWidget],
@@ -153,8 +177,8 @@ export default defineWebExtension({
 
 ## 本体の部品（デザイン）
 
-見た目は本体の部品を組み合わせて作り、拡張機能の CSS では色・角丸・余白・影を決めない。本体の見た目が変わっても、拡張機能はそのままそろう。
-部品は `@home-dashboard/widget-sdk` から import する（実体は `packages/widget-sdk/src/ui.tsx`、見た目は本体の `theme.css` の `ui-*`）。
+見た目は本体の部品を組み合わせて作り、拡張機能では色・角丸・影・ガラスを決めない。本体の見た目が変わっても、拡張機能はそのままそろう。
+部品は `@home-dashboard/widget-sdk` から import する（実体は `packages/ui`。見た目は部品が Tailwind のクラスで持つ）。
 どの部品・値をどこでどう使うか（色・字の段・余白・重なり・動き）の決まりは [design-system.md](design-system.md) にある。
 
 | 部品 | 使うところ |
@@ -163,13 +187,13 @@ export default defineWebExtension({
 | `WidgetHint` | ウィジェットの中の補足の一行。`tone="error"` で注意の色 |
 | `DetailFrame` | ウィジェットを押して開く詳しい画面の中身と見出し |
 | `ScreenFrame`・`ScreenSection`・`ScreenNotice` | サイドバーの画面の枠・区切りと見出し・知らせ |
-| `ui-glass`（クラス） | 自前の入れ物をガラスにする。5つ1組（縁・地・光沢・影・ぼかし）を CSS に書き写さず、要素にこれを付ける |
+| `glass`（クラス） | 部品に無い入れ物をガラスにする。5つ1組（縁・地・光沢・影・ぼかし）を書き写さず、要素にこれを付ける（ボタン・ピル・丸いボタンは自分で作らず部品を使う） |
 | `StatTile`（`onClick`・`tone`: warm・hot）・`StatGrid` | 値のタイル（アイコン付きの名前と大きな値。Home Control のセンサー・Weather と同じ形）と、その並べ方 |
 | `Dialog` | 画面の上に重ねて出す小窓（場所の追加など。背景・Esc・× で閉じる） |
 | `PillMenu` | 画面の右上で選ぶもの（Media の音楽アプリ・Home Control の部屋など） |
 | `Button`（`variant`: `primary`・`danger`、`icon`）・`ButtonLink`・`ButtonRow` | ボタン。どれも丸い端の同じ高さ。`primary` はその場でいちばん押すもの（保存など）、`danger` は消すのを確かめるもの |
 | `IconButton`（`icon`・`label`） | アイコンだけのボタン（閉じるなど）。44px の丸 |
-| `ProgressBar`（`value` 0〜1・`label`） | 進み具合・使っている量のバー。色は CSS の `--progress-color` |
+| `ProgressBar`（`value` 0〜1・`label`） | 進み具合・使っている量のバー。色は `--progress-color`（`className="[--progress-color:var(--accent-warn)]"` のように変える） |
 | `Group` | 入れ物（区画）。中に入力欄やボタンを並べる |
 | `List`（`boxed`）・`ListItem`（`title`・`detail`・`badge`・`leading`・`trailing`・`onClick`・`off`・`selected`・`chevron`・`error`） | 一覧。ふだんは角の丸い行が並ぶ形（選んで開く・切り替えるもの）。`boxed` を付けると1つのガラスの入れ物に入れて線で区切る（天気の日ごと・予定のように、並べて読み比べるもの）。押せる行は右に矢印が出る。入／切は `trailing` に `ToggleSwitch` |
 | `ToggleSwitch` | 入／切 |
@@ -195,17 +219,41 @@ export default defineWebExtension({
 </Group>
 ```
 
-寸法の決まり（本体の `theme.css` の `:root`）:
+寸法の決まり（部品が持っている。自分で並べるときもこの段にそろえる）:
 
-- ウィジェットのカードは角丸 45px・内側の余白 30px。中の部品の角丸は `--inner-radius`（外の角丸 − 内側の余白）
-- 入れ物（`Group`・`List`）は内側の余白 `--group-padding`、角丸 `--group-radius`（中の角丸 ＋ 内側の余白。中の入力欄・ボタンと縁が平行になる）
-- 一覧の1行（名前と説明だけ）は上下 `--group-row-padding`、文章を何行も載せるものは上下も `--group-padding`
-- 入れ物と入れ物のあいだは `--group-gap`
+- ウィジェットのカードは角丸 45px（`rounded-card`）・内側の余白 30px。中の部品の角丸は `rounded-inner`（外の角丸 − 内側の余白）
+- 入れ物（`Group`・`List`）は内側の余白 `p-4`、角丸 `rounded-group`（中の角丸 ＋ 内側の余白。中の入力欄・ボタンと縁が平行になる）
+- 入れ物と入れ物のあいだは `gap-3`
 
-- 字の大きさは `--font-*`、余白は `--space-*`、動きは `--motion-*`・`--ease-*` から選ぶ。JS で動かすスクロールは `scrollBehavior()` を使う（「動きを減らす」設定に合わせる）
+### 見た目の書き方（Tailwind）
 
-自分の CSS（`src/web.css`）には、中身の並べ方（並ぶ向き・間・大きさ）だけを書く。クラス名は拡張機能の id で始めて、ほかとぶつからないようにする。
-色が要るときは本体の変数（`--text-primary`・`--text-secondary`・`--accent-warn`・`--glass-border` など）を使う。
+拡張機能の見た目は **Tailwind（v4）のクラス**で書き、**CSS のファイルは作らない**（`src/web.css` を置かない・import しない）。
+テーマ・全体の決まりと、本体に入っているクラス（組み込みの拡張機能が使っているものも）は本体が出す。組み立て（`pnpm build:extension`）は
+`src/` の中で使ったクラスのうち、本体に無いものだけを `dist/web.css` に出す（`web.css` が空に近くても正しい）。
+
+```tsx
+<WidgetCard className="items-stretch gap-1.5 text-left" onClick={openDetail}>
+  <span className="text-note text-muted">git</span>
+  <ul className="flex flex-col gap-1">
+    <li className="flex items-center gap-2 text-label">
+      <span className={cx("size-2.5 rounded-full", online ? "bg-ok" : "bg-warn")} />
+      <span className="ellipsis min-w-0 flex-1">{name}</span>
+    </li>
+  </ul>
+</WidgetCard>
+```
+
+- 自分で書くのは中身の並べ方（`flex`・`grid`・`gap-*`・`p-*`・大きさ）と、役割の決まった字の段・色（`text-caption`・`text-muted`・`text-warn` など）だけ。
+  色・字の大きさ・角丸・画面の区切りは**テーマにあるものだけ**が使える（名前の一覧は design-system.md の「0. 書き方」）。
+  Tailwind の既定の色（`text-red-500`）や、`[13px]`・`[#123]` のようなテーマを通さない値は、書いても何も出ない
+- 画面の区切りは `phone:`・`tablet:`・`wall:` など、軽い表示・夜の表示は `lite:`・`night:`、閉じる動きの間は `closing:`
+- クラスは**文字列のまま全部書く**（`` `note--${color}` `` のようにつなぐと、組み立てが見つけられず何も出ない）。
+  値ごとにクラスを変えるときは、`{ yellow: "…", pink: "…" }` のような表に全部書く。つなぐのは `cx()`（ぶつかるクラスは後のものが勝つ）
+- JS で要素を探すときは、クラス名ではなく `data-*` の属性で探す
+- 実行中に決まる値（位置・割合など）は `style` に書く（色は直書きしない）。`--x` のような変数を渡して、クラスの側で `left-(--x)` と読むこともできる
+- Tailwind のクラスで書けないもの（`@keyframes`・込み入った選び方・その拡張機能だけの色）は、本体の `packages/ui/src/theme/*.css` に `@utility` で足す
+- 決まりに沿っているかは `pnpm lint:style extensions/<id>` で確かめる（CSS のファイル・効かないクラス・テーマを通さない値・部品で書くもの）
+- 字の大きさは `text-*` の段、余白は Tailwind の既定の刻み（`p-4` ＝ 1rem）、動きは `animate-*`・`ease-*` から選ぶ。JS で動かすスクロールは `scrollBehavior()` を使う（「動きを減らす」設定に合わせる）
 
 ## 言語（日本語・英語）
 

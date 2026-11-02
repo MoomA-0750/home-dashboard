@@ -2,7 +2,10 @@ import { lazy, Suspense, useState } from "react";
 import { MOTION_NAMES } from "../avatar/motions";
 import type { AvatarRig } from "../avatar/rig";
 import type { VoicePersona, VoiceState } from "../lib/useVoiceAssistant";
-import { defineMessages } from "@home-dashboard/widget-sdk";
+import { Chip, defineMessages, Message } from "@home-dashboard/widget-sdk";
+
+/** 操作の区切りの小さな見出し（状態・向き・表情・身振り） */
+const HEADING = "mt-3.5 mb-1.5 text-caption font-semibold text-muted first:mt-0";
 
 const messages = defineMessages({
   ja: {
@@ -110,96 +113,89 @@ export function PersonaPreview({ persona, modelUrl }: PersonaPreviewProps) {
     chains.map((chain) => chain.bones[0]?.name).join(t("listSeparator")) || t("notFound");
 
   return (
-    <div className="persona-preview" aria-label={t("previewLabel", { name: persona.name })}>
-      <div className="persona-preview__body">
-          <div className="persona-preview__stage">
-            {error ? (
-              <p className="settings-panel__voice-error">{error}</p>
-            ) : (
-              <Suspense fallback={null}>
-                <VoiceAvatar
-                  modelUrl={modelUrl}
-                  state={state}
-                  socket={null}
-                  rig={persona.rig ?? undefined}
-                  override={{ motion: activeMotion, expression: spec?.avatar ?? null, talking, restroke, viewAngle }}
-                  onReady={setRig}
-                  onError={(err) => setError(t("loadFailed", { error: String(err) }))}
-                />
-              </Suspense>
-            )}
-          </div>
-          <div className="persona-preview__controls">
-            <h4>{t("state")}</h4>
-            <div className="persona-preview__buttons">
-              {STATES.map(([value, label]) => (
-                <button key={value} type="button" aria-pressed={state === value} onClick={() => setState(value)}>
-                  {t(label)}
-                </button>
-              ))}
-              <button type="button" aria-pressed={talking} onClick={() => setTalking((v) => !v)}>
-                {t("talking")}
-              </button>
-              <button type="button" onClick={() => setRestroke((n) => n + 1)}>
-                {t("replayMotion")}
-              </button>
-            </div>
-            <h4>{t("view")}</h4>
-            <div className="persona-preview__buttons">
-              {VIEWS.map(([value, label]) => (
-                <button
-                  key={value}
-                  type="button"
-                  aria-pressed={viewAngle === value}
-                  onClick={() => setViewAngle(value)}
-                >
-                  {t(label)}
-                </button>
-              ))}
-            </div>
-            <h4>{t("expression")}</h4>
-            <div className="persona-preview__buttons">
-              <button type="button" aria-pressed={expression === null} onClick={() => setExpression(null)}>
-                {t("noExpression")}
-              </button>
-              {Object.entries(persona.expressions).map(([name, value]) => (
-                <button
-                  key={name}
-                  type="button"
-                  aria-pressed={expression === name}
-                  title={value.motion ? t("motionOf", { motion: value.motion }) : t("noMotion")}
-                  onClick={() => {
-                    setExpression(name);
-                    setMotion(null);
-                  }}
-                >
-                  {name}
-                </button>
-              ))}
-            </div>
-            <h4>{t("motionOnly")}</h4>
-            <div className="persona-preview__buttons">
-              <button type="button" aria-pressed={motion === null} onClick={() => setMotion(null)}>
-                {t("followExpression")}
-              </button>
-              {MOTION_NAMES.map((name) => (
-                <button key={name} type="button" aria-pressed={motion === name} onClick={() => setMotion(name)}>
-                  {name}
-                </button>
-              ))}
-            </div>
-            {rig && (
-              <dl className="persona-preview__rig">
-                <dt>{t("earLeft")}</dt>
-                <dd>{boneNames(rig.ears.left)}</dd>
-                <dt>{t("earRight")}</dt>
-                <dd>{boneNames(rig.ears.right)}</dd>
-                <dt>{t("tail")}</dt>
-                <dd>{boneNames(rig.tails)}</dd>
-              </dl>
-            )}
-          </div>
+    <div aria-label={t("previewLabel", { name: persona.name })}>
+      {/* 幅が足りなければ、アバターの下に操作を回す */}
+      <div className="flex flex-wrap gap-5">
+        <div className="persona-stage relative w-75 max-w-full shrink-0 rounded-inner">
+          {error ? (
+            <Message tone="error">{error}</Message>
+          ) : (
+            <Suspense fallback={null}>
+              <VoiceAvatar
+                modelUrl={modelUrl}
+                state={state}
+                socket={null}
+                rig={persona.rig ?? undefined}
+                override={{ motion: activeMotion, expression: spec?.avatar ?? null, talking, restroke, viewAngle }}
+                onReady={setRig}
+                onError={(err) => setError(t("loadFailed", { error: String(err) }))}
+              />
+            </Suspense>
+          )}
         </div>
+        <div className="min-w-0 flex-1 basis-64">
+          <h4 className={HEADING}>{t("state")}</h4>
+          <div className="flex flex-wrap gap-1.5">
+            {STATES.map(([value, label]) => (
+              <Chip key={value} selected={state === value} onClick={() => setState(value)}>
+                {t(label)}
+              </Chip>
+            ))}
+            <Chip selected={talking} onClick={() => setTalking((v) => !v)}>
+              {t("talking")}
+            </Chip>
+            <Chip onClick={() => setRestroke((n) => n + 1)}>{t("replayMotion")}</Chip>
+          </div>
+          <h4 className={HEADING}>{t("view")}</h4>
+          <div className="flex flex-wrap gap-1.5">
+            {VIEWS.map(([value, label]) => (
+              <Chip key={value} selected={viewAngle === value} onClick={() => setViewAngle(value)}>
+                {t(label)}
+              </Chip>
+            ))}
+          </div>
+          <h4 className={HEADING}>{t("expression")}</h4>
+          <div className="flex flex-wrap gap-1.5">
+            <Chip selected={expression === null} onClick={() => setExpression(null)}>
+              {t("noExpression")}
+            </Chip>
+            {Object.entries(persona.expressions).map(([name, value]) => (
+              <Chip
+                key={name}
+                selected={expression === name}
+                title={value.motion ? t("motionOf", { motion: value.motion }) : t("noMotion")}
+                onClick={() => {
+                  setExpression(name);
+                  setMotion(null);
+                }}
+              >
+                {name}
+              </Chip>
+            ))}
+          </div>
+          <h4 className={HEADING}>{t("motionOnly")}</h4>
+          <div className="flex flex-wrap gap-1.5">
+            <Chip selected={motion === null} onClick={() => setMotion(null)}>
+              {t("followExpression")}
+            </Chip>
+            {MOTION_NAMES.map((name) => (
+              <Chip key={name} selected={motion === name} onClick={() => setMotion(name)}>
+                {name}
+              </Chip>
+            ))}
+          </div>
+          {rig && (
+            <dl className="mt-4 grid grid-cols-label gap-x-3 gap-y-1 text-caption text-muted [&_dd]:text-text [&_dd]:wrap-anywhere">
+              <dt>{t("earLeft")}</dt>
+              <dd>{boneNames(rig.ears.left)}</dd>
+              <dt>{t("earRight")}</dt>
+              <dd>{boneNames(rig.ears.right)}</dd>
+              <dt>{t("tail")}</dt>
+              <dd>{boneNames(rig.tails)}</dd>
+            </dl>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

@@ -4,9 +4,6 @@ import { CalendarScreen } from "./calendar/CalendarScreen";
 import { agendaWidget } from "./calendar/widget";
 import { MailScreen } from "./mail/MailScreen";
 import { mailWidget } from "./mail/widget";
-import "./web.css";
-import "./calendar/calendar.css";
-import "./mail/mail.css";
 
 // カレンダー・メール。Calendar・Mail の画面とウィジェット、設定の「アカウント」の中のインターネットアカウント（ログインした人ごと）
 export default defineWebExtension({

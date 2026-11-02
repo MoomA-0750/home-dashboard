@@ -5,6 +5,7 @@ import {
   ButtonRow,
   CodeBlock,
   Field,
+  Group,
   List,
   ListItem,
   Message,
@@ -178,7 +179,7 @@ export function HostSettings({ ctx, isAdmin }: ExtensionSettingsPanelProps) {
 
   if (!isAdmin) {
     return (
-      <section className="homelab-settings">
+      <section className="mt-5 flex flex-col gap-3">
         <SectionTitle>{t("hosts")}</SectionTitle>
         <Note>{t("adminOnly")}</Note>
       </section>
@@ -199,7 +200,7 @@ export function HostSettings({ ctx, isAdmin }: ExtensionSettingsPanelProps) {
   }
 
   return (
-    <section className="homelab-settings">
+    <section className="mt-5 flex flex-col gap-3">
       <SectionTitle>{t("hosts")}</SectionTitle>
       <Note>{t("intro")}</Note>
       {error && <Message tone="error">{error}</Message>}
@@ -315,88 +316,90 @@ function HostEditor({ base, draft: initial, onDone }: { base: string; draft: Dra
   );
 
   return (
-    <section className="homelab-settings">
+    <section className="mt-5 flex flex-col gap-3">
       <BackButton label={t("hosts")} onClick={onDone} />
       <SectionTitle>{isNew ? t("addHost") : draft.name}</SectionTitle>
-      <form className="ui-group" onSubmit={save}>
-        <fieldset className="homelab-settings__fields" disabled={busy}>
-          <Field label={t("type")}>
-            <select
-              value={draft.type}
-              onChange={(e) => {
-                const type = e.target.value as HostType;
-                // 種類を替えたら、その種類の項目の既定に入れ替える（名前は残す）
-                setDraft({
-                  ...emptyDraft(type, locale),
-                  id: draft.id,
-                  name: draft.name || emptyDraft(type, locale).name,
-                });
-                setMessage(null);
-                setObservedFingerprint(null);
-              }}
-            >
-              {(Object.keys(TYPE_LABELS) as HostType[]).map((type) => (
-                <option key={type} value={type}>
-                  {textFor(TYPE_LABELS[type], locale)}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Note>{textFor(TYPE_NOTES[draft.type], locale)}</Note>
-          {field(t("name"), "name", { placeholder: t("namePlaceholder") })}
-          {draft.type === "tcp" && (
-            <>
-              {field(t("address"), "host", { placeholder: "192.168.1.10" })}
-              {field(t("port"), "port", { placeholder: "22" })}
-            </>
-          )}
-          {draft.type === "ssh" && (
-            <>
-              {field(t("address"), "host", { placeholder: "192.168.1.10" })}
-              {field(t("port"), "port", { placeholder: "22" })}
-              {field(t("username"), "username", { placeholder: "monitor" })}
-              {field(t("hostKeyFingerprint"), "fingerprint", { placeholder: "SHA256:…" })}
-              <SshKeyHint base={base} />
-            </>
-          )}
-          {draft.type === "node-exporter" && field("URL", "url", { placeholder: "http://192.168.1.10:9100/metrics" })}
-          {draft.type === "proxmox" && (
-            <>
-              {field("URL", "url", { placeholder: "https://192.168.1.10:8006" })}
-              {field(t("tokenId"), "tokenId", { placeholder: "root@pam!dashboard" })}
-              {field(t("tokenSecret"), "tokenSecret", {
-                secret: true,
-                placeholder: draft.hasTokenSecret ? t("secretSet") : "",
-              })}
-              {field(t("certFingerprint"), "fingerprint", { placeholder: "AB:CD:…" })}
-              {field(t("node"), "node", { placeholder: "mooma-lpve" })}
-            </>
-          )}
-          <ButtonRow>
-            <Button variant="primary" type="submit">
-              {isNew ? t("add") : t("save")}
-            </Button>
-            <Button onClick={() => void test()}>{t("test")}</Button>
-          </ButtonRow>
-        </fieldset>
-        {message && <Message tone={message.ok ? "ok" : "error"}>{message.text}</Message>}
-        {observedFingerprint && (
-          <div className="homelab-settings__fingerprint">
-            <CodeBlock>{observedFingerprint}</CodeBlock>
-            <ButtonRow>
-              <Button
-                onClick={() => {
-                  set({ fingerprint: observedFingerprint });
+      <Group>
+        <form onSubmit={save}>
+          <fieldset disabled={busy}>
+            <Field label={t("type")}>
+              <select
+                value={draft.type}
+                onChange={(e) => {
+                  const type = e.target.value as HostType;
+                  // 種類を替えたら、その種類の項目の既定に入れ替える（名前は残す）
+                  setDraft({
+                    ...emptyDraft(type, locale),
+                    id: draft.id,
+                    name: draft.name || emptyDraft(type, locale).name,
+                  });
+                  setMessage(null);
                   setObservedFingerprint(null);
-                  setMessage({ ok: true, text: t("fingerprintSet") });
                 }}
               >
-                {t("useFingerprint")}
+                {(Object.keys(TYPE_LABELS) as HostType[]).map((type) => (
+                  <option key={type} value={type}>
+                    {textFor(TYPE_LABELS[type], locale)}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Note>{textFor(TYPE_NOTES[draft.type], locale)}</Note>
+            {field(t("name"), "name", { placeholder: t("namePlaceholder") })}
+            {draft.type === "tcp" && (
+              <>
+                {field(t("address"), "host", { placeholder: "192.168.1.10" })}
+                {field(t("port"), "port", { placeholder: "22" })}
+              </>
+            )}
+            {draft.type === "ssh" && (
+              <>
+                {field(t("address"), "host", { placeholder: "192.168.1.10" })}
+                {field(t("port"), "port", { placeholder: "22" })}
+                {field(t("username"), "username", { placeholder: "monitor" })}
+                {field(t("hostKeyFingerprint"), "fingerprint", { placeholder: "SHA256:…" })}
+                <SshKeyHint base={base} />
+              </>
+            )}
+            {draft.type === "node-exporter" && field("URL", "url", { placeholder: "http://192.168.1.10:9100/metrics" })}
+            {draft.type === "proxmox" && (
+              <>
+                {field("URL", "url", { placeholder: "https://192.168.1.10:8006" })}
+                {field(t("tokenId"), "tokenId", { placeholder: "root@pam!dashboard" })}
+                {field(t("tokenSecret"), "tokenSecret", {
+                  secret: true,
+                  placeholder: draft.hasTokenSecret ? t("secretSet") : "",
+                })}
+                {field(t("certFingerprint"), "fingerprint", { placeholder: "AB:CD:…" })}
+                {field(t("node"), "node", { placeholder: "mooma-lpve" })}
+              </>
+            )}
+            <ButtonRow>
+              <Button variant="primary" type="submit">
+                {isNew ? t("add") : t("save")}
               </Button>
+              <Button onClick={() => void test()}>{t("test")}</Button>
             </ButtonRow>
-          </div>
-        )}
-      </form>
+          </fieldset>
+          {message && <Message tone={message.ok ? "ok" : "error"}>{message.text}</Message>}
+          {observedFingerprint && (
+            <div className="my-3 flex flex-col gap-2">
+              <CodeBlock>{observedFingerprint}</CodeBlock>
+              <ButtonRow>
+                <Button
+                  onClick={() => {
+                    set({ fingerprint: observedFingerprint });
+                    setObservedFingerprint(null);
+                    setMessage({ ok: true, text: t("fingerprintSet") });
+                  }}
+                >
+                  {t("useFingerprint")}
+                </Button>
+              </ButtonRow>
+            </div>
+          )}
+        </form>
+      </Group>
       {!isNew && (
         <ButtonRow>
           <Button variant="danger" disabled={busy} onClick={() => void remove()}>
@@ -421,7 +424,7 @@ function SshKeyHint({ base }: { base: string }) {
   }, [base]);
   if (!line) return null;
   return (
-    <div className="homelab-settings__key">
+    <div className="my-3 flex flex-col gap-2">
       <Field label={t("authorizedKeysLine")}>
         <CodeBlock>{line}</CodeBlock>
       </Field>

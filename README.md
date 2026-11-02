@@ -16,7 +16,7 @@ apps/
   server/   Fastify製のAPIサーバー（レイアウト永続化・外部サービス連携・静的配信）
   voice-agent/  Python製の音声アシスタント（ウェイクワード → Claude Code → 読み上げ）。ホスト上で常駐させる
 packages/
-  ui/               画面の部品とデザイン（theme.css・Button・List・Field・WidgetCard・Icon・ScreenFrame・小窓・言葉・動き・壁紙に合わせた色）。同じ見た目を使う別の画面とも共有する
+  ui/               画面の部品とデザイン（Tailwind のテーマ・Button・List・Field・WidgetCard・Icon・ScreenFrame・小窓・言葉・動き・壁紙に合わせた色）。同じ見た目を使う別の画面とも共有する
   widget-sdk/       ウィジェット・拡張機能の画面側の型と取得フック・機能の口。ui の部品も、ここから今までどおり使える
   extension-sdk/    拡張機能のサーバー側の型（manifest・道・音声アシスタントのツール・機能の口）
   widgets/

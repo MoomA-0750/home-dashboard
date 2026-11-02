@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 /**
- * 動き（本体の theme.css の --motion-* と --ease-*）を JS から使うとき用。CSS で書ける動きは CSS に書き、
+ * 動き（styles/tokens.css の --motion-* と --ease-*）を JS から使うとき用。CSS で書ける動きは CSS に書き、
  * スクロールや「何秒後に外す」のように JS で動かすものだけ、これで「動きを減らす」設定に合わせる。
  *
  *   el.scrollTo({ top, behavior: scrollBehavior() })
@@ -22,7 +22,7 @@ export function scrollBehavior(): ScrollBehavior {
   return reducedMotion() ? "auto" : "smooth";
 }
 
-/** 動きの時間（ミリ秒）。theme.css の --motion-<name> を読む（動きを減らす設定では 0） */
+/** 動きの時間（ミリ秒）。tokens.css の --motion-<name> を読む（動きを減らす設定では 0） */
 export function motionMs(name: MotionDuration): number {
   if (typeof document === "undefined") return FALLBACK_MS[name];
   const value = getComputedStyle(document.documentElement).getPropertyValue(`--motion-${name}`).trim();
@@ -34,7 +34,7 @@ export function motionMs(name: MotionDuration): number {
  * 消えるときの動きのため、open が false になってからも消える動きの間だけ出しておく（親が開け閉めを持つ部品用）。
  *
  *   const menu = usePresence(open);
- *   {menu.shown && <ul className={`menu${menu.closing ? " menu--closing" : ""}`}>…}
+ *   {menu.shown && <ul className={cx("animate-drop closing:animate-drop-out", menu.closing && "is-closing")}>…}
  */
 export function usePresence(open: boolean, name: MotionDuration = "base"): { shown: boolean; closing: boolean } {
   const [shown, setShown] = useState(open);

@@ -160,7 +160,7 @@ export function PlacesPanel({
                 key={`${r.lat},${r.lon}`}
                 title={r.name}
                 detail={r.detail || `${r.lat.toFixed(2)}, ${r.lon.toFixed(2)}`}
-                trailing={<span className="weather-places__add">{t("add")}</span>}
+                trailing={<span className="text-label text-muted">{t("add")}</span>}
                 onClick={busy === null ? () => void add(r) : undefined}
               />
             ))}

@@ -170,10 +170,10 @@ export function EventEditor({
   };
 
   return (
-    <form className="calendar-editor" onSubmit={submit}>
+    <form className="mb-6" onSubmit={submit}>
       <SectionTitle>{event ? (readOnly ? t("viewTitle") : t("editTitle")) : t("addTitle")}</SectionTitle>
       <Group>
-        <fieldset className="calendar-editor__fields" disabled={busy || readOnly}>
+        <fieldset className="m-0 border-0 p-0" disabled={busy || readOnly}>
           <Field label={t("name")}>
             <input value={draft.title} maxLength={200} autoFocus={!event} onChange={(e) => set({ title: e.target.value })} />
           </Field>
@@ -189,7 +189,8 @@ export function EventEditor({
           <Check checked={draft.allDay} onChange={(allDay) => set({ allDay })}>
             {t("allDay")}
           </Check>
-          <div className="calendar-editor__when">
+          {/* 始まり・終わりの日付と時刻は、広い画面では横に並べる */}
+          <div className="flex flex-wrap gap-x-3 *:min-w-0 *:flex-1 *:basis-36">
             <Field label={t("start")}>
               <input type="date" value={draft.startDate} onChange={(e) => set({ startDate: e.target.value, endDate: e.target.value > draft.endDate ? e.target.value : draft.endDate })} />
             </Field>

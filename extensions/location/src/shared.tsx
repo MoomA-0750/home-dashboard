@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   Button,
+  cx,
   ButtonLink,
   defineMessages,
   extensionApiUrl,
@@ -206,16 +207,19 @@ export function PlaceActions({
   place,
   actions,
   mapLabel,
+  start,
 }: {
   place: Place;
   actions: ReturnType<typeof usePlaceActions>;
   /** マップへのリンクの文言（既定は「地図」） */
   mapLabel?: string;
+  /** 左に寄せる（画面の左の欄。既定は一覧の行の右に置くので右寄せ） */
+  start?: boolean;
 }) {
   const t = messages.useT();
   const { busy, locate, setHome } = actions;
   return (
-    <span className="location-detail__actions">
+    <span className={cx("flex flex-wrap gap-1.5", start ? "justify-start" : "justify-end phone:shrink-0 phone:grow phone:basis-full phone:justify-start")}>
       <Button disabled={busy !== null} onClick={() => void locate(place)}>
         {busy === `locate:${place.name}` ? t("locating") : t("locate")}
       </Button>

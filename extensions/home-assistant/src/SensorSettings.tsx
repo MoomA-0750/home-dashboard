@@ -116,7 +116,7 @@ export function SensorSettings({ ctx, isAdmin }: ExtensionSettingsPanelProps) {
     .filter(([, list]) => list.length > 0);
 
   return (
-    <section className="ha-sensor-settings">
+    <section className="mt-5 flex flex-col gap-2.5">
       <SectionTitle>{t("title")}</SectionTitle>
       <Note>{t("note")}</Note>
       {error && <Message tone="error">{error}</Message>}

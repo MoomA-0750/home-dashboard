@@ -9,7 +9,10 @@ import {
   type WidgetProps,
   ProgressBar,
   DetailFrame,
+  Note,
+  SectionTitle,
   WidgetCard,
+  WidgetHint,
 } from "@home-dashboard/widget-sdk";
 
 const messages = defineMessages({
@@ -136,13 +139,13 @@ function ClaudeUsageView({ ctx, config, openDetail }: WidgetProps<ClaudeUsageCon
   const { data, loading } = usePolling(() => fetchUsage(ctx.apiBaseUrl), config.pollIntervalMs);
 
   if (loading && !data) {
-    return <WidgetCard className="widget-usage">{t("aggregating")}</WidgetCard>;
+    return <WidgetCard>{t("aggregating")}</WidgetCard>;
   }
   if (data && !data.configured) {
     return (
-      <WidgetCard className="widget-usage widget-usage--unconfigured">
+      <WidgetCard>
         {t("notFound")}
-        <span className="widget-hint">{data.reason}</span>
+        <WidgetHint>{data.reason}</WidgetHint>
       </WidgetCard>
     );
   }
@@ -153,16 +156,16 @@ function ClaudeUsageView({ ctx, config, openDetail }: WidgetProps<ClaudeUsageCon
   const blockProgress = block ? Math.min(1, 1 - block.remainingMs / (5 * 60 * 60 * 1000)) : 0;
 
   return (
-    <WidgetCard className="widget-usage" onClick={openDetail}>
-      <span className="widget-usage__label">{t("todayLabel")}</span>
-      <span className="widget-usage__value">{formatTokens(today?.tokens.total ?? 0)}</span>
-      <span className="widget-usage__sub">
+    <WidgetCard className="items-stretch justify-start gap-1 tabular-nums" onClick={openDetail}>
+      <span className="text-caption font-medium text-muted">{t("todayLabel")}</span>
+      <span className="text-stat font-semibold leading-none">{formatTokens(today?.tokens.total ?? 0)}</span>
+      <span className="text-caption font-medium text-muted">
         {today?.messages ?? 0} msg / {today?.sessions ?? 0} session
       </span>
       {block ? (
-        <div className="widget-usage__block">
+        <div className="mt-auto flex flex-col gap-1">
           <ProgressBar value={blockProgress} />
-          <span className="widget-usage__sub">
+          <span className="text-caption font-medium text-muted">
             {t("blockRemaining", {
               remaining: formatDuration(block.remainingMs, t),
               tokens: formatTokens(block.tokens.total),
@@ -170,16 +173,19 @@ function ClaudeUsageView({ ctx, config, openDetail }: WidgetProps<ClaudeUsageCon
           </span>
         </div>
       ) : (
-        <span className="widget-usage__sub">{t("noActiveBlock")}</span>
+        <span className="text-caption font-medium text-muted">{t("noActiveBlock")}</span>
       )}
     </WidgetCard>
   );
 }
 
+/** 名前と数値の行（左に名前・右に数値） */
+const rowsClass = "flex flex-col gap-1 text-label tabular-nums [&>li]:flex [&>li]:justify-between [&>li]:gap-6";
+
 function TokenBreakdown({ tokens }: { tokens: TokenTotals }) {
   const t = messages.useT();
   return (
-    <ul className="widget-usage-detail__breakdown">
+    <ul className={rowsClass}>
       <li>
         <span>{t("input")}</span>
         <span>{tokens.input.toLocaleString()}</span>
@@ -196,7 +202,7 @@ function TokenBreakdown({ tokens }: { tokens: TokenTotals }) {
         <span>{t("cacheRead")}</span>
         <span>{tokens.cacheRead.toLocaleString()}</span>
       </li>
-      <li className="widget-usage-detail__breakdown-total">
+      <li className="mt-1 border-t border-glass-border pt-1.5 font-semibold">
         <span>{t("total")}</span>
         <span>{tokens.total.toLocaleString()}</span>
       </li>
@@ -213,15 +219,14 @@ function ClaudeUsageDetail({ ctx, config }: WidgetDetailProps<ClaudeUsageConfig>
   const maxDaily = Math.max(1, ...data.daily.map((d) => d.total));
 
   return (
-    <DetailFrame title={t("title")} className="widget-usage-detail">
-
+    <DetailFrame title={t("title")} className="flex flex-col gap-5">
       <section>
-        <h3>{t("today", { date: data.today.date })}</h3>
+        <SectionTitle>{t("today", { date: data.today.date })}</SectionTitle>
         <TokenBreakdown tokens={data.today.tokens} />
-        <ul className="widget-usage-detail__models">
+        <ul className={rowsClass}>
           {data.today.byModel.map((m) => (
             <li key={m.model}>
-              <span className="widget-usage-detail__model">{m.model}</span>
+              <span className="text-muted">{m.model}</span>
               <span>{formatTokens(m.total)}</span>
             </li>
           ))}
@@ -230,29 +235,29 @@ function ClaudeUsageDetail({ ctx, config }: WidgetDetailProps<ClaudeUsageConfig>
 
       {data.block && (
         <section>
-          <h3>
+          <SectionTitle>
             {t("currentBlock", {
               start: formatTime(data.block.startsAt, locale),
               end: formatTime(data.block.endsAt, locale),
             })}
-          </h3>
-          <p className="widget-note">
+          </SectionTitle>
+          <Note>
             {t("blockSummary", {
               remaining: formatDuration(data.block.remainingMs, t),
               messages: data.block.messages,
               tokens: formatTokens(data.block.tokens.total),
             })}
-          </p>
+          </Note>
         </section>
       )}
 
       {data.projects.length > 0 && (
         <section>
-          <h3>{t("byProject")}</h3>
-          <ul className="widget-usage-detail__models">
+          <SectionTitle>{t("byProject")}</SectionTitle>
+          <ul className={rowsClass}>
             {data.projects.map((p) => (
               <li key={p.name}>
-                <span className="widget-usage-detail__model">{p.name}</span>
+                <span className="text-muted">{p.name}</span>
                 <span>{formatTokens(p.total)}</span>
               </li>
             ))}
@@ -261,21 +266,19 @@ function ClaudeUsageDetail({ ctx, config }: WidgetDetailProps<ClaudeUsageConfig>
       )}
 
       <section>
-        <h3>{t("daily")}</h3>
-        <ul className="widget-usage-detail__daily">
+        <SectionTitle>{t("daily")}</SectionTitle>
+        <ul className="flex flex-col gap-1 text-note tabular-nums">
           {data.daily.map((d) => (
-            <li key={d.date}>
-              <span className="widget-usage-detail__date">{d.date.slice(5)}</span>
-              <span className="widget-usage-detail__daily-bar">
-                <span style={{ width: `${(d.total / maxDaily) * 100}%` }} />
-              </span>
-              <span className="widget-usage-detail__daily-value">{formatTokens(d.total)}</span>
+            <li key={d.date} className="flex items-center gap-2">
+              <span className="w-12 shrink-0 text-muted">{d.date.slice(5)}</span>
+              <ProgressBar value={d.total / maxDaily} className="flex-1 [--progress-color:rgb(var(--accent-soft-rgb))]" />
+              <span className="w-14 shrink-0 text-right text-muted">{formatTokens(d.total)}</span>
             </li>
           ))}
         </ul>
       </section>
 
-      <p className="widget-note">{t("noCost")}</p>
+      <Note>{t("noCost")}</Note>
     </DetailFrame>
   );
 }

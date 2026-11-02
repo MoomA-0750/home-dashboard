@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { defineMessages, Icon, motionMs, useSnackbars, type SnackbarMessage } from "@home-dashboard/widget-sdk";
+import { cx, defineMessages, Icon, IconButton, motionMs, useSnackbars, type SnackbarMessage } from "@home-dashboard/widget-sdk";
 
 /**
  * スナックバーを出す場所（画面の下の中央。スマホではタブバーの上）。拡張機能や本体の showSnackbar で出し、
@@ -66,19 +66,23 @@ export function SnackbarHost() {
     if (!shown.closing) schedule(shown);
   };
   return (
-    <div className="snackbar-area">
+    // 画面の下の中央（サイドバーの右の幅の中）。スマホではタブバーの上
+    <div className="pointer-events-none fixed right-0 bottom-8 left-(--sidebar-width) layer-snackbar flex justify-center px-4 phone:left-0 phone:above-tabbar">
       <div
         key={shown.id}
-        className={`snackbar${shown.tone === "error" ? " snackbar--error" : ""}${shown.closing ? " snackbar--closing" : ""}`}
+        className={cx(
+          "glass pointer-events-auto flex max-w-140 min-h-12 items-center gap-2.5 rounded-full py-1.5 pr-1.5 pl-4 text-label leading-normal text-text",
+          "animate-enter closing:animate-exit closing:pointer-events-none",
+          shown.tone === "error" && "border-danger/45",
+          shown.closing && "is-closing",
+        )}
         role={shown.tone === "error" ? "alert" : "status"}
         onPointerEnter={hold}
         onPointerLeave={release}
       >
-        {shown.tone === "error" && <Icon name="warning" className="snackbar__icon" />}
-        <span className="snackbar__text">{shown.text}</span>
-        <button type="button" className="snackbar__close" aria-label={t("close")} onClick={() => close(shown.id)}>
-          <Icon name="dismiss" />
-        </button>
+        {shown.tone === "error" && <Icon name="warning" className="shrink-0 text-danger" />}
+        <span className="min-w-0 untrim wrap-anywhere">{shown.text}</span>
+        <IconButton icon="dismiss" label={t("close")} onClick={() => close(shown.id)} />
       </div>
     </div>
   );

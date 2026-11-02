@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { CSSProperties } from "react";
 import {
   defineMessages,
   FeatureProvidersContext,
@@ -17,14 +16,8 @@ import { fetchLayout, saveLayout } from "./api/layout";
 import { useRuntimeContext } from "./lib/useRuntimeContext";
 import { MainInfo } from "./components/MainInfo";
 import { WidgetRail } from "./components/WidgetRail";
-import {
-  Sidebar,
-  SidebarHandle,
-  SIDEBAR_LABEL_THRESHOLD,
-  SIDEBAR_MAX_WIDTH,
-  SIDEBAR_MIN_WIDTH,
-  type ScreenId,
-} from "./components/Sidebar";
+import { AppShell } from "@home-dashboard/ui/shell";
+import { useSidebarItems, type ScreenId } from "./components/Sidebar";
 import type { Account } from "./lib/auth";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -83,15 +76,6 @@ const SIDEBAR_WIDTH_STORAGE_KEY = "home-dashboard:sidebar-width";
 
 // crypto.randomUUID は https か localhost でしか使えないので、どこでも使える作り方（会話のIDと同じ）
 const newInstanceId = newConversationId;
-
-function clampSidebarWidth(width: number): number {
-  return Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_WIDTH, Math.round(width)));
-}
-
-function readStoredSidebarWidth(): number {
-  const stored = Number(localStorage.getItem(SIDEBAR_WIDTH_STORAGE_KEY));
-  return Number.isFinite(stored) && stored > 0 ? clampSidebarWidth(stored) : SIDEBAR_MIN_WIDTH;
-}
 
 interface AppProps {
   account: Account;
@@ -173,10 +157,8 @@ export function App({ account, sessionId, onSignedOut }: AppProps) {
   useEffect(() => {
     document.title = pageTitle ? `${pageTitle} · Home Dashboard` : "Home Dashboard";
   }, [pageTitle]);
-  const [sidebarWidth, setSidebarWidth] = useState(readStoredSidebarWidth);
+  const sidebarItems = useSidebarItems(screens, chatOn);
   const [widgetPickerOpen, setWidgetPickerOpen] = useState(false);
-  // 閉じるときも薄くなってから消す
-  const widgetPicker = usePresence(widgetPickerOpen);
   // 追加したウィジェットを見える位置へ送るための目印
   const [revealInstanceId, setRevealInstanceId] = useState<string | null>(null);
   /**
@@ -243,12 +225,6 @@ export function App({ account, sessionId, onSignedOut }: AppProps) {
     socket.addEventListener("message", onMessage);
     return () => socket.removeEventListener("message", onMessage);
   }, [ctx.socket, ctx.apiBaseUrl, applyServerLayout]);
-
-  const handleSidebarResize = useCallback((width: number) => {
-    const next = clampSidebarWidth(width);
-    setSidebarWidth(next);
-    localStorage.setItem(SIDEBAR_WIDTH_STORAGE_KEY, String(next));
-  }, []);
 
   // 画面の切り替え（チャットと設定も画面の1つ）
   const handleSelectScreen = (screen: ScreenId) => {
@@ -340,7 +316,6 @@ export function App({ account, sessionId, onSignedOut }: AppProps) {
     [instances],
   );
 
-  const shellStyle = { "--sidebar-width": `${sidebarWidth}px` } as CSSProperties;
   // チャットアプリが2つ以上あるときだけ、Chat 画面の右上に切り替えを出す（Media の音楽アプリと同じ部品）
   const chatOptions = [
     ...(chatInstalled ? [{ id: ASSISTANT_CHAT, label: t("assistant") }] : []),
@@ -358,31 +333,30 @@ export function App({ account, sessionId, onSignedOut }: AppProps) {
       />
     ) : null;
 
-  const shellClassName = `app-shell${sidebarWidth > SIDEBAR_LABEL_THRESHOLD ? " app-shell--sidebar-expanded" : ""}`;
-
   if (instances === null) {
-    return <div className="app-loading">{t("loading")}</div>;
+    return <div className="flex h-svh items-center justify-center text-muted">{t("loading")}</div>;
   }
 
   return (
     // 機能の口に入っている拡張機能の一覧を、口を持つ拡張機能（Media の音楽アプリなど）へ渡す
     <FeatureProvidersContext.Provider value={extensions.featureProviders}>
-      <div className={shellClassName} style={shellStyle}>
-        <Sidebar
-          activeScreen={onHome ? "home" : activeScreen}
-          screens={screens}
-          chatEnabled={chatOn}
-          chatOpen={chatScreenOpen}
-          onSelect={handleSelectScreen}
-        />
-        <SidebarHandle width={sidebarWidth} onResize={handleSidebarResize} />
+      <AppShell
+        items={sidebarItems}
+        active={(id) => (id === "chat" ? chatScreenOpen : id === (onHome ? "home" : activeScreen))}
+        onSelect={handleSelectScreen}
+        storageKey={SIDEBAR_WIDTH_STORAGE_KEY}
+      >
         {/* 切った拡張機能の画面を開いていたときは、ホームに戻る */}
         {currentScreen && (
           <ErrorBoundary key={currentScreen.key} name={textFor(currentScreen.label, locale)}>
             <currentScreen.Component ctx={ctx} account={account} />
           </ErrorBoundary>
         )}
-        <main className="main-screen" hidden={!onHome}>
+        {/* ホーム（時計とウィジェットの列）。開いたときは、中身の区画を少しずつずらして出す */}
+        <main
+          className="home-layout layer-base grid h-full min-h-0 overflow-hidden enter-stagger"
+          hidden={!onHome}
+        >
           <MainInfo ctx={ctx} />
           {extensions.ready && (
             // ホームを隠している間は、ウィジェットの読み直しを止める
@@ -453,9 +427,8 @@ export function App({ account, sessionId, onSignedOut }: AppProps) {
         {editBar.shown && (
           <WidgetEditBar closing={editBar.closing} onAdd={() => setWidgetPickerOpen(true)} onDone={() => setEditMode(false)} />
         )}
-        {widgetPicker.shown && (
+        {widgetPickerOpen && (
           <WidgetPicker
-            closing={widgetPicker.closing}
             registry={extensions.registry}
             hiddenWidgetIds={CHROME_WIDGET_IDS}
             placedWidgetIds={railInstances.map((i) => i.widgetId)}
@@ -475,7 +448,7 @@ export function App({ account, sessionId, onSignedOut }: AppProps) {
         />
         {/* 音声アシスタントが道具を使う前の了承・許可。どの画面にも、音声のパネルより上に出す */}
         <VoiceGuardPrompt apiBaseUrl={ctx.apiBaseUrl} socket={ctx.socket} />
-      </div>
+      </AppShell>
     </FeatureProvidersContext.Provider>
   );
 }

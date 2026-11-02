@@ -14,12 +14,12 @@ import {
   type WidgetDetailProps,
   type WidgetProps,
 } from "@home-dashboard/widget-sdk";
-import "./web.css";
 
 /**
  * 伝言メモの拡張機能の画面側（拡張機能の作り方の見本）。
  * React と widget-sdk は本体のものを使う（ビルドの道具が同梱しないようにつなぐ）。
- * 見た目は本体の部品（WidgetCard・DetailFrame・Field・Button など）で組み、自分の CSS には中身の並べ方だけを書く。
+ * 見た目は本体の部品（WidgetCard・DetailFrame・Field・Button など）で組み、中身の並べ方だけを Tailwind のクラスで書く
+ * （CSS のファイルは作らない。組み立てが、ここで使ったクラスだけを dist/web.css に出す）。
  * サーバーが api.broadcast("changed") すると、WebSocket に "ext:memo:changed" が届くので、すぐ読み直す。
  */
 
@@ -57,9 +57,9 @@ function formatWhen(iso: string | null): string {
 function MemoView({ ctx, openDetail }: WidgetProps) {
   const { data } = useMemo(ctx);
   return (
-    <WidgetCard className="memo-widget" onClick={openDetail}>
-      <span className="memo-widget__title">{data?.title ?? "伝言メモ"}</span>
-      <span className="memo-widget__text">{data?.memo.text || "まだメモはありません。押して書けます"}</span>
+    <WidgetCard className="gap-1.5 text-left" onClick={openDetail}>
+      <span className="text-note text-muted">{data?.title ?? "伝言メモ"}</span>
+      <span className="untrim line-clamp-3 text-title leading-normal whitespace-pre-wrap">{data?.memo.text || "まだメモはありません。押して書けます"}</span>
       {data?.memo.updatedAt && (
         <WidgetHint>
           {data.memo.author ?? "だれか"} · {formatWhen(data.memo.updatedAt)}

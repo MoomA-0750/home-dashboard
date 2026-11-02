@@ -1,8 +1,23 @@
 import { useState, type FormEvent } from "react";
 import type { McpCatalogServer, McpSettingsInput, VoiceMcpControl } from "../lib/voiceMcp";
-import { ToggleSwitch } from "./ExtensionSettings";
-import { Icon } from "./Icon";
-import { Badge, defineMessages, formatClock, formatDate, useLocale, type Locale } from "@home-dashboard/widget-sdk";
+import {
+  Badge,
+  Button,
+  cx,
+  defineMessages,
+  formatClock,
+  formatDate,
+  IconButton,
+  inputClass,
+  List,
+  ListItem,
+  type Locale,
+  Message,
+  Note,
+  SectionTitle,
+  ToggleSwitch,
+  useLocale,
+} from "@home-dashboard/widget-sdk";
 
 const messages = defineMessages({
   ja: {
@@ -136,31 +151,34 @@ export function VoiceMcpManager({ mcp }: { mcp: VoiceMcpControl }) {
     const status = statusKey && t(statusKey);
     const label = server.kind === "connector" ? server.name.replace(/^claude\.ai /, "") : server.name;
     return (
-      <li key={server.name} className={`voice-mcp__item${server.available ? "" : " voice-mcp__item--disabled"}`}>
-        <span className="voice-mcp__name">{label}</span>
-        {status && <Badge tone="warn">{status}</Badge>}
-        <ToggleSwitch
-          checked={state.enabled.includes(server.name)}
-          disabled={busy || !server.available}
-          label={t(state.enabled.includes(server.name) ? "dontUse" : "use", { name: label })}
-          onChange={() => void toggle(server.name)}
-        />
-        <span className="voice-mcp__target" title={server.target}>
-          {server.available ? server.target : t("projectScoped")}
-        </span>
-      </li>
+      <ListItem
+        key={server.name}
+        title={label}
+        detail={<span title={server.target}>{server.available ? server.target : t("projectScoped")}</span>}
+        off={!server.available}
+        trailing={
+          <>
+            {status && <Badge tone="warn">{status}</Badge>}
+            <ToggleSwitch
+              checked={state.enabled.includes(server.name)}
+              disabled={busy || !server.available}
+              label={t(state.enabled.includes(server.name) ? "dontUse" : "use", { name: label })}
+              onChange={() => void toggle(server.name)}
+            />
+          </>
+        }
+      />
     );
   };
 
   return (
-    <section className="voice-mcp" aria-label={t("sectionLabel")}>
-      <p className="voice-mcp__note">{t("note")}</p>
-      <div className="voice-mcp__toolbar">
-        <button type="button" disabled={busy || state.scanning || !state.connected} onClick={() => void run(mcp.scan)}>
-          <Icon name="arrow-sync" />
-          <span>{state.scanning ? t("scanning") : t("refresh")}</span>
-        </button>
-        <span className="voice-mcp__scanned">
+    <section aria-label={t("sectionLabel")}>
+      <Note>{t("note")}</Note>
+      <div className="flex items-center gap-2.5 text-note text-muted">
+        <Button icon="arrow-sync" disabled={busy || state.scanning || !state.connected} onClick={() => void run(mcp.scan)}>
+          {state.scanning ? t("scanning") : t("refresh")}
+        </Button>
+        <span>
           {!state.connected
             ? t("agentDown")
             : state.catalog?.scannedAt
@@ -168,62 +186,68 @@ export function VoiceMcpManager({ mcp }: { mcp: VoiceMcpControl }) {
               : t("scanningList")}
         </span>
       </div>
-      {state.catalog?.error && (
-        <p className="settings-panel__voice-error">{t("catalogError", { error: state.catalog.error })}</p>
-      )}
+      {state.catalog?.error && <Message tone="error">{t("catalogError", { error: state.catalog.error })}</Message>}
 
       {connectors.length > 0 && (
         <>
-          <h5 className="voice-mcp__group">{t("connectors")}</h5>
-          <ul className="voice-mcp__list">{connectors.map(renderServer)}</ul>
+          <SectionTitle>{t("connectors")}</SectionTitle>
+          <List boxed label={t("connectors")}>
+            {connectors.map(renderServer)}
+          </List>
         </>
       )}
       {locals.length > 0 && (
         <>
-          <h5 className="voice-mcp__group">{t("locals")}</h5>
-          <ul className="voice-mcp__list">{locals.map(renderServer)}</ul>
+          <SectionTitle>{t("locals")}</SectionTitle>
+          <List boxed label={t("locals")}>
+            {locals.map(renderServer)}
+          </List>
         </>
       )}
       {missing.length > 0 && (
         <>
-          <h5 className="voice-mcp__group">{t("missing")}</h5>
-          <ul className="voice-mcp__list">
+          <SectionTitle>{t("missing")}</SectionTitle>
+          <List boxed label={t("missing")}>
             {missing.map((name) => (
-              <li key={name} className="voice-mcp__item">
-                <span className="voice-mcp__name">{name}</span>
-                <ToggleSwitch checked disabled={busy} label={t("dontUse", { name })} onChange={() => void toggle(name)} />
-              </li>
+              <ListItem
+                key={name}
+                title={name}
+                trailing={
+                  <ToggleSwitch checked disabled={busy} label={t("dontUse", { name })} onChange={() => void toggle(name)} />
+                }
+              />
             ))}
-          </ul>
+          </List>
         </>
       )}
 
-      <h5 className="voice-mcp__group">{t("custom")}</h5>
+      <SectionTitle>{t("custom")}</SectionTitle>
       {state.custom.length > 0 && (
-        <ul className="voice-mcp__list">
+        <List boxed label={t("custom")}>
           {state.custom.map((server) => (
-            <li key={server.name} className="voice-mcp__item">
-              <span className="voice-mcp__name">{server.name}</span>
-              {server.hasToken && <Badge>{t("hasToken")}</Badge>}
-              <button
-                type="button"
-                className="voice-mcp__remove"
-                aria-label={t("remove", { name: server.name })}
-                disabled={busy}
-                onClick={() => void removeCustom(server.name)}
-              >
-                <Icon name="delete" />
-              </button>
-              <span className="voice-mcp__target" title={server.url}>
-                {server.url}
-              </span>
-            </li>
+            <ListItem
+              key={server.name}
+              title={server.name}
+              detail={<span title={server.url}>{server.url}</span>}
+              trailing={
+                <>
+                  {server.hasToken && <Badge>{t("hasToken")}</Badge>}
+                  <IconButton
+                    icon="delete"
+                    label={t("remove", { name: server.name })}
+                    disabled={busy}
+                    onClick={() => void removeCustom(server.name)}
+                  />
+                </>
+              }
+            />
           ))}
-        </ul>
+        </List>
       )}
-      <form className="voice-mcp__form" onSubmit={addCustom}>
+      <form className="grid grid-cols-3 gap-1.5" onSubmit={addCustom}>
         <input
           type="text"
+          className={inputClass}
           value={draft.name}
           onChange={(event) => setDraft({ ...draft, name: event.target.value })}
           placeholder={t("namePlaceholder")}
@@ -232,6 +256,7 @@ export function VoiceMcpManager({ mcp }: { mcp: VoiceMcpControl }) {
         />
         <input
           type="url"
+          className={cx(inputClass, "col-span-2")}
           value={draft.url}
           onChange={(event) => setDraft({ ...draft, url: event.target.value })}
           placeholder="https://…/mcp"
@@ -239,17 +264,18 @@ export function VoiceMcpManager({ mcp }: { mcp: VoiceMcpControl }) {
         />
         <input
           type="password"
+          className={inputClass}
           value={draft.token}
           onChange={(event) => setDraft({ ...draft, token: event.target.value })}
           placeholder={t("tokenPlaceholder")}
           aria-label={t("tokenLabel")}
           autoComplete="off"
         />
-        <button type="submit" disabled={busy || !draft.name.trim() || !draft.url.trim()}>
+        <Button type="submit" className="col-span-2 justify-self-start" disabled={busy || !draft.name.trim() || !draft.url.trim()}>
           {t("add")}
-        </button>
+        </Button>
       </form>
-      {error && <p className="settings-panel__voice-error">{error}</p>}
+      {error && <Message tone="error">{error}</Message>}
     </section>
   );
 }

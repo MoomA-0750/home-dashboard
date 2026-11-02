@@ -7,11 +7,23 @@ import {
   type VoicePersona,
   type VoicePersonas,
 } from "../lib/useVoiceAssistant";
-import { ToggleSwitch } from "./ExtensionSettings";
-import { Icon } from "./Icon";
 import { PersonaIcon } from "./PersonaIcon";
 import { PersonaPreview } from "./PersonaPreview";
-import { Badge, defineMessages } from "@home-dashboard/widget-sdk";
+import {
+  BackButton,
+  Badge,
+  Button,
+  ButtonLink,
+  ButtonRow,
+  defineMessages,
+  Group,
+  List,
+  ListItem,
+  Message,
+  Note,
+  SectionTitle,
+  ToggleSwitch,
+} from "@home-dashboard/widget-sdk";
 
 const messages = defineMessages({
   ja: {
@@ -46,7 +58,6 @@ const messages = defineMessages({
     confirmDelete: "削除する",
     cancel: "やめる",
     delete: "削除",
-    open: "{name}を開く",
     needsReview: "確かめてほしいことがあります（開いて見てください）",
     wakePhrase: "「{phrase}」",
     withAvatar: "・アバター",
@@ -86,7 +97,6 @@ const messages = defineMessages({
     confirmDelete: "Delete",
     cancel: "Cancel",
     delete: "Delete",
-    open: "Open {name}",
     needsReview: "Something needs checking (open to see)",
     wakePhrase: "“{phrase}”",
     withAvatar: " · Avatar",
@@ -119,6 +129,9 @@ interface PersonaManagerProps {
   avatarUrlFor: (personaId: string) => string | null;
   apiBaseUrl: string;
 }
+
+/** 確かめてほしいこと（表情の割り当てが無いなど）の1行 */
+const WARNING = "leading-normal text-warn";
 
 type Notice =
   | { kind: "done"; message: string; warnings: string[] }
@@ -250,67 +263,67 @@ export function PersonaManager({
 
   const opened = personas.personas.find((persona) => persona.id === openId) ?? null;
 
+  const warningsOf = (persona: VoicePersona) => [...persona.warnings, ...motionWarnings(persona, t)];
+
   return (
-    <div className="persona-manager">
+    <div>
       {opened ? (
-        <div className="persona-detail">
-          <button
-            type="button"
-            className="settings-detail__back"
+        <div>
+          <BackButton
+            label={t("characters")}
             onClick={() => {
               setOpenId(null);
               setNotice(null);
               setConfirmingDelete(null);
             }}
-          >
-            <Icon name="chevron-left" />
-            <span>{t("characters")}</span>
-          </button>
-          <div className="settings-list__row settings-list__row--static">
-            <PersonaIcon apiBaseUrl={apiBaseUrl} persona={opened} />
-            <span className="settings-list__text">
-              <span className="settings-list__title extension-detail__name">{opened.name}</span>
-              <span className="settings-list__detail">{t("callWith", { phrase: opened.wakePhrase })}</span>
-            </span>
-            <ToggleSwitch
-              checked={opened.enabled}
-              disabled={busy || opened.builtIn}
-              label={t(opened.enabled ? "turnOff" : "turnOn", { name: opened.name })}
-              onChange={(enabled) => void toggle(opened, enabled)}
+          />
+          <List boxed label={opened.name}>
+            <ListItem
+              leading={<PersonaIcon apiBaseUrl={apiBaseUrl} persona={opened} />}
+              title={<span className="text-title font-semibold">{opened.name}</span>}
+              detail={t("callWith", { phrase: opened.wakePhrase })}
+              trailing={
+                <ToggleSwitch
+                  checked={opened.enabled}
+                  disabled={busy || opened.builtIn}
+                  label={t(opened.enabled ? "turnOff" : "turnOn", { name: opened.name })}
+                  onChange={(enabled) => void toggle(opened, enabled)}
+                />
+              }
             />
-          </div>
-          <div className="persona-manager__tags">
+          </List>
+          <div className="flex flex-wrap gap-1">
             {opened.id === personas.defaultPersonaId && <Badge>{t("tagDefault")}</Badge>}
             {opened.hasAvatar && <Badge>{t("tagAvatar")}</Badge>}
             {opened.hasPrompt ? <Badge>{t("tagPrompt")}</Badge> : <Badge>{t("tagPlain")}</Badge>}
             {!opened.enabled && <Badge>{t("tagOff")}</Badge>}
           </div>
-          {[...opened.warnings, ...motionWarnings(opened, t)].map((warning) => (
-            <p key={warning} className="persona-manager__warning">
+          {warningsOf(opened).map((warning) => (
+            <p key={warning} className={WARNING}>
               {warning}
             </p>
           ))}
           {opened.builtIn ? (
-            <p className="connection-settings__note">{t("builtInNote")}</p>
+            <Note>{t("builtInNote")}</Note>
           ) : (
             <>
               {opened.hasAvatar && avatarUrlFor(opened.id) && (
                 <>
-                  <h4 className="settings-detail__subtitle">{t("avatarMotion")}</h4>
+                  <SectionTitle>{t("avatarMotion")}</SectionTitle>
                   <PersonaPreview key={opened.id} persona={opened} modelUrl={avatarUrlFor(opened.id)!} />
                 </>
               )}
-              <h4 className="settings-detail__subtitle">{t("iconSettings")}</h4>
-              <div className="persona-manager__icon-settings">
+              <SectionTitle>{t("iconSettings")}</SectionTitle>
+              {/* 今のアイコンと、それを変えるボタンを横に並べる */}
+              <div className="flex items-center gap-5">
                 <PersonaIcon apiBaseUrl={apiBaseUrl} persona={opened} size="large" />
-                <div className="persona-manager__actions">
+                <ButtonRow>
                   {opened.hasAvatar && (
-                    <button type="button" disabled={busy} onClick={() => makeIconFromAvatar(opened)}>
+                    <Button disabled={busy} onClick={() => makeIconFromAvatar(opened)}>
                       {t("makeFromAvatar")}
-                    </button>
+                    </Button>
                   )}
-                  <button
-                    type="button"
+                  <Button
                     disabled={busy}
                     onClick={() => {
                       iconTargetRef.current = opened;
@@ -318,107 +331,72 @@ export function PersonaManager({
                     }}
                   >
                     {t("chooseImage")}
-                  </button>
+                  </Button>
                   {opened.iconVersion && (
-                    <button
-                      type="button"
+                    <Button
                       disabled={busy}
-                      onClick={() =>
-                        runIcon(opened, () => deletePersonaIcon(apiBaseUrl, opened.id), "iconRemoved")
-                      }
+                      onClick={() => runIcon(opened, () => deletePersonaIcon(apiBaseUrl, opened.id), "iconRemoved")}
                     >
                       {t("remove")}
-                    </button>
+                    </Button>
                   )}
-                </div>
+                </ButtonRow>
               </div>
-              <h4 className="settings-detail__subtitle">{t("package")}</h4>
-              <div className="persona-manager__actions">
-                <a href={exportUrl(opened.id)} download={`${opened.id}.zip`}>
+              <SectionTitle>{t("package")}</SectionTitle>
+              <ButtonRow>
+                <ButtonLink href={exportUrl(opened.id)} download={`${opened.id}.zip`}>
                   {t("exportZip")}
-                </a>
+                </ButtonLink>
                 {confirmingDelete === opened.id ? (
                   <>
-                    <button
-                      type="button"
-                      className="persona-manager__danger"
-                      disabled={busy}
-                      onClick={() => handleDelete(opened.id, opened.name)}
-                    >
+                    <Button variant="danger" disabled={busy} onClick={() => handleDelete(opened.id, opened.name)}>
                       {t("confirmDelete")}
-                    </button>
-                    <button type="button" onClick={() => setConfirmingDelete(null)}>
-                      {t("cancel")}
-                    </button>
+                    </Button>
+                    <Button onClick={() => setConfirmingDelete(null)}>{t("cancel")}</Button>
                   </>
                 ) : (
-                  <button type="button" disabled={busy} onClick={() => setConfirmingDelete(opened.id)}>
+                  <Button disabled={busy} onClick={() => setConfirmingDelete(opened.id)}>
                     {t("delete")}
-                  </button>
+                  </Button>
                 )}
-              </div>
+              </ButtonRow>
             </>
           )}
         </div>
       ) : (
         <>
-          <ul className="settings-list settings-list--boxed">
+          <List boxed label={t("characters")}>
             {personas.personas.map((persona) => (
-              <li key={persona.id}>
-                <div
-                  role="button"
-                  tabIndex={0}
-                  className={`settings-list__row${persona.enabled ? "" : " settings-list__row--off"}`}
-                  aria-label={t("open", { name: persona.name })}
-                  onClick={() => {
-                    setOpenId(persona.id);
-                    setNotice(null);
-                  }}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") {
-                      event.preventDefault();
-                      setOpenId(persona.id);
-                    }
-                  }}
-                >
-                  <PersonaIcon apiBaseUrl={apiBaseUrl} persona={persona} />
-                  <span className="settings-list__text">
-                    <span className="settings-list__title">
-                      {persona.name}
-                      {persona.id === personas.defaultPersonaId && <small>{t("tagDefault")}</small>}
-                    </span>
-                    <span
-                      className={`settings-list__detail${
-                        persona.warnings.length + motionWarnings(persona, t).length > 0
-                          ? " settings-list__detail--error"
-                          : ""
-                      }`}
-                    >
-                      {persona.warnings.length + motionWarnings(persona, t).length > 0
-                        ? t("needsReview")
-                        : `${t("wakePhrase", { phrase: persona.wakePhrase })}${persona.hasAvatar ? t("withAvatar") : ""}`}
-                    </span>
-                  </span>
+              <ListItem
+                key={persona.id}
+                leading={<PersonaIcon apiBaseUrl={apiBaseUrl} persona={persona} />}
+                title={persona.name}
+                badge={persona.id === personas.defaultPersonaId ? t("tagDefault") : undefined}
+                detail={
+                  warningsOf(persona).length > 0
+                    ? t("needsReview")
+                    : `${t("wakePhrase", { phrase: persona.wakePhrase })}${persona.hasAvatar ? t("withAvatar") : ""}`
+                }
+                error={warningsOf(persona).length > 0}
+                off={!persona.enabled}
+                onClick={() => {
+                  setOpenId(persona.id);
+                  setNotice(null);
+                }}
+                trailing={
                   <ToggleSwitch
                     checked={persona.enabled}
                     disabled={busy || persona.builtIn}
                     label={t(persona.enabled ? "turnOff" : "turnOn", { name: persona.name })}
                     onChange={(enabled) => void toggle(persona, enabled)}
                   />
-                  <Icon name="chevron-right" className="settings-list__chevron" />
-                </div>
-              </li>
+                }
+              />
             ))}
-          </ul>
-          <button
-            type="button"
-            className="persona-manager__import"
-            disabled={busy}
-            onClick={() => fileRef.current?.click()}
-          >
-            <Icon name="add" />
-            <span>{busy ? t("working") : t("importZip")}</span>
-          </button>
+          </List>
+          <Button icon="add" disabled={busy} onClick={() => fileRef.current?.click()}>
+            {busy ? t("working") : t("importZip")}
+          </Button>
         </>
       )}
 
@@ -426,34 +404,27 @@ export function PersonaManager({
       <input ref={iconFileRef} type="file" accept="image/*" hidden onChange={handleIconFile} />
 
       {notice?.kind === "done" && (
-        <div className="persona-manager__notice">
+        <Group className="mt-3 flex flex-col gap-2 text-label leading-normal">
           <p>{notice.message}</p>
           {notice.warnings.map((warning) => (
-            <p key={warning} className="persona-manager__warning">
+            <p key={warning} className={WARNING}>
               {warning}
             </p>
           ))}
-        </div>
+        </Group>
       )}
       {notice?.kind === "conflict" && (
-        <div className="persona-manager__notice">
+        <Group className="mt-3 flex flex-col gap-2 text-label leading-normal">
           <p>{notice.message}</p>
-          <div className="persona-manager__actions">
-            <button
-              type="button"
-              className="persona-manager__danger"
-              disabled={busy}
-              onClick={() => runImport(notice.file, true)}
-            >
+          <ButtonRow>
+            <Button variant="danger" disabled={busy} onClick={() => runImport(notice.file, true)}>
               {t("overwrite")}
-            </button>
-            <button type="button" onClick={() => setNotice(null)}>
-              {t("cancel")}
-            </button>
-          </div>
-        </div>
+            </Button>
+            <Button onClick={() => setNotice(null)}>{t("cancel")}</Button>
+          </ButtonRow>
+        </Group>
       )}
-      {notice?.kind === "error" && <p className="settings-panel__voice-error">{notice.message}</p>}
+      {notice?.kind === "error" && <Message tone="error">{notice.message}</Message>}
     </div>
   );
 }

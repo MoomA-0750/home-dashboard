@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 /**
- * 軽い表示。ガラスのぼかし（backdrop-filter）を切って、後ろが透けない落ち着いた板にする（theme.css の :root[data-lite]）。
+ * 軽い表示。ガラスのぼかし（backdrop-filter）を切って、後ろが透けない落ち着いた板にする（styles/tokens.css の :root[data-lite]）。
  * ぼかしは画面の後ろを毎回描き直すので、GPU の無い・弱い端末（キオスクの小さな PC など）では動きがかくつく。
  *
  * 端末ごとに「自動・入・切」を選ぶ（サーバーの DeviceSettings.lite）。自動のときは次のどれかで入れる:

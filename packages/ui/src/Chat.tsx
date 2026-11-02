@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type FormEvent, type KeyboardEvent, type ReactNode, type Ref } from "react";
 import { Icon, type IconName } from "./Icon";
-import { BackButton, Button } from "./ui";
+import { cx } from "./cx";
+import { BackButton, Button, IconButton, ListNoChevron, StatusDot } from "./ui";
 import { defineMessages } from "./i18n";
 
 const messages = defineMessages({
@@ -23,7 +24,7 @@ const messages = defineMessages({
 /**
  * チャットの画面を組む部品（本体の Chat 画面の、音声アシスタントとチャットアプリ（iMessage など）が同じ形になるように）。
  * 画面の枠は ScreenFrame（fill を付ける）、会話の一覧は List・ListItem（selected）、そのほかの文・ボタンも本体の部品を使い、
- * ここではチャットにしか無いもの（一覧とやり取りの並べ方・見出し・吹き出し・入力欄）だけを持つ。見た目は本体の theme.css の ui-chat-*。
+ * ここではチャットにしか無いもの（一覧とやり取りの並べ方・見出し・吹き出し・入力欄）だけを持つ。見た目は部品が Tailwind のクラスで持つ。
  *
  *   <ScreenFrame title="Chat" actions={switcher} fill>
  *     <ChatLayout list={<List>…</List>} listOpen={listOpen} onCloseList={() => setListOpen(false)}>
@@ -36,7 +37,12 @@ const messages = defineMessages({
  *   </ScreenFrame>
  */
 
-const cx = (...names: (string | false | null | undefined)[]) => names.filter(Boolean).join(" ");
+const AVATAR_SIZES = {
+  small: "size-5 text-micro",
+  medium: "size-8 text-small",
+  large: "size-10 text-title",
+  xlarge: "size-24 text-heading",
+} as const;
 
 /** 丸い顔（写真か、無ければ名前の頭文字）。hue を渡すと頭文字の丸をその色にする */
 export function Avatar({
@@ -47,17 +53,20 @@ export function Avatar({
 }: {
   src?: string | null;
   name: string;
-  size?: "small" | "medium" | "large";
+  size?: "small" | "medium" | "large" | "xlarge";
   hue?: number;
 }) {
   const [failed, setFailed] = useState<string | null>(null);
-  const className = `ui-avatar ui-avatar--${size}`;
+  const className = cx(
+    "inline-grid flex-none place-items-center rounded-full bg-white/8 object-cover ring-1 ring-glass-border",
+    AVATAR_SIZES[size],
+  );
   if (src && failed !== src) {
     return <img className={className} src={src} alt="" loading="lazy" onError={() => setFailed(src)} />;
   }
   return (
     <span
-      className={cx(className, "ui-avatar--initial", hue !== undefined && "ui-avatar--colored")}
+      className={cx(className, "font-bold leading-none text-muted", hue !== undefined && "avatar-hue")}
       style={hue !== undefined ? ({ "--avatar-hue": hue } as CSSProperties) : undefined}
       aria-hidden="true"
     >
@@ -69,15 +78,15 @@ export function Avatar({
 /** 何人かの顔を少し重ねて並べる（一覧の行の左など） */
 export function AvatarStack({ children }: { children: ReactNode }) {
   return (
-    <span className="ui-avatar-stack" aria-hidden="true">
+    <span className="flex flex-none -space-x-2.5" aria-hidden="true">
       {children}
     </span>
   );
 }
 
 /**
- * 左に会話の一覧、右にやり取り。狭い画面ではどちらか一方だけを出し、listOpen で一覧に切り替える
- * （一覧の上の「戻る」で onCloseList）
+ * 左に会話の一覧、右にやり取り。狭い画面（1100px 以下）ではどちらか一方だけを出し、listOpen で一覧に切り替える
+ * （一覧の上の「戻る」で onCloseList）。一覧の行は押すとやり取りが開くだけなので、右の矢印は出さない
  */
 export function ChatLayout({
   list,
@@ -94,14 +103,21 @@ export function ChatLayout({
 }) {
   const t = messages.useT();
   return (
-    <div className={cx("ui-chat", listOpen && "ui-chat--list-open")}>
-      <section className="ui-chat__list" aria-label={listLabel ?? t("conversationList")}>
-        <div className="ui-chat__back">
+    <div className="grid min-h-0 flex-1 grid-cols-chat gap-6 narrow:grid-cols-1">
+      {/* 一覧は自分で送る。選んだ行の影・文字の影が送りの枠で切れないよう、余白を取って同じだけ外へ広げる */}
+      <section
+        className={cx(
+          "shadow-room-x shadow-room-b halo-room-t flex min-h-0 min-w-0 flex-col overflow-y-auto *:shrink-0",
+          listOpen ? "narrow:flex" : "narrow:hidden",
+        )}
+        aria-label={listLabel ?? t("conversationList")}
+      >
+        <div className={listOpen ? "hidden narrow:block" : "hidden"}>
           <BackButton label={t("backToChat")} onClick={onCloseList} />
         </div>
-        {list}
+        <ListNoChevron>{list}</ListNoChevron>
       </section>
-      <section className="ui-chat__main">{children}</section>
+      <section className={cx("flex min-h-0 min-w-0 flex-col", listOpen && "narrow:hidden")}>{children}</section>
     </div>
   );
 }
@@ -123,15 +139,14 @@ export function ChatHeader({
 }) {
   const t = messages.useT();
   return (
-    <header className="ui-chat__header">
-      <Button className="ui-chat__icon-button ui-chat__list-button" aria-label={t("conversationList")} onClick={onOpenList}>
-        <Icon name="history" />
-      </Button>
-      <div className="ui-chat__title">
-        <h2>{title}</h2>
+    <header className="flex items-center gap-3 border-b border-line pb-3">
+      <IconButton icon="history" label={t("conversationList")} glass className="hidden narrow:grid" onClick={onOpenList} />
+      <div className="min-w-0 flex-1">
+        {/* 1行に収め、入りきらなければ … で切る（文字の影が切れないよう余白を取る） */}
+        <h2 className="halo-room ellipsis text-title font-semibold">{title}</h2>
         {status && (
-          <p className="ui-chat__status">
-            <span className={cx("status-dot", ok && "status-dot--ok")} aria-hidden="true" />
+          <p className="mt-1.5 flex items-center gap-2 text-note text-muted">
+            <StatusDot ok={ok} />
             {status}
           </p>
         )}
@@ -141,7 +156,7 @@ export function ChatHeader({
   );
 }
 
-/** やり取りの並び。scrollKey（最後のやり取りの id など）が変わったら、いちばん下まで送る */
+/** やり取りの並び。scrollKey（最後のやり取りの id など）が変わったら、いちばん下まで送る。新しく出た最後の1つは下から上がる */
 export function ChatLog({ scrollKey, empty, children }: { scrollKey?: unknown; empty?: ReactNode; children?: ReactNode }) {
   const ref = useRef<HTMLOListElement>(null);
   useEffect(() => {
@@ -149,36 +164,52 @@ export function ChatLog({ scrollKey, empty, children }: { scrollKey?: unknown; e
     if (el) el.scrollTop = el.scrollHeight;
   }, [scrollKey]);
   return (
-    <ol ref={ref} className="ui-chat__log" aria-live="polite">
-      {empty ? <li className="ui-chat__empty">{empty}</li> : children}
+    <ol
+      ref={ref}
+      // 端に並ぶ顔の縁取りや吹き出しの影が、送りの枠で切れないよう余白を取る
+      className="shadow-room-x flex min-h-0 flex-1 list-none flex-col gap-1 overflow-y-auto pt-4 pb-8 [&>:last-child]:animate-enter"
+      aria-live="polite"
+    >
+      {empty ? <li className="m-auto text-label text-muted">{empty}</li> : children}
     </ol>
   );
 }
 
-/** やり取りの1行（またはひとまとまり）。mine なら右に寄せる */
+/** やり取りの1行（またはひとまとまり）。mine なら右に寄せる。gap はひとまとまり（同じ人の続き）の最後のあとを空ける */
 export function ChatRow({ mine, gap, children }: { mine?: boolean; gap?: boolean; children: ReactNode }) {
-  return <li className={cx("ui-chat__row", mine && "ui-chat__row--mine", gap && "ui-chat__row--gap")}>{children}</li>;
+  return (
+    <li className={cx("chat-row flex min-w-0 flex-col gap-1", mine ? "items-end" : "items-start", gap && "mb-3")}>{children}</li>
+  );
 }
 
 /** 相手の吹き出しの左に顔を置く（avatar が null なら、顔の幅だけ空ける） */
 export function ChatFrom({ avatar, children }: { avatar: ReactNode | null; children: ReactNode }) {
   return (
-    <div className="ui-chat__from">
-      {avatar ?? <span className="ui-chat__avatar-space" aria-hidden="true" />}
-      <div className="ui-chat__from-body">{children}</div>
+    <div className="flex max-w-17/20 min-w-0 items-end gap-2" data-chat-from="">
+      {avatar ?? <span className="w-8 flex-none" aria-hidden="true" />}
+      <div className="flex min-w-0 flex-col items-start gap-1 *:max-w-full">{children}</div>
     </div>
   );
 }
 
-/** 吹き出し。mine は自分（右・薄い水色）、それ以外は相手（左） */
+/** 吹き出し。mine は自分（右・薄い水色を重ねたガラス）、それ以外は相手（左・ガラス） */
 export function ChatBubble({ mine, children }: { mine?: boolean; children: ReactNode }) {
-  return <div className={cx("ui-chat__bubble", mine ? "ui-chat__bubble--mine" : "ui-chat__bubble--theirs")}>{children}</div>;
+  return (
+    <div
+      className={cx(
+        "max-w-17/20 rounded-inner px-3.5 py-2.5 text-body leading-normal whitespace-pre-line text-text text-shadow-none wrap-anywhere untrim",
+        mine ? "bubble-mine self-end" : "glass bubble-theirs",
+      )}
+    >
+      {children}
+    </div>
+  );
 }
 
 /** 吹き出しの下の小さな文（時刻・送った人・状態） */
 export function ChatMeta({ title, children }: { title?: string; children: ReactNode }) {
   return (
-    <span className="ui-chat__meta" title={title}>
+    <span className="text-caption font-medium text-muted" title={title} data-chat-meta="">
       {children}
     </span>
   );
@@ -186,32 +217,41 @@ export function ChatMeta({ title, children }: { title?: string; children: ReactN
 
 /** 1通に添えた画像・ファイル（ChatImage・ChatFile）を並べる。mine は自分（右に寄せる） */
 export function ChatAttachments({ mine, children }: { mine?: boolean; children: ReactNode }) {
-  return <div className={cx("ui-chat__attachments", mine && "ui-chat__attachments--mine")}>{children}</div>;
+  return (
+    <div className={cx("flex max-w-17/20 flex-wrap items-start gap-1.5", mine && "self-end justify-end")}>{children}</div>
+  );
 }
 
 /** やり取りに添えた画像。押すと元の大きさで開く */
 export function ChatImage({ src, alt }: { src: string; alt: string }) {
   return (
-    <a className="ui-chat__image" href={src} target="_blank" rel="noreferrer">
-      <img src={src} alt={alt} loading="lazy" />
+    <a
+      className="block max-w-80 overflow-hidden rounded-inner border border-glass-border"
+      href={src}
+      target="_blank"
+      rel="noreferrer"
+    >
+      <img className="block max-h-80 w-auto max-w-full" src={src} alt={alt} loading="lazy" />
     </a>
   );
 }
 
 /** やり取りに添えた、画像でないファイル。href があれば押して開く・保存する */
 export function ChatFile({ name, href, icon = "attach" }: { name: string; href?: string; icon?: IconName }) {
+  const className =
+    "inline-flex max-w-full items-center gap-1.5 rounded-full border border-glass-border px-3 py-1.5 text-note text-muted no-underline [&_.fluent-icon]:size-4";
   const body = (
     <>
       <Icon name={icon} />
-      <span className="ui-chat__file-name">{name}</span>
+      <span className="ellipsis">{name}</span>
     </>
   );
   return href ? (
-    <a className="ui-chat__file" href={href} target="_blank" rel="noreferrer">
+    <a className={cx(className, "press hover:border-tint/30")} href={href} target="_blank" rel="noreferrer">
       {body}
     </a>
   ) : (
-    <span className="ui-chat__file">{body}</span>
+    <span className={className}>{body}</span>
   );
 }
 
@@ -220,18 +260,17 @@ export function ChatFileChips({ files, onRemove }: { files: { name: string }[]; 
   const t = messages.useT();
   if (files.length === 0) return null;
   return (
-    <div className="ui-button-row" aria-label={t("filesToSend")}>
+    <div className="flex flex-wrap items-center gap-2" aria-label={t("filesToSend")}>
       {files.map((file, index) => (
-        <button
+        <Button
           key={`${file.name}-${index}`}
-          type="button"
-          className="ui-button ui-chat__file-chip"
+          className="max-w-64"
           aria-label={t("removeFile", { name: file.name })}
           onClick={() => onRemove(index)}
         >
-          <span className="ui-chat__file-name">{file.name}</span>
+          <span className="ellipsis">{file.name}</span>
           <Icon name="dismiss" />
-        </button>
+        </Button>
       ))}
     </div>
   );
@@ -239,7 +278,7 @@ export function ChatFileChips({ files, onRemove }: { files: { name: string }[]; 
 
 /** 返事を待っているあいだなどの、吹き出しの代わりの小さな文 */
 export function ChatPending({ children }: { children: ReactNode }) {
-  return <p className="ui-chat__pending">{children}</p>;
+  return <p className="text-label text-muted">{children}</p>;
 }
 
 /** 入力欄の左に置く、アイコンだけの丸いボタン（マイク・添付など）。on で押している（録音中など）の色 */
@@ -259,15 +298,15 @@ export function ChatIconButton({
   onClick: () => void;
 }) {
   return (
-    <Button
-      className={cx("ui-chat__icon-button", on && "ui-chat__icon-button--on")}
-      aria-label={label}
-      title={title}
+    <IconButton
+      icon={icon}
+      label={label}
+      glass
+      selected={on}
+      title={title ?? label}
       disabled={disabled}
       onClick={onClick}
-    >
-      <Icon name={icon} />
-    </Button>
+    />
   );
 }
 
@@ -314,16 +353,23 @@ export function ChatComposer({
     event.preventDefault();
     if (canSubmit) onSubmit();
   };
+  // 欄の中の右端の丸いボタン（明るい塗り）
+  const sendClass =
+    "press absolute right-1.5 grid size-8.5 cursor-pointer place-items-center rounded-full fill-bright text-on-fill disabled:cursor-default disabled:opacity-50 [&_.fluent-icon]:size-5";
   return (
-    <div className="ui-chat__composer">
+    <div className="flex flex-col gap-2.5 border-t border-line pt-3 *:m-0">
       {above}
-      <form className="ui-chat__form" onSubmit={submit}>
+      <form className="flex items-center gap-2" onSubmit={submit}>
         {leading}
-        <div className={stop || showSend ? "ui-chat__field ui-chat__field--button" : "ui-chat__field"}>
+        <div className="relative flex min-w-0 flex-1 items-center">
+          {/* 入力欄はピル型（本体の入力欄 Field と同じ色と線） */}
           <input
             ref={inputRef}
             type="text"
-            className="ui-chat__input"
+            className={cx(
+              "tap-lg min-w-0 flex-1 rounded-full border border-glass-border bg-input px-4.5 text-small text-text text-shadow-none placeholder:text-muted disabled:opacity-60",
+              (stop || showSend) && "pr-12",
+            )}
             value={value}
             onChange={(event) => onChange(event.target.value)}
             onKeyDown={onKeyDown}
@@ -334,12 +380,12 @@ export function ChatComposer({
           />
           {/* 止めるボタンは返事の途中だけ、送るボタンは文字を入れてからだけ、欄の中の右端に出す */}
           {stop ? (
-            <button type="button" className="ui-chat__send" aria-label={stop.label} onClick={stop.onClick}>
+            <button type="button" className={sendClass} aria-label={stop.label} title={stop.label} onClick={stop.onClick}>
               <Icon name="stop" />
             </button>
           ) : (
             showSend && (
-              <button type="submit" className="ui-chat__send" aria-label={t("send")} disabled={!canSubmit}>
+              <button type="submit" className={sendClass} aria-label={t("send")} title={t("send")} disabled={!canSubmit}>
                 <Icon name="send" />
               </button>
             )

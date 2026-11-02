@@ -7,8 +7,11 @@ import {
   type WidgetDetailProps,
   type WidgetProps,
   Badge,
+  cx,
   DetailFrame,
+  Note,
   WidgetCard,
+  WidgetHint,
 } from "@home-dashboard/widget-sdk";
 
 const messages = defineMessages({
@@ -89,16 +92,21 @@ function relativeLastSeen(iso: string | null, t: ReturnType<typeof messages.useT
   return t("daysAgo", { n: Math.floor(hours / 24) });
 }
 
+/** つながっているか（緑 / 注意の色）の丸い印 */
+const Dot = ({ ok }: { ok: boolean }) => (
+  <span className={cx("size-2.5 shrink-0 rounded-full", ok ? "bg-ok" : "bg-warn")} />
+);
+
 function TailscaleView({ ctx, config, openDetail }: WidgetProps<TailscaleConfig>) {
   const t = messages.useT();
   const { data, loading } = usePolling(() => fetchStatus(ctx.apiBaseUrl), config.pollIntervalMs);
 
-  if (loading && !data) return <WidgetCard className="widget-tailscale">{t("checking")}</WidgetCard>;
+  if (loading && !data) return <WidgetCard>{t("checking")}</WidgetCard>;
   if (data && !data.configured) {
     return (
-      <WidgetCard className="widget-tailscale widget-tailscale--unconfigured">
+      <WidgetCard>
         {t("notConnected")}
-        <span className="widget-hint">{data.reason}</span>
+        <WidgetHint>{data.reason}</WidgetHint>
       </WidgetCard>
     );
   }
@@ -106,17 +114,17 @@ function TailscaleView({ ctx, config, openDetail }: WidgetProps<TailscaleConfig>
   const running = data?.backendState === "Running";
 
   return (
-    <WidgetCard className="widget-tailscale" onClick={openDetail}>
-      <span className="widget-tailscale__header">
-        <span className={`widget-homelab__dot ${running ? "widget-homelab__dot--ok" : "widget-homelab__dot--warn"}`} />
-        <span className="widget-tailscale__title">Tailscale</span>
+    <WidgetCard className="items-stretch gap-1 text-left tabular-nums" onClick={openDetail}>
+      <span className="flex items-center gap-1.5">
+        <Dot ok={running} />
+        <span className="text-note text-muted">Tailscale</span>
       </span>
-      <span className="widget-tailscale__count">
+      <span className="text-stat font-semibold leading-none">
         {data?.onlineCount ?? 0}
-        <span className="widget-tailscale__total">/{data?.totalCount ?? 0}</span>
+        <span className="text-body font-normal text-muted">/{data?.totalCount ?? 0}</span>
       </span>
-      <span className="widget-tailscale__sub">{data?.self?.ip ?? ""}</span>
-      {data?.exitNode && <span className="widget-tailscale__exit">exit: {data.exitNode.name}</span>}
+      <span className="text-caption text-muted">{data?.self?.ip ?? ""}</span>
+      {data?.exitNode && <span className="text-caption text-muted">exit: {data.exitNode.name}</span>}
     </WidgetCard>
   );
 }
@@ -127,24 +135,22 @@ function TailscaleDetail({ ctx, config }: WidgetDetailProps<TailscaleConfig>) {
   if (!data?.configured) return <DetailFrame>{t("loading")}</DetailFrame>;
 
   return (
-    <DetailFrame title="Tailscale" className="widget-tailscale-detail">
-      <p className="widget-tailscale-detail__self">
+    <DetailFrame title="Tailscale">
+      <p className="mb-3 text-label text-muted">
         {t("self", { name: data.self?.name ?? "", ip: data.self?.ip ?? "" })} · {data.backendState} · v
         {data.version.split("-")[0]}
       </p>
 
-      <ul className="widget-tailscale-detail__list">
+      <ul className="flex flex-col gap-1.5">
         {data.peers.map((peer) => (
-          <li key={peer.dnsName || peer.name} className="widget-tailscale-detail__item">
-            <span
-              className={`widget-homelab__dot ${peer.online ? "widget-homelab__dot--ok" : "widget-homelab__dot--warn"}`}
-            />
-            <span className="widget-tailscale-detail__name">
-              <Icon name={osIcon(peer.os)} label={peer.os || undefined} className="widget-tailscale-detail__os" />
+          <li key={peer.dnsName || peer.name} className="flex items-center gap-2.5 text-label">
+            <Dot ok={peer.online} />
+            <span className="inline-flex min-w-0 flex-1 items-center gap-1.5">
+              <Icon name={osIcon(peer.os)} label={peer.os || undefined} className="size-4.5 shrink-0 text-muted" />
               {peer.name}
             </span>
-            <span className="widget-tailscale-detail__ip">{peer.ip}</span>
-            <span className="widget-tailscale-detail__meta">
+            <span className="text-muted tabular-nums">{peer.ip}</span>
+            <span className="flex items-center gap-1">
               {peer.isExitNode && <Badge>exit node</Badge>}
               {!peer.isExitNode && peer.offersExitNode && (
                 <Badge tone="dim">{t("exitCapable")}</Badge>
@@ -154,14 +160,14 @@ function TailscaleDetail({ ctx, config }: WidgetDetailProps<TailscaleConfig>) {
                 <Badge>derp:{peer.relay}</Badge>
               )}
               {!peer.online && (
-                <span className="widget-tailscale-detail__seen">{relativeLastSeen(peer.lastSeen, t)}</span>
+                <span className="text-muted tabular-nums">{relativeLastSeen(peer.lastSeen, t)}</span>
               )}
             </span>
           </li>
         ))}
       </ul>
 
-      <p className="widget-note">{t("note")}</p>
+      <Note>{t("note")}</Note>
     </DetailFrame>
   );
 }

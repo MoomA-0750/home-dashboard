@@ -1,6 +1,6 @@
 // @ts-check
 // 包みの public/（アイコンと字体）を、使う画面の /icons/・/fonts/ に出す Vite のプラグイン。
-// 開発中はそのまま返し、組み立てでは出来上がりに同じ名前で入れる（theme.css と Icon が /icons/・/fonts/ を指すため）。
+// 開発中はそのまま返し、組み立てでは出来上がりに同じ名前で入れる（Icon と styles/base.css が /icons/・/fonts/ を指すため）。
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { extname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";

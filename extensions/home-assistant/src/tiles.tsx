@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useState, type CSSProperties, type ReactNode } from "react";
-import { defineMessages, Icon, Slider, type IconName } from "@home-dashboard/widget-sdk";
+import { Button, Chip, cx, defineMessages, Icon, IconButton, Slider, type IconName } from "@home-dashboard/widget-sdk";
 import { DEFAULT_COLORS, sizeOf, textOn, type Climate, type HaEntity, type Placement, type Tile, type TileSize, type Toggle } from "./homeTypes";
 
 /**
@@ -105,6 +105,40 @@ export interface TileFrameProps {
   onDetail: () => void;
 }
 
+/**
+ * 大きさごとの見た目（クラスはつながずに全部書く。Tailwind が見つけられるように）。
+ * 2x1 は横に並べて背を低くし、字とアイコンを一回り小さくする（明るさのバーは出さない）。4x4 は字とアイコンを大きく
+ */
+const SIZE_CLASSES: Record<
+  TileSize,
+  { frame: string; main: string; icon: string; text: string; name: string; state: string; actions: string; action: string; more: string }
+> = {
+  "2x1": {
+    frame: "flex-row items-center",
+    main: "flex-row items-center justify-start gap-2.5 py-0 pr-1 pl-3.5",
+    icon: "size-6",
+    text: "gap-0.5",
+    name: "text-fit-small",
+    state: "text-fit-caption",
+    actions: "p-0 pr-1",
+    action: "flex-none",
+    more: "static mr-2 flex-none",
+  },
+  "2x2": { frame: "", main: "", icon: "", text: "", name: "", state: "", actions: "", action: "", more: "" },
+  "4x2": { frame: "", main: "", icon: "", text: "", name: "", state: "", actions: "", action: "", more: "" },
+  "4x4": { frame: "", main: "px-6.5 py-6", icon: "size-11", text: "", name: "text-fit-title", state: "", actions: "", action: "", more: "" },
+};
+
+/** タイルの中身（アイコン・名前・状態）。押せるもの（照明）は button、押せないもの（鍵・空調）は div */
+const MAIN =
+  "flex min-h-0 w-full flex-1 flex-col items-start justify-between gap-1.5 border-0 bg-transparent px-4.5 py-4 text-left text-current";
+const MAIN_STATIC = "flex-initial justify-start";
+
+/** 色の付いた地の上に置くボタン（「>」・設定温度の上げ下げ）は、文字の色に寄せて馴染ませる */
+const ON_TILE_BUTTON = "text-current hover:bg-current/10 focus-visible:bg-current/10";
+/** 色の付いた地の上で選んでいるもの（電源・運転モード）は、明るい塗りでは地に溶けるので、文字の色を地にする */
+const ON_TILE_SELECTED = "aria-pressed:bg-(--tile-ink) aria-pressed:text-(--tile-color)";
+
 /** 字を小さくするのはここまで（もとの 70%） */
 const MIN_FIT = 0.7;
 
@@ -117,7 +151,7 @@ function useFitText(tile: HTMLDivElement | null, key: string) {
     if (!tile) return;
     const fit = () => {
       const overflows = () =>
-        Array.from(tile.querySelectorAll<HTMLElement>(".home-tile__main")).some(
+        Array.from(tile.querySelectorAll<HTMLElement>("[data-tile-main]")).some(
           (main) => main.scrollHeight > main.clientHeight + 1 || main.scrollWidth > main.clientWidth + 1,
         );
       let scale = 1;
@@ -134,6 +168,20 @@ function useFitText(tile: HTMLDivElement | null, key: string) {
   }, [tile, key]);
 }
 
+/** タイルの中身（アイコン・名前・状態）。名前と状態は切らずに折り返す（長い名前でも最後まで読める） */
+function TileText({ size, icon, iconClass, name, state }: { size: TileSize; icon: IconName; iconClass?: string; name: string; state: ReactNode }) {
+  const sz = SIZE_CLASSES[size];
+  return (
+    <>
+      <Icon name={icon} className={cx("size-7 flex-none", sz.icon, iconClass)} />
+      <span className={cx("flex max-w-full min-w-0 flex-col gap-1", sz.text)}>
+        <span className={cx("text-fit-body leading-tight font-semibold wrap-anywhere", sz.name)}>{name}</span>
+        <span className={cx("text-fit-note leading-tight wrap-anywhere opacity-75", sz.state)}>{state}</span>
+      </span>
+    </>
+  );
+}
+
 /** タイルの外枠。ます目の数・色・「オン」の地・詳細を開くボタン */
 function TileFrame({
   tile,
@@ -142,9 +190,9 @@ function TileFrame({
   place,
   editOverlay,
   onDetail,
-  className,
+  state,
   children,
-}: TileFrameProps & { className?: string; children: ReactNode }) {
+}: TileFrameProps & { state?: "alert" | "error"; children: ReactNode }) {
   const t = tileMessages.useT();
   const [box, setBox] = useState<HTMLDivElement | null>(null);
   useFitText(box, `${size}:${tile.entity.name}:${tile.entity.state}`);
@@ -157,22 +205,26 @@ function TileFrame({
     "--tile-ink": textOn(tint),
   } as CSSProperties;
   return (
+    // タイルの大きさはます目で決まり、中身（明るさのバーの有無など）では変わらない
     <div
-      className={`ui-glass home-tile home-tile--${size} home-tile--${tile.kind}${tileIsOn(tile) ? " is-on" : ""}${className ? ` ${className}` : ""}`}
+      className={cx(
+        "glass home-tile-radius home-tile-state change relative flex min-h-0 min-w-0 flex-col justify-between overflow-hidden",
+        SIZE_CLASSES[size].frame,
+      )}
       style={style}
       ref={setBox}
       data-tile-id={tile.entity.entityId}
+      data-state={tileIsOn(tile) ? "on" : state}
     >
       {children}
       {!editOverlay && (
-        <button
-          type="button"
-          className="home-tile__more"
-          aria-label={t("details", { name: tile.entity.name })}
+        // 詳細を開く「>」（右上。2x1 は右端）
+        <IconButton
+          icon="chevron-right"
+          label={t("details", { name: tile.entity.name })}
+          className={cx("absolute top-2 right-2 z-1", ON_TILE_BUTTON, SIZE_CLASSES[size].more)}
           onClick={onDetail}
-        >
-          <Icon name="chevron-right" />
-        </button>
+        />
       )}
       {editOverlay}
     </div>
@@ -195,20 +247,18 @@ export function ToggleTile({
     <TileFrame {...frame}>
       <button
         type="button"
-        className="home-tile__main"
+        className={cx(MAIN, "cursor-pointer disabled:cursor-default disabled:opacity-60", SIZE_CLASSES[frame.size].main)}
+        data-tile-main
         aria-pressed={on}
         disabled={busy || toggle.state === "unavailable"}
         onClick={onToggle}
       >
-        <Icon name={toggleIcon(toggle)} className="home-tile__icon" />
-        <span className="home-tile__text">
-          <span className="home-tile__name">{toggle.name}</span>
-          <span className="home-tile__state">{toggleStateLabel(toggle, t)}</span>
-        </span>
+        <TileText size={frame.size} icon={toggleIcon(toggle)} name={toggle.name} state={toggleStateLabel(toggle, t)} />
       </button>
       {showSlider && (
+        // 明るさのバー。点いているときはタイルの地の上なので、文字の色に寄せる（home-tile-state が色を決める）
         <Slider
-          className="home-tile__slider"
+          className="mx-4.5 mb-3.5 flex-none"
           value={draft ?? toggle.brightnessPct ?? 100}
           min={1}
           max={100}
@@ -258,41 +308,43 @@ export function LockTile({
   const unlocked = lock.state === "unlocked" || lock.state === "open";
   const wide = frame.size === "4x2" || frame.size === "4x4";
   const short = frame.size === "2x1";
+  const sz = SIZE_CLASSES[frame.size];
 
   const lockButton = (
-    <button type="button" className="home-button home-tile__action" disabled={busy || lock.state === "locked"} onClick={onLock}>
+    <Button size="lg" className={cx("flex-1 px-3", sz.action)} disabled={busy || lock.state === "locked"} onClick={onLock}>
       {t("lock")}
-    </button>
+    </Button>
   );
   const unlockButton = canUnlock ? (
-    <button
-      type="button"
-      className={`home-button home-tile__action${confirming ? " home-button--danger" : ""}`}
+    <Button
+      size="lg"
+      variant={confirming ? "danger" : "default"}
+      className={cx("flex-1 px-3", sz.action)}
       disabled={busy || unlocked}
       onClick={press}
     >
       {confirming ? t(short ? "unlockConfirmShort" : "unlockConfirm") : t("unlock")}
-    </button>
+    </Button>
   ) : null;
 
   return (
-    <TileFrame
-      {...frame}
-      className={`${unlocked ? "home-tile--alert" : ""}${lock.state === "jammed" ? " home-tile--error" : ""}`}
-    >
-      <div className="home-tile__main home-tile__main--static">
-        <Icon name={unlocked ? "lock-open" : "lock-closed"} className="home-tile__icon" />
-        <span className="home-tile__text">
-          <span className="home-tile__name">{lock.name}</span>
-          <span className="home-tile__state">{lockStateLabel(lock, t)}</span>
-        </span>
+    // 鍵: 解錠中は注意の色、詰まったら赤い縁。施錠中はアイコンをタイルの色にする
+    <TileFrame {...frame} state={lock.state === "jammed" ? "error" : unlocked ? "alert" : undefined}>
+      <div className={cx(MAIN, MAIN_STATIC, sz.main)} data-tile-main>
+        <TileText
+          size={frame.size}
+          icon={unlocked ? "lock-open" : "lock-closed"}
+          iconClass={unlocked ? "text-warn" : "text-(--tile-color)"}
+          name={lock.name}
+          state={lockStateLabel(lock, t)}
+        />
       </div>
-      <div className="home-tile__actions">
+      <div className={cx("flex flex-none gap-2 px-3.5 pb-3.5", sz.actions)}>
         {/* 広いタイルは両方、狭いタイルは今の状態から次にすることだけ（解錠中なら施錠） */}
         {wide ? (
           <>
             {lockButton}
-            {unlockButton ?? <span className="home-tile__note">{t("cannotUnlock")}</span>}
+            {unlockButton ?? <span className="text-note opacity-75">{t("cannotUnlock")}</span>}
           </>
         ) : unlocked || !unlockButton ? (
           lockButton
@@ -309,6 +361,86 @@ export function climateClamp(climate: Climate, value: number): number {
   return Math.min(climate.maxTemperature ?? 30, Math.max(climate.minTemperature ?? 16, Math.round(value / step) * step));
 }
 
+/** 設定温度と、その上げ下げ（タイルと詳細で同じもの）。onTile はタイルの色の地の上に置くとき */
+export function TargetControl({
+  climate,
+  busy,
+  onCall,
+  onTile,
+}: {
+  climate: Climate;
+  busy: boolean;
+  onCall: (service: string, data?: Record<string, unknown>) => void;
+  onTile?: boolean;
+}) {
+  const t = tileMessages.useT();
+  const step = climate.step ?? 0.5;
+  const target = climate.targetTemperature;
+  const off = climate.state === "off";
+  const disabled = busy || off || target === null;
+  const buttonClass = cx("size-10", onTile && ON_TILE_BUTTON);
+  return (
+    <div className="flex items-center gap-1">
+      <IconButton
+        icon="chevron-down"
+        label={t("lowerTemp")}
+        className={buttonClass}
+        disabled={disabled}
+        onClick={() => target !== null && onCall("set_temperature", { temperature: climateClamp(climate, target - step) })}
+      />
+      <span className="home-target-value">
+        {off ? "—" : (target ?? "—")}
+        <small>℃</small>
+      </span>
+      <IconButton
+        icon="chevron-up"
+        label={t("raiseTemp")}
+        className={buttonClass}
+        disabled={disabled}
+        onClick={() => target !== null && onCall("set_temperature", { temperature: climateClamp(climate, target + step) })}
+      />
+    </div>
+  );
+}
+
+/** 運転モードの選択（タイルと詳細で同じもの） */
+export function ModeChips({
+  climate,
+  modes,
+  busy,
+  label,
+  modeLabel,
+  onCall,
+  className,
+  chipClass,
+}: {
+  climate: Climate;
+  modes: string[];
+  busy: boolean;
+  label: string;
+  modeLabel: (mode: string) => string;
+  onCall: (service: string, data?: Record<string, unknown>) => void;
+  className?: string;
+  /** 1つずつの Chip に足すクラス（タイルの色の地の上に置くとき） */
+  chipClass?: string;
+}) {
+  return (
+    <div className={cx("flex flex-wrap gap-2", className)} role="group" aria-label={label}>
+      {modes.map((mode) => (
+        <Chip
+          key={mode}
+          selected={climate.state === mode}
+          className={chipClass}
+          disabled={busy}
+          onClick={() => onCall("set_hvac_mode", { hvac_mode: mode })}
+        >
+          {modeLabel(mode)}
+        </Chip>
+      ))}
+    </div>
+  );
+}
+
 export function ClimateTile({
   climate,
   busy,
@@ -322,83 +454,57 @@ export function ClimateTile({
   modeLabel: (mode: string) => string;
 }) {
   const t = tileMessages.useT();
-  const step = climate.step ?? 0.5;
-  const target = climate.targetTemperature;
   const off = climate.state === "off";
   const short = frame.size === "2x1";
   const wide = frame.size === "4x2" || frame.size === "4x4";
   const modes = climate.hvacModes.filter((mode) => mode !== "off");
+  const sz = SIZE_CLASSES[frame.size];
 
   const power = (
-    <button
-      type="button"
-      className={`home-icon-button home-tile__power${off ? "" : " home-icon-button--on"}`}
-      aria-label={t(off ? "turnOn" : "turnOff", { name: climate.name })}
-      aria-pressed={!off}
+    <IconButton
+      icon="power"
+      size="lg"
+      selected={!off}
+      label={t(off ? "turnOn" : "turnOff", { name: climate.name })}
+      // 2x1 では右に並べ、ほかでは右上（詳細の「>」の隣）に置く
+      className={cx(!short && "absolute top-2 right-14 z-1", ON_TILE_SELECTED)}
       disabled={busy}
       onClick={() => onCall(off ? "turn_on" : "turn_off")}
-    >
-      <Icon name="power" />
-    </button>
+    />
   );
 
   return (
     <TileFrame {...frame}>
-      <div className="home-tile__main home-tile__main--static">
-        <Icon name="temperature" className="home-tile__icon" />
-        <span className="home-tile__text">
-          <span className="home-tile__name">{climate.name}</span>
-          <span className="home-tile__state">
-            {off ? t("off") : modeLabel(climate.state)} · {t("roomTemp", { value: climate.currentTemperature ?? "—" })}℃
-          </span>
-        </span>
+      <div className={cx(MAIN, MAIN_STATIC, sz.main)} data-tile-main>
+        <TileText
+          size={frame.size}
+          icon="temperature"
+          name={climate.name}
+          state={
+            <>
+              {off ? t("off") : modeLabel(climate.state)} · {t("roomTemp", { value: climate.currentTemperature ?? "—" })}℃
+            </>
+          }
+        />
       </div>
-      {/* 電源は、2x1 では右に、ほかでは右上（詳細の「>」の隣）に置く */}
       {short ? (
-        <div className="home-tile__actions">{power}</div>
+        <div className={cx("flex flex-none gap-2 px-3.5 pb-3.5", sz.actions)}>{power}</div>
       ) : (
-        <div className="home-tile__climate">
+        // 下に設定温度。広いタイルは、その右に運転モードを並べる（入りきらなければ折り返す）
+        <div className="flex flex-none items-center gap-3 px-3 pb-3">
           {power}
-          <div className="home-tile__target">
-            <button
-              type="button"
-              className="home-icon-button"
-              aria-label={t("lowerTemp")}
-              disabled={busy || off || target === null}
-              onClick={() => target !== null && onCall("set_temperature", { temperature: climateClamp(climate, target - step) })}
-            >
-              <Icon name="chevron-down" />
-            </button>
-            <span className="home-tile__target-value">
-              {off ? "—" : (target ?? "—")}
-              <small>℃</small>
-            </span>
-            <button
-              type="button"
-              className="home-icon-button"
-              aria-label={t("raiseTemp")}
-              disabled={busy || off || target === null}
-              onClick={() => target !== null && onCall("set_temperature", { temperature: climateClamp(climate, target + step) })}
-            >
-              <Icon name="chevron-up" />
-            </button>
-          </div>
-          {/* 広いタイルは、設定温度の右に運転モードを並べる（入りきらなければ折り返す） */}
+          <TargetControl climate={climate} busy={busy} onCall={onCall} onTile={!off} />
           {wide && modes.length > 0 && (
-            <div className="home-tile__modes" role="group" aria-label={t("hvacMode")}>
-              {modes.map((mode) => (
-                <button
-                  key={mode}
-                  type="button"
-                  className={`home-chip${climate.state === mode ? " home-chip--on" : ""}`}
-                  aria-pressed={climate.state === mode}
-                  disabled={busy}
-                  onClick={() => onCall("set_hvac_mode", { hvac_mode: mode })}
-                >
-                  {modeLabel(mode)}
-                </button>
-              ))}
-            </div>
+            <ModeChips
+              climate={climate}
+              modes={modes}
+              busy={busy}
+              label={t("hvacMode")}
+              modeLabel={modeLabel}
+              onCall={onCall}
+              className="min-w-0 flex-1 justify-end gap-1.5"
+              chipClass={ON_TILE_SELECTED}
+            />
           )}
         </div>
       )}

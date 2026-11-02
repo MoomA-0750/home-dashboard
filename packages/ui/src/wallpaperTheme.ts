@@ -7,7 +7,7 @@
  * 沈んでしまうので、壁紙を読み込んだときに、画面の横の位置ごと（左・中ほど・右寄り・右端）に明るさを測り、明るい所が
  * 目安の明るさに収まるだけの暗さを、その位置にだけ足す（.app-shell::after の --wallpaper-dim-*）。暗い壁紙なら何も足さない。
  *
- * 測るのは、theme.css で壁紙に重ねている上から下への暗さを足した後の明るさ。文字の影の濃さも、足した後の明るさで決める（下の「文字の影」）。
+ * 測るのは、画面の枠（Shell）で壁紙に重ねている上から下への暗さを足した後の明るさ。文字の影の濃さも、足した後の明るさで決める（下の「文字の影」）。
  */
 
 // 足した後の、明るい所（上位1割）の明るさの目安（相対輝度）。白い文字で明暗比 およそ 6、薄い文字で 4 になる
@@ -98,7 +98,7 @@ export function dimmedBrightness(bright: number, dim: number): number {
 
 /*
  * ■ 文字の影
- * 壁紙にじかに置く文字には淡い影（theme.css の --text-halo）を付ける。足した暗さで後ろが十分暗くなっていれば影は要らず、
+ * 壁紙にじかに置く文字には淡い影（tokens.css の --text-halo）を付ける。足した暗さで後ろが十分暗くなっていれば影は要らず、
  * 暗さを弱めた（強さを下げた）ときや、暗さの上限まで足しても明るい所が残るときは、影で補う。そこで、足した後に
  * いちばん明るい位置の明るさから、影の濃さ（0〜1）を決める（--text-halo-strength）
  */
@@ -214,7 +214,7 @@ function hsl(h: number, s: number, l: number): string {
   return `${f(0)}, ${f(8)}, ${f(4)}`;
 }
 
-/** テーマの色を当てる（theme.css の --accent-rgb など）。null なら既定の青 */
+/** テーマの色を当てる（tokens.css の --accent-rgb など）。null なら既定の青 */
 export function applyTheme(measured: { hue: number; saturation: number } | null): void {
   const root = document.documentElement;
   const hue = measured?.hue ?? DEFAULT_HUE;

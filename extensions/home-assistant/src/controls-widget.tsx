@@ -1,5 +1,6 @@
-import { useCallback, useState } from "react";
+import { useCallback, useState, type CSSProperties } from "react";
 import {
+  cx,
   defineMessages,
   defineWidget,
   Icon,
@@ -17,8 +18,13 @@ import {
   type WidgetProps,
   type WidgetSettingsProps,
   WidgetCard,
+  WidgetHint,
 } from "@home-dashboard/widget-sdk";
+import { DEFAULT_COLORS, textOn } from "./homeTypes";
 import { localizeReading } from "./units";
+
+/** 家電のボタンの「オン」の地。Home Control の照明のタイルと同じ色（home-tile-state が --tile-color・--tile-ink を使う） */
+const ON_COLORS = { "--tile-color": DEFAULT_COLORS.toggle, "--tile-ink": textOn(DEFAULT_COLORS.toggle) } as CSSProperties;
 
 /**
  * 家電操作のウィジェット。左に温度・湿度など（設定で選んだ種類の、入っているセンサーの平均）、
@@ -260,17 +266,24 @@ function EntityButton({
   const on = isOn(entity);
 
   return (
+    // Home Control のタイルと同じ見た目（オフはガラス、オンはタイルの色）。角はカードの丸みから余白を引いたもの
     <button
       type="button"
-      className={`ui-glass ha-entity ${on ? "ha-entity--on" : ""} ${service ? "" : "ha-entity--readonly"}`}
+      className={cx(
+        "glass home-tile-state press untrim flex min-h-0 cursor-pointer flex-col items-start justify-between gap-1 overflow-hidden rounded-inner px-3.5 py-2.5 text-left text-text",
+        "disabled:cursor-not-allowed disabled:opacity-55",
+      )}
+      style={ON_COLORS}
+      data-state={on ? "on" : undefined}
       disabled={!service}
       onClick={() => onToggle(entity)}
       // 状態は色で分かるので文字では出さない。読み上げと押さえたときの説明にだけ添える
       aria-label={`${entity.name}（${stateLabel(entity.state, locale)}）`}
       title={service ? stateLabel(entity.state, locale) : t("disabled")}
     >
-      <Icon name={entityIcon(entity)} className="ha-entity__icon" />
-      <span className="ha-entity__name">{entity.name}</span>
+      <Icon name={entityIcon(entity)} className="size-5 flex-none" />
+      {/* タイルが低いときも名前の欄は縮めない（縮めると字の上下が切れる） */}
+      <span className="ellipsis max-w-full flex-none text-note font-semibold">{entity.name}</span>
     </button>
   );
 }
@@ -282,9 +295,9 @@ function HaControlsView({ ctx, config }: WidgetProps<HaControlsConfig>) {
 
   if (!loading && data && !data.configured) {
     return (
-      <WidgetCard className="ha-controls ha-controls--unconfigured">
+      <WidgetCard>
         {t("notConnected")}
-        <span className="widget-hint">{t("notConnectedHint")}</span>
+        <WidgetHint>{t("notConnectedHint")}</WidgetHint>
       </WidgetCard>
     );
   }
@@ -293,33 +306,35 @@ function HaControlsView({ ctx, config }: WidgetProps<HaControlsConfig>) {
   const readings = chosenReadings(data?.readings ?? [], config.readings);
 
   return (
-    <WidgetCard className="ha-controls">
+    // 左に室温・湿度など、右に選んだ家電のボタン
+    <WidgetCard className="flex-row items-center justify-start gap-5">
       {readings.length > 0 && (
-        <div className="ha-controls__readings">
+        <div className="flex flex-none flex-col justify-center gap-2">
           {readings.map((reading) => {
             const meta = READING_META[reading.deviceClass];
             return (
               <span
                 key={reading.deviceClass}
-                className="ha-controls__reading"
+                className="flex items-center gap-2 text-muted [&_.fluent-icon]:size-5"
                 title={t("readingAverage", { label: textFor(meta.label, locale), n: reading.count })}
               >
                 <Icon name={meta.icon} />
-                <span className="ha-controls__reading-value">
+                <span className="text-heading font-semibold text-text tabular-nums">
                   {reading.value.toFixed(meta.digits)}
-                  <small>{reading.unit}</small>
+                  <small className="ml-0.5 text-note font-medium text-muted">{reading.unit}</small>
                 </span>
               </span>
             );
           })}
         </div>
       )}
-      <div className="ha-controls__main">
-        {loading && !data && <span className="widget-status">{t("loading")}</span>}
-        {Boolean(error) && !data && <span className="widget-status--error">{t("unreachable")}</span>}
-        {failure && <span className="ha-controls__error">{failure}</span>}
-        {data && shown.length === 0 && <span className="widget-hint">{t("chooseHint")}</span>}
-        <div className="ha-controls__grid">
+      <div className="flex min-h-0 min-w-0 flex-auto flex-col gap-2 self-stretch">
+        {loading && !data && <WidgetHint>{t("loading")}</WidgetHint>}
+        {Boolean(error) && !data && <WidgetHint tone="error">{t("unreachable")}</WidgetHint>}
+        {failure && <WidgetHint tone="error">{failure}</WidgetHint>}
+        {data && shown.length === 0 && <WidgetHint>{t("chooseHint")}</WidgetHint>}
+        {/* タイルの段は、カードの中身の高さ（カードの余白の内側）に収める。はみ出すと外側の余白がつぶれて角の丸みがずれる */}
+        <div className="ha-controls-grid grid min-h-0 w-full flex-auto gap-2.5">
           {shown.map((e) => (
             <EntityButton
               key={e.entityId}
@@ -357,14 +372,14 @@ function HaControlsSettings({ ctx, config, onChange }: WidgetSettingsProps<HaCon
   };
 
   return (
-    <div className="ha-controls-settings">
+    <div>
       <SectionTitle>{t("readingsTitle")}</SectionTitle>
       <Note>{t("readingsNote")}</Note>
       <List>
         {Object.entries(READING_META).map(([deviceClass, meta]) => (
           <ListItem
             key={deviceClass}
-            leading={<Icon name={meta.icon} className="ha-controls-settings__icon" />}
+            leading={<Icon name={meta.icon} className="size-5.5 flex-none" />}
             title={textFor(meta.label, locale)}
             detail={data && !available.has(deviceClass) ? t("noSensor") : undefined}
             trailing={
@@ -388,7 +403,7 @@ function HaControlsSettings({ ctx, config, onChange }: WidgetSettingsProps<HaCon
             return (
               <ListItem
                 key={entity.entityId}
-                leading={<Icon name={entityIcon(entity)} className="ha-controls-settings__icon" />}
+                leading={<Icon name={entityIcon(entity)} className="size-5.5 flex-none" />}
                 title={entity.name}
                 detail={on ? t("position", { n: entityIds.indexOf(entity.entityId) + 1 }) : entity.entityId}
                 trailing={

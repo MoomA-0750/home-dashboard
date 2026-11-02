@@ -2,10 +2,14 @@ import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type 
 import {
   Button,
   ButtonRow,
+  Chip,
+  cx,
   defineMessages,
   Icon,
   PillMenu,
   ScreenFrame,
+  ScreenNotice,
+  SectionTitle,
   StatTile,
   textFor,
   useLocale,
@@ -256,18 +260,23 @@ export function HomeControlScreen({ ctx }: ScreenProps) {
     }
   };
 
-  if (loading) return <ScreenFrame title={SCREEN_TITLE}>{t("loading")}</ScreenFrame>;
+  if (loading)
+    return (
+      <ScreenFrame title={SCREEN_TITLE}>
+        <ScreenNotice>{t("loading")}</ScreenNotice>
+      </ScreenFrame>
+    );
   if (error || !data) {
     return (
       <ScreenFrame title={SCREEN_TITLE}>
-        <p className="screen__notice">{t("unreachable")}</p>
+        <ScreenNotice>{t("unreachable")}</ScreenNotice>
       </ScreenFrame>
     );
   }
   if (!data.configured) {
     return (
       <ScreenFrame title={SCREEN_TITLE}>
-        <p className="screen__notice">{t("notConfigured")}</p>
+        <ScreenNotice>{t("notConfigured")}</ScreenNotice>
       </ScreenFrame>
     );
   }
@@ -346,8 +355,12 @@ export function HomeControlScreen({ ctx }: ScreenProps) {
       color: layout.tiles[id]?.color,
       onDetail: () => setTileDetail(id),
       editOverlay: editing ? (
+        // 並べ替えの間は、タイルの上に重ねて押せなくする（押すと選ぶ、引くと並べ替える）
         <div
-          className={`home-tile__edit${selected === id ? " is-selected" : ""}`}
+          className={cx(
+            "home-tile-radius absolute inset-0 z-2 flex cursor-grab touch-none items-start justify-between border-2 border-dashed border-white/40 bg-black/20 px-3 py-2.5 font-semibold text-white select-none",
+            "aria-pressed:border-3 aria-pressed:border-solid aria-pressed:border-fill aria-pressed:bg-black/10 [&_.fluent-icon]:size-5.5",
+          )}
           role="button"
           tabIndex={0}
           aria-pressed={selected === id}
@@ -440,15 +453,12 @@ export function HomeControlScreen({ ctx }: ScreenProps) {
 
   return (
     <ScreenFrame title={SCREEN_TITLE} actions={actions}>
-      {failure && (
-        <p className="screen__error" role="alert">
-          {failure}
-        </p>
-      )}
+      {failure && <ScreenNotice tone="error">{failure}</ScreenNotice>}
 
-      <div className={`home-control${sensors.length > 0 ? " has-sensors" : ""}`}>
+      {/* 部屋の空気（センサー）は上に横並びの帯、横長の画面では左に縦並び。照明・鍵・空調は右（下）のます目 */}
+      <div className={cx("flex gap-5", sensors.length > 0 ? "home-control-split" : "flex-col")}>
         {sensors.length > 0 && (
-          <section className="home-control__sensors" aria-label={t("air")}>
+          <section className="home-sensors-column flex flex-wrap gap-x-8 gap-y-1.5" aria-label={t("air")}>
             {groupByArea(sensors, (s) => s.area).flatMap(([area, group]) =>
               mergeSensors(group).map((merged) => {
                 const known = SENSOR_META[merged.deviceClass ?? ""];
@@ -459,7 +469,9 @@ export function HomeControlScreen({ ctx }: ScreenProps) {
                 return (
                   <StatTile
                     key={`${area}:${merged.key}`}
-                    className="home-sensor"
+                    // センサーの値は、カードの地を敷かずに文字だけで出す（壁紙の上でも読めるよう、影を付ける）
+                    // （StatTile のガラスより強くするため ! を付ける。StatTile に地を敷かない形ができたら、そちらに替える）
+                    className="halo! no-blur! flex-none gap-1 rounded-none border-0! bg-transparent! bg-none! px-0 py-1.5 shadow-none! [&>:first-child]:whitespace-nowrap"
                     icon={known?.icon ?? "unknown"}
                     label={shownLabel}
                     value={value}
@@ -474,49 +486,44 @@ export function HomeControlScreen({ ctx }: ScreenProps) {
           </section>
         )}
 
-        <div className="home-control__tiles" ref={setTilesBox}>
+        <div className="@container flex min-w-0 flex-col gap-5" ref={setTilesBox}>
           {editing && (
-            <div className="ui-glass home-arrange" role="toolbar" aria-label={t("arrange")}>
+            <div className="glass flex flex-wrap items-center gap-x-4 gap-y-2.5 rounded-group px-4 py-3" role="toolbar" aria-label={t("arrange")}>
               {selectedTile ? (
                 <>
-                  <span className="home-arrange__name">{selectedTile.entity.name}</span>
-                  <div className="home-arrange__sizes" role="group" aria-label={t("sizeOf", { name: selectedTile.entity.name })}>
+                  <span className="font-semibold">{selectedTile.entity.name}</span>
+                  <div className="flex flex-wrap gap-1.5" role="group" aria-label={t("sizeOf", { name: selectedTile.entity.name })}>
                     {TILE_SIZES.map((size) => (
-                      <button
+                      <Chip
                         key={size}
-                        type="button"
-                        className={`home-chip${sizeFor(selectedTile.entity.entityId) === size ? " home-chip--on" : ""}`}
-                        aria-pressed={sizeFor(selectedTile.entity.entityId) === size}
+                        selected={sizeFor(selectedTile.entity.entityId) === size}
                         onClick={() => setTile(selectedTile.entity.entityId, { size })}
                       >
                         {size.replace("x", "×")}
-                      </button>
+                      </Chip>
                     ))}
                   </div>
-                  <div className="home-arrange__moves">
-                    <button type="button" className="home-chip" onClick={() => moveBy(selectedTile.entity.entityId, -1)}>
-                      <Icon name="chevron-left" />
+                  <div className="flex flex-wrap gap-1.5">
+                    <Chip icon="chevron-left" onClick={() => moveBy(selectedTile.entity.entityId, -1)}>
                       {t("moveBefore")}
-                    </button>
-                    <button type="button" className="home-chip" onClick={() => moveBy(selectedTile.entity.entityId, 1)}>
+                    </Chip>
+                    <Chip onClick={() => moveBy(selectedTile.entity.entityId, 1)}>
                       {t("moveAfter")}
                       <Icon name="chevron-right" />
-                    </button>
-                    <button type="button" className="home-chip" onClick={() => setTileDetail(selectedTile.entity.entityId)}>
-                      {t("openDetail")}
-                    </button>
+                    </Chip>
+                    <Chip onClick={() => setTileDetail(selectedTile.entity.entityId)}>{t("openDetail")}</Chip>
                   </div>
                 </>
               ) : (
-                <span className="home-arrange__hint">{t("arrangeHint")}</span>
+                <span className="text-small text-muted">{t("arrangeHint")}</span>
               )}
             </div>
           )}
           {groupByArea(tiles, (tile) => tile.entity.area).map(([area, group]) => (
-            <section key={area} className="home-control__area">
-              {shownRoom === null && areas.length > 1 && <h2 className="home-control__area-name">{roomLabel(area)}</h2>}
+            <section key={area}>
+              {shownRoom === null && areas.length > 1 && <SectionTitle>{roomLabel(area)}</SectionTitle>}
               <div
-                className={`home-grid${editing ? " is-editing" : ""}`}
+                className="home-grid"
                 data-area={area}
                 style={{ "--cols": metrics.cols, "--gap": `${metrics.gap}px` } as CSSProperties}
               >
@@ -533,7 +540,7 @@ export function HomeControlScreen({ ctx }: ScreenProps) {
         </div>
       </div>
 
-      {sensors.length + tiles.length === 0 && <p className="screen__notice">{t("nothingHere")}</p>}
+      {sensors.length + tiles.length === 0 && <ScreenNotice>{t("nothingHere")}</ScreenNotice>}
       {sensorDetail && (
         <SensorDetail
           apiBaseUrl={apiBaseUrl}
@@ -544,7 +551,6 @@ export function HomeControlScreen({ ctx }: ScreenProps) {
               : sensorDetail.merged.sensors[0].name,
             t,
           )}
-          icon={(SENSOR_META[sensorDetail.merged.deviceClass ?? ""] ?? { icon: "unknown" as const }).icon}
           sensors={sensorDetail.merged.sensors}
           digits={sensorDetail.merged.deviceClass === "temperature" ? 1 : 0}
           onClose={() => setSensorDetail(null)}

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   Button,
   ButtonRow,
+  cx,
   defineMessages,
   Field,
   Group,
@@ -376,11 +377,15 @@ export function MailScreen({ ctx }: ScreenProps) {
           />
         }
       >
-        <div className={`mail-layout${pane ? " mail-layout--open" : ""}`}>
-          <div className="mail-layout__list">
+        {/*
+          右の欄。とても広い画面（triple:）では一覧の右に開いたメール、そうでなければ開いたメールが一覧の代わりに出る
+        */}
+        <div className="flex items-start gap-6">
+          <div className={cx("min-w-0 flex-1", pane && "hidden triple:block triple:flex-2")}>
             {selecting && (
-              <div className="mail-selection">
-                <span className="mail-selection__count">{t("selected", { n: chosen.size })}</span>
+              // 「選ぶ」のときの操作の帯（一覧の上）
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+                <span className="text-label text-muted">{t("selected", { n: chosen.size })}</span>
                 <ButtonRow>
                   <Button onClick={() => setChosen(new Set(messages?.map((m) => m.id)))}>{t("selectAll")}</Button>
                   <Button disabled={chosen.size === 0} onClick={() => void markRead(chosenIds, true)}>
@@ -419,18 +424,21 @@ export function MailScreen({ ctx }: ScreenProps) {
                       key={m.id}
                       leading={
                         selecting ? (
+                          // 「選ぶ」のときの丸いチェック
                           <span
-                            className={`mail-check${isChosen ? " mail-check--on" : ""}`}
+                            className={cx(
+                              "grid size-5.5 shrink-0 place-items-center rounded-full border-2 text-body",
+                              isChosen ? "fill-bright" : "border-muted",
+                            )}
                             role="checkbox"
                             aria-checked={isChosen}
                             aria-label={t("choose", { subject: m.subject })}
                           >
                             {isChosen && <Icon name="checkmark" />}
                           </span>
-                        ) : m.unread ? (
-                          <span className="mail-unread-dot" aria-hidden="true" />
                         ) : (
-                          <span className="mail-unread-dot mail-unread-dot--read" aria-hidden="true" />
+                          // 未読の印。既読は同じ幅の空きにして、件名の頭をそろえる
+                          <span className={cx("size-2 shrink-0 rounded-full", m.unread && "bg-accent")} aria-hidden="true" />
                         )
                       }
                       title={m.subject}
@@ -455,7 +463,7 @@ export function MailScreen({ ctx }: ScreenProps) {
             )}
           </div>
           {pane && (
-            <div className="mail-layout__pane">
+            <div className="min-w-0 flex-1 triple:flex-3">
               {pane.kind === "read" ? (
                 <Reader
                   key={pane.id}
@@ -535,7 +543,7 @@ function Reader({
   if (!message) return <Note>{tc("loading")}</Note>;
   const people = (list: MailMessage["to"]) => list.map((a) => a.name || a.address).join(t("peopleSeparator"));
   return (
-    <article className="mail-reader">
+    <article>
       <SectionTitle>{message.subject}</SectionTitle>
       <Note>
         {senderName(message, locale)}
@@ -545,7 +553,7 @@ function Reader({
         {message.cc.length > 0 && t("cc", { people: people(message.cc) })}
       </Note>
       <Group>
-        <div className="mail-reader__body">{message.text || t("noBody")}</div>
+        <div className="reader-scroll leading-normal whitespace-pre-wrap untrim wrap-anywhere">{message.text || t("noBody")}</div>
       </Group>
       <ButtonRow>
         {canReply && (
@@ -629,10 +637,10 @@ function Composer({
   };
 
   return (
-    <form className="mail-composer" onSubmit={(e) => void submit(e)}>
+    <form onSubmit={(e) => void submit(e)}>
       <SectionTitle>{replyTo ? t("reply") : t("newMail")}</SectionTitle>
       <Group>
-        <fieldset className="mail-composer__fields" disabled={busy}>
+        <fieldset className="m-0 border-0 p-0" disabled={busy}>
           <Field label={t("from")}>
             <select value={from} onChange={(e) => setFrom(e.target.value)} disabled={Boolean(replyTo)}>
               {mailboxes.map((m) => (

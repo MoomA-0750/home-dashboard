@@ -56,25 +56,33 @@ export function MainInfo({ ctx }: MainInfoProps) {
   const dateText = date(ctx.now, "monthDayWeekday");
 
   return (
-    <div className="main-info">
-      <div className="time-grid" aria-label={`${t("currentTime")} ${formatClock(ctx.now, locale)}`}>
-        <span className="time-part time-part--hour">
-          <b>{hh}</b>
+    <div className="clock-size halo col-start-2 grid min-w-0 grid-cols-(--clock-columns) items-center tablet:col-start-1 tablet:self-center tablet:justify-self-center">
+      <div
+        className="grid grid-cols-(--clock-time-columns) items-center text-(length:--clock-size) leading-none drop-shadow-(--clock-shadow)"
+        aria-label={`${t("currentTime")} ${formatClock(ctx.now, locale)}`}
+      >
+        <span className="flex min-w-0 justify-end font-semibold whitespace-nowrap text-white">
+          <span className="inline-block w-min">{hh}</span>
         </span>
-        <span className="time-part time-part--minute">
-          <b>{mm}</b>
+        <span className="flex min-w-0 justify-start font-(--clock-thin) whitespace-nowrap text-white/70">
+          <span className="inline-block w-min">{mm}</span>
         </span>
       </div>
-      <div className="meta-grid">
-        <div className="meta-weather">
+      <div className="flex flex-col items-start gap-2.5 self-center text-(length:--meta-size) leading-none font-(--clock-thin) whitespace-nowrap">
+        {/* 天気の取得前でも行の高さを取っておき、日付が上にずれないようにする */}
+        <div className="flex min-h-lh items-center text-white/70">
           {data && (
             <>
-              <Icon name={weatherIcon(data.current.code, data.current.isDay)} label={weatherConditionText(data.current.code, data.current.condition, locale)} />
-              <strong>{temperature(data.current.temperatureC, { unit: true })}</strong>
+              <Icon
+                name={weatherIcon(data.current.code, data.current.isDay)}
+                label={weatherConditionText(data.current.code, data.current.condition, locale)}
+                className="block size-cap overflow-visible"
+              />
+              <span>{temperature(data.current.temperatureC, { unit: true })}</span>
             </>
           )}
         </div>
-        <p className="meta-date">{dateText}</p>
+        <p className="text-white">{dateText}</p>
       </div>
     </div>
   );

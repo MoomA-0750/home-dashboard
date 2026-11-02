@@ -1,7 +1,6 @@
 import { defineWebExtension } from "@home-dashboard/widget-sdk";
 import weatherWidget from "./widget";
 import { WeatherScreen } from "./WeatherScreen";
-import "./web.css";
 
 export default defineWebExtension({
   widgets: [weatherWidget],

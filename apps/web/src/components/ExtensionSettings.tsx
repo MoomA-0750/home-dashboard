@@ -1,8 +1,13 @@
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import {
+  BackButton,
+  Button,
   defineMessages,
   List,
   ListItem,
+  Message,
+  Note,
+  Notice,
   SectionTitle,
   ToggleSwitch,
   useLocale,
@@ -13,11 +18,7 @@ import type { ComponentType } from "react";
 import type { ExtensionInfo, LoadedExtensions } from "../lib/extensions";
 import { ConnectionSection } from "./ConnectionSettings";
 import { ExtensionSources, ExtensionTrustPanel, ExtensionUpdatePanel } from "./ExtensionSources";
-import { Icon } from "./Icon";
 import { localizeExtension } from "../lib/manifestText";
-
-// 本体の画面でも使うので、ここから出し直す（実体は拡張機能からも使えるよう SDK にある）
-export { ToggleSwitch };
 
 const messages = defineMessages({
   ja: {
@@ -261,21 +262,21 @@ export function ExtensionSettings({ apiBaseUrl, extensions, isAdmin, link }: Ext
   const { standalone, slots, orphans } = groupExtensions(all);
   const updateCount = all.filter((ext) => ext.update).length;
   return (
-    <div className="extension-settings">
-      {!isAdmin && <p className="connection-settings__notice">{t("adminOnly")}</p>}
+    <div>
+      {!isAdmin && <Notice>{t("adminOnly")}</Notice>}
       {isAdmin && updateCount > 0 && (
-        <p className="connection-settings__notice">
+        <Notice>
           {t("updatesNotice", { n: updateCount })}
-          <button type="button" className="extension-settings__link" onClick={() => setSourcesOpen(true)}>
+          <button type="button" className="ml-2 cursor-pointer text-accent-soft" onClick={() => setSourcesOpen(true)}>
             {t("view")}
           </button>
-        </p>
+        </Notice>
       )}
       <List boxed label={t("extensions")}>{standalone.map(row)}</List>
       {slots.map((slot) => (
         <section key={`${slot.owner.id}:${slot.id}`}>
           <SectionTitle>{t("slotOf", { owner: slot.owner.name, slot: slot.name })}</SectionTitle>
-          {slot.description && <p className="connection-settings__note">{slot.description}</p>}
+          {slot.description && <Note>{slot.description}</Note>}
           <List boxed label={t("slotOf", { owner: slot.owner.name, slot: slot.name })}>{slot.providers.map(row)}</List>
         </section>
       ))}
@@ -285,11 +286,7 @@ export function ExtensionSettings({ apiBaseUrl, extensions, isAdmin, link }: Ext
           <List boxed label={t("orphans")}>{orphans.map(row)}</List>
         </section>
       )}
-      {message && (
-        <p className={`connection-settings__message${message.ok ? "" : " connection-settings__message--error"}`}>
-          {message.text}
-        </p>
-      )}
+      {message && <Message tone={message.ok ? "ok" : "error"}>{message.text}</Message>}
       {isAdmin && (
         <section>
           <SectionTitle>{t("installUpdate")}</SectionTitle>
@@ -308,18 +305,12 @@ export function ExtensionSettings({ apiBaseUrl, extensions, isAdmin, link }: Ext
         </section>
       )}
       {isAdmin && (
-        <div className="extension-settings__install">
-          <button
-            type="button"
-            className="settings-panel__edit-toggle"
-            disabled={busy !== null}
-            onClick={() => fileRef.current?.click()}
-          >
-            <Icon name="add" />
-            <span>{busy === "install" ? t("installing") : t("installZip")}</span>
-          </button>
+        <div className="flex flex-col items-start gap-2">
+          <Button icon="add" disabled={busy !== null} onClick={() => fileRef.current?.click()}>
+            {busy === "install" ? t("installing") : t("installZip")}
+          </Button>
           <input ref={fileRef} type="file" accept=".zip,application/zip" hidden onChange={install} />
-          <p className="connection-settings__note">{t("installZipNote")}</p>
+          <Note>{t("installZipNote")}</Note>
         </div>
       )}
     </div>
@@ -362,37 +353,28 @@ function ExtensionDetail({
   const [deleting, setDeleting] = useState(false);
   const t = messages.useT();
   return (
-    <div className="extension-detail">
-      <button type="button" className="settings-detail__back" onClick={onBack}>
-        <Icon name="chevron-left" />
-        <span>{t("extensions")}</span>
-      </button>
-      <div className="settings-list__row settings-list__row--static">
-        <span className="settings-list__text">
-          <span className="settings-list__title extension-detail__name">{ext.name}</span>
-          <span className="settings-list__detail">
-            {ext.version} · {originText(ext, t)}
-          </span>
-        </span>
-        <ToggleSwitch
-          checked={ext.enabled}
-          disabled={!isAdmin || busy}
-          label={t(ext.enabled ? "turnOff" : "turnOn", { name: ext.name })}
-          onChange={onToggle}
+    <div>
+      <BackButton label={t("extensions")} onClick={onBack} />
+      <List boxed label={ext.name}>
+        <ListItem
+          title={<span className="text-title font-semibold">{ext.name}</span>}
+          detail={`${ext.version} · ${originText(ext, t)}`}
+          trailing={
+            <ToggleSwitch
+              checked={ext.enabled}
+              disabled={!isAdmin || busy}
+              label={t(ext.enabled ? "turnOff" : "turnOn", { name: ext.name })}
+              onChange={onToggle}
+            />
+          }
         />
-      </div>
-      {ext.description && <p className="extension-detail__description">{ext.description}</p>}
+      </List>
+      {ext.description && <p className="mb-2 text-label leading-normal text-muted">{ext.description}</p>}
       <SlotSummary ext={ext} all={all} onOpen={onOpen} />
       <ExtensionUpdatePanel apiBaseUrl={apiBaseUrl} ext={ext} isAdmin={isAdmin} onChanged={onChanged} />
       <ExtensionTrustPanel apiBaseUrl={apiBaseUrl} ext={ext} isAdmin={isAdmin} onChanged={onChanged} />
-      {failure && (
-        <p className="connection-settings__message connection-settings__message--error">{t("notRunning", { reason: failure })}</p>
-      )}
-      {message && (
-        <p className={`connection-settings__message${message.ok ? "" : " connection-settings__message--error"}`}>
-          {message.text}
-        </p>
-      )}
+      {failure && <Message tone="error">{t("notRunning", { reason: failure })}</Message>}
+      {message && <Message tone={message.ok ? "ok" : "error"}>{message.text}</Message>}
       {ext.active ? (
         // 入／切や入れ替えで中身が変わったら読み直す
         <>
@@ -404,12 +386,12 @@ function ExtensionDetail({
           {Panel && <Panel key={`panel:${ext.revision}`} ctx={{ apiBaseUrl }} isAdmin={isAdmin} />}
         </>
       ) : (
-        <p className="connection-settings__note">{t("turnOnForSettings")}</p>
+        <Note>{t("turnOnForSettings")}</Note>
       )}
       {!ext.builtin && isAdmin && (
-        <button
-          type="button"
-          className="account-settings__button extension-detail__remove"
+        <Button
+          variant={deleting ? "danger" : "default"}
+          className={deleting ? "mt-6" : "mt-6 text-danger"}
           disabled={busy}
           onClick={() => (deleting ? onRemoved() : setDeleting(true))}
         >
@@ -418,7 +400,7 @@ function ExtensionDetail({
             : ext.builtinVersion
               ? t("revertToBuiltin", { version: ext.builtinVersion })
               : t("removeExtension")}
-        </button>
+        </Button>
       )}
     </div>
   );
@@ -473,7 +455,7 @@ function SlotSummary({ ext, all, onOpen }: { ext: ExtensionInfo; all: ExtensionI
       {owned.map(({ feature, providers }) => (
         <section key={feature.id}>
           <SectionTitle>{t("providersTitle", { name: feature.name })}</SectionTitle>
-          {feature.description && <p className="connection-settings__note">{feature.description}</p>}
+          {feature.description && <Note>{feature.description}</Note>}
           <List boxed label={feature.name}>
             {providers.map((provider) => (
               <ListItem
@@ -488,7 +470,7 @@ function SlotSummary({ ext, all, onOpen }: { ext: ExtensionInfo; all: ExtensionI
         </section>
       ))}
       {joined.length > 0 && (
-        <p className={`connection-settings__note${unused ? " connection-settings__message--error" : ""}`}>
+        <p className={unused ? "mb-2.5 text-note leading-normal text-danger" : "mb-2.5 text-note leading-normal text-muted"}>
           {t("joinedAs", {
             list: joined
               .map(({ owner, feature }) => t("slotOf", { owner: owner.name, slot: feature.name }))

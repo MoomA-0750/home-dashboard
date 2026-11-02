@@ -19,6 +19,7 @@
 - クラスをつなぐのは `cx()`（`@home-dashboard/ui`・widget-sdk）。ぶつかるクラスは後のものが勝つ（部品の `p-4` に `className="p-2"` を渡すと `p-2`）
 - 拡張機能の組み立て（`scripts/build-extension.mjs`）が、拡張機能の中で使ったクラスだけを `dist/web.css` に出す。テーマと全体の決まりは本体が出す
 - Tailwind のクラスで書けないもの（`@keyframes`・込み入った選び方）は、`packages/ui/src/theme/*.css` に `@utility` で足す（拡張機能からも使える）
+- 部品の中のアイコン（`Icon`）は、目印の `fluent-icon` で選ぶ（`[&_.fluent-icon]:size-5`）。大きさは既定 24px（`size-6`）、`Icon` の `className` でも変えられる
 
 ### テーマの名前
 
@@ -40,8 +41,8 @@
 
 | クラス | 何をするか |
 |---|---|
-| `glass` | ガラスの面（縁・光沢・暗い地・影・ぼかしの5つ1組）。入れ物・カード・ボタン |
-| `raised` | 浮かせる面（小窓・メニュー。ぼかさない） |
+| `glass` | ガラスの面（縁・光沢・暗い地・影・ぼかしの5つ1組）。入れ物・カード・ボタン。components の層にあり、同じ要素の `bg-*`・`border-*`・`fill-bright` がいつも勝つ（`styles/components.css`） |
+| `raised` | 浮かせる面（小窓・メニュー。ぼかさない）。`glass` と同じく components の層 |
 | `fill-bright` | 明るい塗り（選んでいる項目・いちばん押すボタン） |
 | `no-blur` | ガラスの中のガラス・ほぼ不透明な塗りの、後ろのぼかしを切る |
 | `halo` | 壁紙にじかに置く文字の影 |
@@ -181,13 +182,14 @@ backdrop-filter: var(--widget-blur);
 | 押す | `Button`（`variant="primary"` はその場でいちばん押すもの1つだけ、`"danger"` は消す確認。壁掛けで離れて押すものは `size="lg"`） | 独自のピルボタン |
 | 選べるものを並べる（運転モード・大きさ・期間） | `Chip`（`selected` で明るい塗り） | 自前のピル |
 | ボタンを並べる | `ButtonRow` | |
-| 名前と説明の並び | `List` ＋ `ListItem`。読み比べる中身（予定・メール・天気の日ごと）は1つの入れ物にまとめる `List boxed`、左の欄で選ぶもの（受信箱・会話）は行ごとにガラスにする `List` | 自前の `ul` と線 |
+| 名前と説明の並び | `List` ＋ `ListItem`（左のアイコンは `ListIcon`）。読み比べる中身（予定・メール・天気の日ごと）は1つの入れ物にまとめる `List boxed`、左の欄で選ぶもの（受信箱・会話）は行ごとにガラスにする `List` | 自前の `ul` と線 |
 | 左で選んで右に出す（受信箱とメール、カレンダーと予定） | `SideLayout`（狭い画面で左の欄を消すなら `narrow="hide"` ＋ 右上に `NarrowOnly` で `PillMenu`、下に回すなら `"below"`） | 自前の2列の grid |
 | 入力欄をまとめる | `Group` ＋ `Field`（`hint` に説明） | |
 | 値を大きく見せる | `StatTile`（`StatGrid` で並べる。押して詳しくするなら `onClick`、注意の値は `tone="warm"`・`"hot"`） | 自前のタイル |
 | 進み具合・使っている量 | `ProgressBar`（`value` は 0〜1、色は `--progress-color`） | 自前のバー |
 | 件数・状態の小さな印 | `Badge`（`tone`: on・warn・dim） | 自前のピル |
-| アイコンだけのボタン（閉じる・その他・家電の電源） | `IconButton`（44px の丸、`label` は必須。壁掛けで押すものは `size="lg"`（52px のガラス）、入っているものは `selected`） | 自前の丸いボタン |
+| つながりの状態の丸 | `StatusDot`（`ok` で正常の色） | 自前の丸 |
+| アイコンだけのボタン（閉じる・その他・家電の電源） | `IconButton`（44px の丸、`label` は必須。壁掛けで押すものは `size="lg"`（52px のガラス）、入っているものは `selected`。ボタンの並びに置く 44px のガラスの丸は `glass`） | 自前の丸いボタン |
 | 入／切 | `ToggleSwitch` | チェックボックス（`Check` は、選ぶものが多い一覧だけ） |
 | 量を変える（音量・明るさ・再生位置・強さ） | `Slider`（動かしている間は `onInput`、離したら `onCommit` で保存） | `<input type="range">` |
 | 画面の上に重ねて出す | `Dialog` | 自前の下敷き |

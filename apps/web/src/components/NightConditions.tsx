@@ -7,10 +7,15 @@ import {
   ListItem,
   Message,
   Note,
+  SectionTitle,
   defineMessages,
   usePolledResource,
 } from "@home-dashboard/widget-sdk";
 import type { NightCondition, NightRules, NightState } from "../lib/useNight";
+import { STACK } from "./settingsStyles";
+
+/** 入力欄を横に並べる（スマホでは縦に） */
+const FIELD_ROW = "grid grid-cols-2 gap-3 phone:grid-cols-1";
 
 /**
  * 設定画面の「夜の表示」の条件。照度などの数値・照明などのオンオフ・時間帯を並べ、すべて（またはどれか）を満たして
@@ -194,8 +199,8 @@ export function NightConditions({ apiBaseUrl, night, isAdmin, onChange }: NightC
   const results = dirty ? [] : (night.evaluation?.results ?? []);
 
   return (
-    <div className="night-conditions">
-      <h4 className="settings-detail__subtitle">{t("conditions")}</h4>
+    <div className={STACK}>
+      <SectionTitle>{t("conditions")}</SectionTitle>
       {rules.conditions.length === 0 ? (
         <Note>{t("none")}</Note>
       ) : (
@@ -231,7 +236,7 @@ export function NightConditions({ apiBaseUrl, night, isAdmin, onChange }: NightC
 
       {isAdmin && <AddCondition sources={sources} onAdd={(condition) => change({ conditions: [...rules.conditions, condition] })} />}
 
-      <div className="night-conditions__options">
+      <div className={FIELD_ROW}>
         <Field label={t("match")}>
           <select
             value={rules.match}
@@ -257,7 +262,7 @@ export function NightConditions({ apiBaseUrl, night, isAdmin, onChange }: NightC
 
       {message && <Message tone={message.tone}>{message.text}</Message>}
       {isAdmin && (
-        <div className="night-conditions__actions">
+        <div className="flex justify-end">
           <Button variant="primary" disabled={!dirty || busy} onClick={() => void save()}>
             {t("save")}
           </Button>
@@ -318,7 +323,7 @@ function AddCondition({ sources, onAdd }: { sources: ReadingSource[]; onAdd: (co
   );
 
   return (
-    <div className="night-conditions__add">
+    <div className="flex flex-col gap-3 rounded-group bg-input p-4">
       <Field label={t("target")} hint={picked ? t("now", { value: readingText(picked.reading, t) }) : undefined}>
         <select value={target} onChange={(event) => choose(event.target.value)}>
           <option value="">{t("choose")}</option>
@@ -335,7 +340,7 @@ function AddCondition({ sources, onAdd }: { sources: ReadingSource[]; onAdd: (co
         </select>
       </Field>
       {isTime && (
-        <div className="night-conditions__row">
+        <div className={FIELD_ROW}>
           <Field label={t("from")}>
             <input type="time" value={from} onChange={(event) => setFrom(event.target.value)} />
           </Field>
@@ -345,7 +350,7 @@ function AddCondition({ sources, onAdd }: { sources: ReadingSource[]; onAdd: (co
         </div>
       )}
       {picked && (
-        <div className="night-conditions__row">
+        <div className={FIELD_ROW}>
           {numeric && (
             <Field label={`${t("value")}${picked.reading.unit ? `（${picked.reading.unit}）` : ""}`}>
               <input type="number" inputMode="decimal" value={value} onChange={(event) => setValue(event.target.value)} />
@@ -364,6 +369,7 @@ function AddCondition({ sources, onAdd }: { sources: ReadingSource[]; onAdd: (co
       )}
       <Button
         icon="add"
+        className="self-start"
         disabled={!condition}
         onClick={() => {
           if (!condition) return;

@@ -9,6 +9,8 @@ import {
   type Locale,
   type LocalizedText,
   type WidgetProps,
+  Badge,
+  cx,
   ProgressBar,
   WidgetCard,
 } from "@home-dashboard/widget-sdk";
@@ -112,6 +114,13 @@ function formatAgo(ms: number, t: T): string {
   return t("daysAgo", { n: Math.round(hours / 24) });
 }
 
+/** 使った割合の色（数値とバーに使う） */
+const LEVEL_COLOR = {
+  ok: "[--limit-color:var(--accent-ok)]",
+  warm: "[--limit-color:var(--accent-warn)]",
+  hot: "[--limit-color:var(--danger-strong)]",
+} as const;
+
 function level(percent: number): "ok" | "warm" | "hot" {
   if (percent >= 90) return "hot";
   if (percent >= 75) return "warm";
@@ -127,18 +136,19 @@ function LimitRow({ window, now }: { window: LimitWindow; now: Date }) {
   const percent = reset ? 0 : Math.round(window.usedPercent);
   const known = KIND_LABELS[window.kind];
   const label = known ? textFor(known, locale) : window.kind;
+  const tone = reset ? "ok" : level(window.usedPercent);
 
   return (
-    <div className={`widget-limits__row widget-limits__row--${reset ? "ok" : level(window.usedPercent)}`}>
-      <div className="widget-limits__head">
-        <span className="widget-limits__label">{label}</span>
-        <span className="widget-limits__percent">
+    <div className={cx("flex min-w-0 flex-col justify-end gap-1.5", LEVEL_COLOR[tone])}>
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="text-small font-semibold">{label}</span>
+        <span className="text-stat leading-none font-semibold text-(--limit-color)">
           {reset ? "—" : percent}
-          {!reset && <small>%</small>}
+          {!reset && <small className="ml-0.5 text-small font-normal">%</small>}
         </span>
       </div>
-      <ProgressBar value={percent / 100} label={t("usageOf", { label })} className="widget-limits__bar" />
-      <span className="widget-limits__sub">
+      <ProgressBar value={percent / 100} label={t("usageOf", { label })} className="[--progress-color:var(--limit-color)]" />
+      <span className="ellipsis text-micro text-muted">
         {reset
           ? t("resetDone")
           : resetsAt
@@ -158,13 +168,13 @@ function ClaudeLimitsView({ ctx, config }: WidgetProps<ClaudeLimitsConfig>) {
   const now = ctx.now;
 
   if (loading && !data) {
-    return <WidgetCard className="widget-limits">{t("loading")}</WidgetCard>;
+    return <WidgetCard>{t("loading")}</WidgetCard>;
   }
   if (!data || data.windows.length === 0) {
     return (
-      <WidgetCard className="widget-limits widget-limits--empty">
-        <span className="widget-limits__title">{t("title")}</span>
-        <span className="widget-limits__sub">{error ? t("unreachable") : t("noValues")}</span>
+      <WidgetCard className="items-stretch gap-2.5">
+        <span className="text-note font-medium text-muted">{t("title")}</span>
+        <span className="text-micro leading-normal text-muted untrim">{error ? t("unreachable") : t("noValues")}</span>
       </WidgetCard>
     );
   }
@@ -178,14 +188,12 @@ function ClaudeLimitsView({ ctx, config }: WidgetProps<ClaudeLimitsConfig>) {
   const staleMs = now.getTime() - latest;
 
   return (
-    <WidgetCard className="widget-limits">
-      <div className="widget-limits__title-row">
-        <span className="widget-limits__title">{t("title")}</span>
-        {staleMs > STALE_AFTER_MS && (
-          <span className="widget-limits__stale">{t("staleValue", { ago: formatAgo(staleMs, t) })}</span>
-        )}
+    <WidgetCard className="items-stretch justify-start gap-2.5 tabular-nums">
+      <div className="flex items-baseline justify-between gap-4">
+        <span className="text-note font-medium text-muted">{t("title")}</span>
+        {staleMs > STALE_AFTER_MS && <Badge tone="warn">{t("staleValue", { ago: formatAgo(staleMs, t) })}</Badge>}
       </div>
-      <div className="widget-limits__rows">
+      <div className="grid flex-1 grid-cols-2 gap-6">
         {windows.slice(0, 2).map((window) => (
           <LimitRow key={window.kind} window={window} now={now} />
         ))}

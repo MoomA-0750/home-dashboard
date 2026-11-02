@@ -1,1 +1,261 @@
 /* small の担当が足す @utility・@keyframes（Tailwind のクラスで書けないものだけ） */
+
+/* --- 付箋（extensions/sticky-notes）。紙の色・字の色・効果の粒の色は、この拡張機能の中だけの色として持つ --- */
+
+/* 付箋の紙（紙の色は sticky-paper-yellow などで --sticky-paper に入れる）。上端の「のり」の部分を ::before で描く */
+@utility sticky-paper {
+  border-radius: 0.2rem 0.2rem 0.6rem 0.2rem;
+  background: var(--sticky-paper, #fde68a);
+  color: #2b2410;
+  box-shadow: 0 0.3rem 0.8rem rgba(var(--shade-rgb), 0.35);
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 0.45rem;
+    background: rgba(0, 0, 0, 0.06);
+  }
+}
+@utility sticky-paper-yellow {
+  --sticky-paper: #fde68a;
+}
+@utility sticky-paper-pink {
+  --sticky-paper: #fbcfe8;
+}
+@utility sticky-paper-blue {
+  --sticky-paper: #bfdbfe;
+}
+@utility sticky-paper-green {
+  --sticky-paper: #bbf7d0;
+}
+
+/* 見えないインク。押すまで中の文字をぼかし、上に砂のような粒を重ねる（粒の動きは after:animate-sticky-ink） */
+@utility sticky-ink {
+  position: relative;
+  & > * {
+    filter: blur(6px);
+    user-select: none;
+  }
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+      radial-gradient(circle, rgba(43, 36, 16, 0.35) 0.06rem, transparent 0.08rem),
+      radial-gradient(circle, rgba(255, 255, 255, 0.7) 0.05rem, transparent 0.07rem);
+    background-size:
+      0.55rem 0.55rem,
+      0.8rem 0.8rem;
+  }
+}
+
+/* ウィジェットの付箋の並び（1 枚 9rem 以上。入りきらない分は横にめくる。行の数は高さに合わせて JS が決める） */
+@utility sticky-columns {
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(9rem, 1fr);
+}
+
+/* 詳細の貼ってある付箋の並び（幅に合わせて列の数を変える） */
+@utility sticky-board {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+}
+
+/* 付箋の中の効果の粒。位置・大きさ・色・時間は粒ごとに JS が --x・--size・--color・--dur・--delay で決める */
+@utility sticky-confetti {
+  top: -0.8rem;
+  width: 0.35rem;
+  height: 0.6rem;
+  border-radius: 0.08rem;
+  background: var(--color);
+}
+@utility sticky-balloon {
+  bottom: calc(var(--size) * -1.3);
+  width: var(--size);
+  height: calc(var(--size) * 1.2);
+  border-radius: 50% 50% 48% 48% / 55% 55% 45% 45%;
+  background: radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.55), transparent 32%), var(--color);
+  opacity: 0.85;
+  /* 風船のひも */
+  &::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    width: 1px;
+    height: calc(var(--size) * 0.8);
+    background: rgba(43, 36, 16, 0.35);
+  }
+}
+@utility sticky-heart {
+  bottom: -1.2rem;
+  color: #f43f5e;
+  font-size: var(--size);
+  line-height: 1;
+}
+
+/*
+ * 付箋の動き（iMessage の吹き出しの効果にならう。動きを減らす設定では JS が付けない）と、中の効果の粒の動き。
+ * 付箋の傾きは rotate（transform とは別のプロパティ）で付けるので、ここの transform は傾きを含めない。
+ * @theme の --animate-* にすると tailwind-theme.css の「--animate-*: initial」で消えるので、@utility で書く
+ * （@keyframes は本体の CSS に出る。拡張機能はそれを使う）
+ */
+@utility animate-sticky-slam {
+  animation: sticky-notes-slam 700ms var(--ease-out) both;
+}
+@utility animate-sticky-loud {
+  animation: sticky-notes-loud 1400ms var(--ease-standard) both;
+}
+@utility animate-sticky-gentle {
+  animation: sticky-notes-gentle 1600ms var(--ease-out) both;
+}
+@utility animate-sticky-gentle-words {
+  animation: sticky-notes-gentle-words 1600ms var(--ease-out) both;
+}
+/* 粒の通り道（付箋と同じ大きさなので、translateY の % が付箋の高さになる） */
+@utility animate-sticky-fall {
+  animation: sticky-notes-fall var(--dur) var(--ease-in) var(--delay) both;
+}
+@utility animate-sticky-rise {
+  animation: sticky-notes-rise var(--dur) var(--ease-standard) var(--delay) both;
+}
+@utility animate-sticky-hearts {
+  animation: sticky-notes-hearts var(--dur) var(--ease-out) var(--delay) both;
+}
+/* 紙吹雪の粒そのものの回転・見えないインクの粒 */
+@utility animate-sticky-spin {
+  animation: sticky-notes-spin var(--dur) linear var(--delay) both;
+}
+@utility animate-sticky-ink {
+  animation: sticky-notes-ink 2.4s linear infinite;
+}
+
+@keyframes sticky-notes-slam {
+  0% {
+    opacity: 0;
+    transform: translateY(-30%) scale(1.6) rotate(-8deg);
+  }
+  55% {
+    opacity: 1;
+    transform: translateY(0) scale(0.94);
+  }
+  65% {
+    transform: translate(-3px, 1px) scale(1.03);
+  }
+  75% {
+    transform: translate(3px, -1px) scale(1);
+  }
+  85% {
+    transform: translate(-1px, 0);
+  }
+  100% {
+    transform: none;
+  }
+}
+@keyframes sticky-notes-loud {
+  0% {
+    transform: scale(1);
+  }
+  20% {
+    transform: scale(1.12);
+  }
+  28% {
+    transform: scale(1.12) rotate(-3deg);
+  }
+  36% {
+    transform: scale(1.12) rotate(3deg);
+  }
+  44% {
+    transform: scale(1.12) rotate(-3deg);
+  }
+  52% {
+    transform: scale(1.12) rotate(3deg);
+  }
+  60% {
+    transform: scale(1.12) rotate(-2deg);
+  }
+  68% {
+    transform: scale(1.12);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes sticky-notes-gentle {
+  0% {
+    opacity: 0.4;
+    transform: scale(0.85);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes sticky-notes-gentle-words {
+  0% {
+    opacity: 0.5;
+    transform: scale(0.7);
+  }
+  40% {
+    opacity: 0.6;
+    transform: scale(0.7);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes sticky-notes-fall {
+  from {
+    transform: translate(0, 0);
+  }
+  to {
+    transform: translate(var(--drift), 115%);
+  }
+}
+@keyframes sticky-notes-rise {
+  0% {
+    transform: translate(0, 0) rotate(-4deg);
+  }
+  50% {
+    transform: translate(calc(var(--drift) * 0.5), -60%) rotate(4deg);
+  }
+  100% {
+    transform: translate(var(--drift), -135%) rotate(-4deg);
+  }
+}
+@keyframes sticky-notes-hearts {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.4);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(0, -20%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--drift), -110%) scale(1.1);
+  }
+}
+@keyframes sticky-notes-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(var(--spin));
+  }
+}
+@keyframes sticky-notes-ink {
+  from {
+    background-position:
+      0 0,
+      0 0;
+  }
+  to {
+    background-position:
+      0.55rem -0.55rem,
+      -0.8rem 0.8rem;
+  }
+}

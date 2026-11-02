@@ -1,1 +1,17 @@
 /* settings の担当が足す @utility・@keyframes（Tailwind のクラスで書けないものだけ） */
+
+/* キャラクターの詳細の、アバターの動きを確かめる舞台。高さは画面の6割まで、後ろに淡くテーマの色を敷く */
+@utility persona-stage {
+  height: min(400px, 60svh);
+  background: radial-gradient(circle at 50% 35%, rgba(var(--accent-rgb), 0.18), transparent 70%);
+}
+
+/* 名前と値の2列（<dl> の dt・dd。名前の幅は中身に合わせ、値は残りの幅で折り返す） */
+@utility grid-cols-label {
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+/* 壁紙の暗さの見本。画面と同じ縦横比（--preview-aspect）で、高さが画面の4割に収まる幅にする */
+@utility wallpaper-preview-fit {
+  width: min(100%, calc(40vh * var(--preview-aspect, 1.78)));
+}

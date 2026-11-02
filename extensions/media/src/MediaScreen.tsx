@@ -1,9 +1,23 @@
 import { useEffect, useRef, useState } from "react";
-import { type ReactNode } from "react";
-import { Icon, PillMenu, ScreenFrame, scrollBehavior, Slider, usePolledResource, type ScreenProps } from "@home-dashboard/widget-sdk";
+import { type ButtonHTMLAttributes, type ReactNode } from "react";
+import {
+  BackButton,
+  Button,
+  Chip,
+  cx,
+  IconButton,
+  PillMenu,
+  ScreenFrame,
+  ScreenNotice,
+  ScreenSection,
+  scrollBehavior,
+  Slider,
+  usePolledResource,
+  type ScreenProps,
+} from "@home-dashboard/widget-sdk";
+import { Artwork } from "./Artwork";
 import { messages } from "./i18n";
 import { useMusicProviders, useSelectedMusicProvider, type MediaProviderOption } from "./providers";
-import "./media.css";
 
 /**
  * Media 画面（再生中・操作・次に再生・歌詞・プレイリスト・おすすめ）。右上のピルで
@@ -121,7 +135,7 @@ export function MediaScreen({ ctx, account }: ScreenProps) {
   if (!provider) {
     return (
       <ScreenFrame title={{ ja: "メディア", en: "Media" }}>
-        <p className="screen__notice">{t("noProviders")}</p>
+        <ScreenNotice>{t("noProviders")}</ScreenNotice>
       </ScreenFrame>
     );
   }
@@ -176,7 +190,7 @@ function MediaScreenBody({ ctx, provider, providers, onChooseProvider }: MediaSc
 
   // 右上: 音楽アプリと鳴らす端末を選ぶピル。読み込み中・未接続でも出す（ほかのアプリへ替えられるように）
   const actions: ReactNode = (
-    <div className="media__pickers">
+    <div className="flex flex-wrap items-center gap-2.5">
       <PillMenu
         label={provider.name}
         icon="music-note"
@@ -207,14 +221,14 @@ function MediaScreenBody({ ctx, provider, providers, onChooseProvider }: MediaSc
   if (playbackResource.error && !playback) {
     return (
       <ScreenFrame title={{ ja: "メディア", en: "Media" }} actions={actions}>
-        <p className="screen__notice">{String((playbackResource.error as Error).message ?? playbackResource.error)}</p>
+        <ScreenNotice>{String((playbackResource.error as Error).message ?? playbackResource.error)}</ScreenNotice>
       </ScreenFrame>
     );
   }
   if (playback && !playback.configured) {
     return (
       <ScreenFrame title={{ ja: "メディア", en: "Media" }} actions={actions}>
-        <p className="screen__notice">{t("notConnected", { name: provider.name })}</p>
+        <ScreenNotice>{t("notConnected", { name: provider.name })}</ScreenNotice>
       </ScreenFrame>
     );
   }
@@ -226,82 +240,94 @@ function MediaScreenBody({ ctx, provider, providers, onChooseProvider }: MediaSc
 
   return (
     <ScreenFrame title={{ ja: "メディア", en: "Media" }} actions={actions}>
-      {failure && (
-        <p className="screen__error" role="alert">
-          {failure}
-        </p>
-      )}
-      <div className="media">
-        <section className="media__now" aria-label={t("nowPlaying")}>
-          <div className="media__art">
-            {track?.artUrl ? <img src={track.artUrl} alt="" /> : <Icon name="music-note" />}
-          </div>
-          <div className="media__meta">
-            <span className="media__title">{track?.title ?? t("notPlaying")}</span>
-            <span className="media__artist">
-              {track ? [track.artist, track.album].filter(Boolean).join(" — ") : ""}
-            </span>
-          </div>
-          <SeekBar
-            key={track?.uri ?? "none"}
-            position={position}
-            duration={duration}
-            onSeek={(positionMs) => act(() => postJson(`${apiBaseUrl}/seek`, { positionMs }))}
+      {failure && <ScreenNotice tone="error">{failure}</ScreenNotice>}
+      {/*
+        左に再生中（ジャケット・曲名・操作・次に再生）、右にタブ（歌詞・プレイリスト・おすすめ）。狭い画面では縦に積む。
+        壁掛けの横長で背の低い画面では、画面の高さに収め、ジャケットを左の高さいっぱいにして、それぞれの列の中だけを送る
+      */}
+      <div className="flex items-start gap-10 tablet:flex-col tablet:items-stretch tablet:gap-6 wall:media-wall-height wall:items-stretch">
+        <section
+          className="sticky top-0 flex min-w-75 shrink basis-105 flex-col gap-4.5 tablet:static tablet:basis-auto wall:static wall:min-h-0 wall:grow-5 wall:basis-0 wall:flex-row wall:gap-8"
+          aria-label={t("nowPlaying")}
+        >
+          <Artwork
+            url={track?.artUrl ?? null}
+            className="w-full rounded-inner shadow-widget tablet:mx-auto tablet:max-w-90 wall:h-full wall:w-auto wall:shrink-0"
           />
-          <div className={`media__controls${canShuffle && canRepeat ? "" : " media__controls--basic"}`}>
-            {canShuffle && (
-              <button
-                type="button"
-                className={`home-icon-button${playback?.shuffle ? " home-icon-button--on" : ""}`}
-                aria-label={t("shuffle")}
-                aria-pressed={playback?.shuffle ?? false}
-                onClick={() => control("shuffle", !playback?.shuffle)}
-              >
-                <Icon name="shuffle" />
-              </button>
-            )}
-            <button type="button" className="home-icon-button" aria-label={t("previous")} onClick={() => control("previous")}>
-              <Icon name="previous" />
-            </button>
-            <button
-              type="button"
-              className="media__play"
-              aria-label={playback?.isPlaying ? t("pause") : t("play")}
-              onClick={() => control(playback?.isPlaying ? "pause" : "play")}
-            >
-              <Icon name={playback?.isPlaying ? "pause" : "play"} />
-            </button>
-            <button type="button" className="home-icon-button" aria-label={t("next")} onClick={() => control("next")}>
-              <Icon name="next" />
-            </button>
-            {canRepeat && (
-              <button
-                type="button"
-                className={`home-icon-button${playback?.repeat !== "off" ? " home-icon-button--on" : ""}`}
-                aria-label={t("repeatState", {
-                  state: t(playback?.repeat === "track" ? "repeatOne" : playback?.repeat === "context" ? "repeatAll" : "repeatOff"),
-                })}
-                onClick={() =>
-                  control(
-                    "repeat",
-                    playback?.repeat === "off" ? "context" : playback?.repeat === "context" ? "track" : "off",
-                  )
-                }
-              >
-                <Icon name="repeat" />
-                {playback?.repeat === "track" && <span className="media__repeat-one">1</span>}
-              </button>
-            )}
+          <div className="flex min-w-0 flex-col gap-4.5 wall:min-h-0 wall:flex-1">
+            <div className="flex min-w-0 flex-col gap-2.5">
+              <span className="ellipsis text-card font-semibold">{track?.title ?? t("notPlaying")}</span>
+              <span className="ellipsis text-muted">
+                {track ? [track.artist, track.album].filter(Boolean).join(" — ") : ""}
+              </span>
+            </div>
+            <SeekBar
+              key={track?.uri ?? "none"}
+              position={position}
+              duration={duration}
+              onSeek={(positionMs) => act(() => postJson(`${apiBaseUrl}/seek`, { positionMs }))}
+            />
+            {/* シャッフル・繰り返しのできない提供元（wave）では、残りの3つを真ん中に寄せる */}
+            <div className={cx("flex items-center", canShuffle && canRepeat ? "justify-between" : "justify-center gap-8")}>
+              {canShuffle && (
+                <IconButton
+                  icon="shuffle"
+                  size="lg"
+                  label={t("shuffle")}
+                  selected={playback?.shuffle ?? false}
+                  onClick={() => control("shuffle", !playback?.shuffle)}
+                />
+              )}
+              <IconButton icon="previous" size="lg" label={t("previous")} onClick={() => control("previous")} />
+              <IconButton
+                icon={playback?.isPlaying ? "pause" : "play"}
+                size="lg"
+                selected
+                aria-pressed={undefined}
+                label={playback?.isPlaying ? t("pause") : t("play")}
+                className="size-19 [&_.fluent-icon]:size-8.5"
+                onClick={() => control(playback?.isPlaying ? "pause" : "play")}
+              />
+              <IconButton icon="next" size="lg" label={t("next")} onClick={() => control("next")} />
+              {canRepeat && (
+                <span className="relative">
+                  <IconButton
+                    icon="repeat"
+                    size="lg"
+                    selected={playback?.repeat !== "off"}
+                    label={t("repeatState", {
+                      state: t(
+                        playback?.repeat === "track" ? "repeatOne" : playback?.repeat === "context" ? "repeatAll" : "repeatOff",
+                      ),
+                    })}
+                    onClick={() =>
+                      control(
+                        "repeat",
+                        playback?.repeat === "off" ? "context" : playback?.repeat === "context" ? "track" : "off",
+                      )
+                    }
+                  />
+                  {/* 1曲の繰り返しの印（ボタンの右下に重ねる） */}
+                  {playback?.repeat === "track" && (
+                    <span className="pointer-events-none absolute right-1.5 bottom-1.5 text-micro font-bold text-on-fill">1</span>
+                  )}
+                </span>
+              )}
+            </div>
+            <UpNext
+              apiBaseUrl={apiBaseUrl}
+              trackUri={track?.uri ?? null}
+              onSkip={(index, trackUri) => act(() => postJson(`${apiBaseUrl}/queue/skip`, { index, trackUri }))}
+            />
           </div>
-          <UpNext
-            apiBaseUrl={apiBaseUrl}
-            trackUri={track?.uri ?? null}
-            onSkip={(index, trackUri) => act(() => postJson(`${apiBaseUrl}/queue/skip`, { index, trackUri }))}
-          />
         </section>
 
-        <section className="ui-glass media__panel">
-          <div className="media__tabs" role="tablist" aria-label={t("tabsAria")}>
+        <section className="glass flex min-w-0 flex-1 flex-col rounded-card media-panel-height tablet:min-h-0 wall:h-full wall:min-h-0 wall:grow-4 wall:basis-0">
+          <div
+            className="flex gap-1.5 border-b border-glass-border p-5 phone:overflow-x-auto"
+            role="tablist"
+            aria-label={t("tabsAria")}
+          >
             {(
               [
                 ["lyrics", t("lyrics"), "lyrics"],
@@ -309,20 +335,21 @@ function MediaScreenBody({ ctx, provider, providers, onChooseProvider }: MediaSc
                 ["suggestions", t("suggestions"), "sparkle"],
               ] as const
             ).map(([id, label, icon]) => (
-              <button
+              <Chip
                 key={id}
-                type="button"
                 role="tab"
+                icon={icon}
+                selected={tab === id}
+                aria-pressed={undefined}
                 aria-selected={tab === id}
-                className={`media__tab${tab === id ? " media__tab--active" : ""}`}
+                className="shrink-0 whitespace-nowrap phone:[&_.fluent-icon]:hidden"
                 onClick={() => setTab(id)}
               >
-                <Icon name={icon} />
                 {label}
-              </button>
+              </Chip>
             ))}
           </div>
-          <div className="media__tab-body">
+          <div className="min-h-0 flex-1 p-6 *:animate-enter wall:overflow-y-auto">
             {tab === "lyrics" && <LyricsView apiBaseUrl={apiBaseUrl} track={track} positionMs={position} />}
             {tab === "playlists" && <PlaylistsView apiBaseUrl={apiBaseUrl} onPlay={play} />}
             {tab === "suggestions" && (
@@ -363,15 +390,15 @@ function UpNext({
   const tracks = data?.tracks.slice(0, 5) ?? [];
   if (tracks.length === 0) return null;
   return (
-    <div className="media__up-next">
-      <h2 className="screen__section-title">{t("upNext")}</h2>
-      <ol className="media__track-list">
+    <ScreenSection title={t("upNext")} className="mt-2 mb-0 wall:min-h-0 wall:overflow-y-auto">
+      <TrackList>
         {tracks.map((track, index) => (
           <li key={`${track.uri}-${index}`}>
             {/* 押すとその曲へ飛ぶ */}
-            <button
-              type="button"
-              className={`media__track${skipping === index ? " media__track--pending" : ""}`}
+            <TrackButton
+              track={track}
+              detail={skipping === index ? t("skipping") : undefined}
+              pending={skipping === index}
               disabled={skipping !== null}
               aria-label={t("skipTo", { title: track.title })}
               onClick={async () => {
@@ -383,25 +410,53 @@ function UpNext({
                   setSkipping(null);
                 }
               }}
-            >
-              <TrackArt track={track} />
-              <span className="media__track-text">
-                <span className="media__track-title">{track.title}</span>
-                <span className="media__track-artist">{skipping === index ? t("skipping") : track.artist}</span>
-              </span>
-            </button>
+            />
           </li>
         ))}
-      </ol>
-    </div>
+      </TrackList>
+    </ScreenSection>
   );
 }
 
-function TrackArt({ track }: { track: { artUrl: string | null } }) {
+/** 曲の一覧（次に再生・プレイリストの曲・おすすめ） */
+function TrackList({ children }: { children: ReactNode }) {
+  return <ol className="flex flex-col gap-1">{children}</ol>;
+}
+
+/** 曲の1行（ジャケット・曲名・アーティスト。右に長さを出せる）。押すとその曲を鳴らす */
+function TrackButton({
+  track,
+  detail,
+  time,
+  pending,
+  className,
+  ...rest
+}: {
+  track: MusicTrack;
+  /** アーティストの代わりに出す文（「移動中…」など） */
+  detail?: string;
+  time?: string;
+  /** 押して待っている行（薄く色を付ける） */
+  pending?: boolean;
+} & ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
-    <span className="media__track-art">
-      {track.artUrl ? <img src={track.artUrl} alt="" loading="lazy" /> : <Icon name="music-note" />}
-    </span>
+    <button
+      type="button"
+      className={cx(
+        "press-wide flex min-h-15 w-full cursor-pointer items-center gap-3.5 rounded-inner px-2.5 py-1.5 text-left text-text",
+        "hover:bg-white/8 disabled:cursor-progress",
+        pending && "bg-tint/10",
+        className,
+      )}
+      {...rest}
+    >
+      <Artwork url={track.artUrl} className="size-12 shrink-0 rounded-art" />
+      <span className="flex min-w-0 flex-1 flex-col gap-1">
+        <span className="ellipsis">{track.title}</span>
+        <span className="ellipsis text-note font-medium text-muted">{detail ?? track.artist}</span>
+      </span>
+      {time && <span className="text-note font-medium text-muted tabular-nums">{time}</span>}
+    </button>
   );
 }
 
@@ -474,31 +529,31 @@ function LyricsView({
     });
   }, [active]);
 
-  if (!track) return <p className="screen__notice">{t("lyricsIdle")}</p>;
-  if (error) return <p className="screen__notice">{t("lyricsFailed", { error })}</p>;
-  if (!lyrics) return <p className="screen__notice">{t("lyricsSearching")}</p>;
-  if (lyrics.instrumental) return <p className="screen__notice">{t("instrumental")}</p>;
-  if (!lyrics.found) return <p className="screen__notice">{t("lyricsNotFound")}</p>;
+  if (!track) return <ScreenNotice>{t("lyricsIdle")}</ScreenNotice>;
+  if (error) return <ScreenNotice>{t("lyricsFailed", { error })}</ScreenNotice>;
+  if (!lyrics) return <ScreenNotice>{t("lyricsSearching")}</ScreenNotice>;
+  if (lyrics.instrumental) return <ScreenNotice>{t("instrumental")}</ScreenNotice>;
+  if (!lyrics.found) return <ScreenNotice>{t("lyricsNotFound")}</ScreenNotice>;
 
   return (
-    <div className="media__lyrics">
-      <ol ref={listRef} className={`media__lyrics-lines${lyrics.synced ? " media__lyrics-lines--synced" : ""}`}>
+    <div className="relative lyrics-scroll wall:h-full wall:max-h-none">
+      <ol ref={listRef} className="flex flex-col gap-4.5 lyrics-pad">
         {lyrics.lines.map((line, index) => (
           <li
             key={index}
-            className={
-              index === active
-                ? "media__lyric media__lyric--active"
-                : index < active
-                  ? "media__lyric media__lyric--past"
-                  : "media__lyric"
-            }
+            className={cx(
+              "text-card leading-normal font-semibold untrim",
+              // 時刻付きの歌詞では、歌っている行だけを明るくし、ほかは控えめにする
+              lyrics.synced &&
+                "origin-left transition duration-(--motion-slow) ease-standard",
+              lyrics.synced && (index === active ? "scale-104" : index < active ? "text-text/55" : "text-text/40"),
+            )}
           >
             {line.text || "♪"}
           </li>
         ))}
       </ol>
-      <p className="media__credit">{t("lyricsCredit")}</p>
+      <p className="text-right text-micro text-muted">{t("lyricsCredit")}</p>
     </div>
   );
 }
@@ -517,40 +572,42 @@ function PlaylistsView({
   );
   const [open, setOpen] = useState<MusicPlaylist | null>(null);
 
-  if (error) return <p className="screen__notice">{(error as Error).message}</p>;
-  if (!data) return <p className="screen__notice">{t("loading")}</p>;
+  if (error) return <ScreenNotice>{(error as Error).message}</ScreenNotice>;
+  if (!data) return <ScreenNotice>{t("loading")}</ScreenNotice>;
   if (open)
     return <PlaylistTracks apiBaseUrl={apiBaseUrl} playlist={open} onBack={() => setOpen(null)} onPlay={onPlay} />;
-  if (data.playlists.length === 0) return <p className="screen__notice">{t("noPlaylists")}</p>;
+  if (data.playlists.length === 0) return <ScreenNotice>{t("noPlaylists")}</ScreenNotice>;
 
   return (
-    <ul className="media__playlists">
+    <ul className="grid media-tiles gap-4.5">
       {data.playlists.map((playlist) => (
-        <li key={playlist.id} className="media__playlist">
+        <li key={playlist.id} className="relative">
           <button
             type="button"
-            className="media__playlist-open"
+            className="press flex w-full cursor-pointer flex-col gap-2 text-left text-text"
             onClick={() => (playlist.browsable ? setOpen(playlist) : onPlay({ contextUri: playlist.uri }))}
             aria-label={playlist.browsable ? t("viewPlaylist", { name: playlist.name }) : t("playPlaylist", { name: playlist.name })}
           >
-            <span className="media__playlist-art">
-              {playlist.artUrl ? <img src={playlist.artUrl} alt="" loading="lazy" /> : <Icon name="music-note" />}
-            </span>
-            <span className="media__playlist-name">{playlist.name}</span>
-            <span className="media__playlist-meta">
+            <Artwork url={playlist.artUrl} className="w-full rounded-inner" />
+            <span className="ellipsis font-semibold">{playlist.name}</span>
+            <span className="text-caption font-medium text-muted untrim">
               {[playlist.owner, playlist.trackCount !== null ? t("trackCount", { n: playlist.trackCount }) : null]
                 .filter(Boolean)
                 .join(" · ")}
             </span>
           </button>
-          <button
-            type="button"
-            className="media__playlist-play"
-            aria-label={t("playPlaylist", { name: playlist.name })}
-            onClick={() => onPlay({ contextUri: playlist.uri })}
-          >
-            <Icon name="play" />
-          </button>
+          {/* ジャケットの右下に重ねる再生ボタン（ジャケットと同じ正方形の枠の右下に置く） */}
+          <div className="pointer-events-none absolute inset-x-0 top-0 flex aspect-square items-end justify-end p-2.5">
+            <IconButton
+              icon="play"
+              size="lg"
+              selected
+              aria-pressed={undefined}
+              label={t("playPlaylist", { name: playlist.name })}
+              className="pointer-events-auto"
+              onClick={() => onPlay({ contextUri: playlist.uri })}
+            />
+          </div>
         </li>
       ))}
     </ul>
@@ -575,40 +632,27 @@ function PlaylistTracks({
   );
 
   return (
-    <div className="media__playlist-detail">
-      <div className="media__playlist-head">
-        <button type="button" className="home-button home-button--ghost" onClick={onBack}>
-          {t("backToPlaylists")}
-        </button>
-        <span className="media__playlist-title">{playlist.name}</span>
-        <button
-          type="button"
-          className="home-button home-button--primary"
-          onClick={() => onPlay({ contextUri: playlist.uri })}
-        >
+    <div>
+      <BackButton label={t("backToPlaylists")} onClick={onBack} />
+      <div className="mb-4 flex flex-wrap items-center gap-4">
+        <span className="min-w-0 flex-1 text-heading font-semibold">{playlist.name}</span>
+        <Button variant="primary" icon="play" onClick={() => onPlay({ contextUri: playlist.uri })}>
           {t("playFromStart")}
-        </button>
+        </Button>
       </div>
-      {error !== null && <p className="screen__notice">{(error as Error).message}</p>}
-      {!data && !error && <p className="screen__notice">{t("loading")}</p>}
-      <ol className="media__track-list">
+      {error !== null && <ScreenNotice>{(error as Error).message}</ScreenNotice>}
+      {!data && !error && <ScreenNotice>{t("loading")}</ScreenNotice>}
+      <TrackList>
         {data?.tracks.map((track, index) => (
           <li key={`${track.uri}-${index}`}>
-            <button
-              type="button"
-              className="media__track"
+            <TrackButton
+              track={track}
+              time={formatTime(track.durationMs)}
               onClick={() => onPlay({ contextUri: playlist.uri, offsetUri: track.uri })}
-            >
-              <TrackArt track={track} />
-              <span className="media__track-text">
-                <span className="media__track-title">{track.title}</span>
-                <span className="media__track-artist">{track.artist}</span>
-              </span>
-              <span className="media__track-time">{formatTime(track.durationMs)}</span>
-            </button>
+            />
           </li>
         ))}
-      </ol>
+      </TrackList>
     </div>
   );
 }
@@ -634,40 +678,23 @@ function SuggestionsView({
     refresh();
   }, [trackUri, refresh]);
 
-  if (error) return <p className="screen__notice">{(error as Error).message}</p>;
-  if (!data) return <p className="screen__notice">{t("loading")}</p>;
-  if (data.groups.length === 0) return <p className="screen__notice">{t("noSuggestions")}</p>;
+  if (error) return <ScreenNotice>{(error as Error).message}</ScreenNotice>;
+  if (!data) return <ScreenNotice>{t("loading")}</ScreenNotice>;
+  if (data.groups.length === 0) return <ScreenNotice>{t("noSuggestions")}</ScreenNotice>;
 
   return (
-    <div className="media__suggestions">
+    <div>
       {data.groups.map((group) => (
-        <section key={group.id} className="media__suggestion-group">
-          <h2 className="screen__section-title">
-            {group.title}
-            {group.note && <small> · {group.note}</small>}
-          </h2>
-          <ol className="media__track-list">
+        <ScreenSection key={group.id} title={group.note ? `${group.title} · ${group.note}` : group.title} className="mb-8 last:mb-0">
+          <TrackList>
             {group.tracks.map((track) => (
-              <li key={track.uri} className="media__track-row">
-                <button type="button" className="media__track" onClick={() => onPlay({ trackUri: track.uri })}>
-                  <TrackArt track={track} />
-                  <span className="media__track-text">
-                    <span className="media__track-title">{track.title}</span>
-                    <span className="media__track-artist">{track.artist}</span>
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  className="home-icon-button media__enqueue"
-                  aria-label={t("enqueue", { title: track.title })}
-                  onClick={() => onEnqueue(track.uri)}
-                >
-                  <Icon name="add" />
-                </button>
+              <li key={track.uri} className="flex items-center gap-2">
+                <TrackButton track={track} onClick={() => onPlay({ trackUri: track.uri })} />
+                <IconButton icon="add" label={t("enqueue", { title: track.title })} onClick={() => onEnqueue(track.uri)} />
               </li>
             ))}
-          </ol>
-        </section>
+          </TrackList>
+        </ScreenSection>
       ))}
     </div>
   );
@@ -755,7 +782,7 @@ function SeekBar({
   };
 
   return (
-    <div className="media__progress">
+    <div>
       <Slider
         value={shown ?? 0}
         max={duration ?? 0}
@@ -769,7 +796,7 @@ function SeekBar({
         }}
         onCommit={(value) => void commit(value)}
       />
-      <div className="media__times">
+      <div className="mt-0.5 flex justify-between text-caption font-medium text-muted tabular-nums">
         <span>{formatTime(shown)}</span>
         <span>{formatTime(duration)}</span>
       </div>

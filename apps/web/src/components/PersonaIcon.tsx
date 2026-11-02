@@ -1,6 +1,6 @@
-import { useState } from "react";
 import { personaIconUrl } from "../lib/personaIcons";
 import type { VoicePersona } from "../lib/useVoiceAssistant";
+import { Avatar } from "@home-dashboard/widget-sdk";
 
 // アイコンが無いキャラクターは、名前の頭文字をキャラクターごとに決まった色の丸で出す
 const FALLBACK_HUES = [330, 200, 35, 150, 270, 0, 95];
@@ -15,24 +15,12 @@ interface PersonaIconProps {
   apiBaseUrl: string;
   /** 記録にだけ残っていて今はいないキャラクターでも、名前で頭文字を出す */
   persona: Pick<VoicePersona, "id" | "name"> & { iconVersion?: number | null };
+  /** large はキャラクターの詳細の「アイコン設定」で、今のアイコンを大きめに見せる */
   size?: "small" | "medium" | "large";
 }
 
-/** チャットの吹き出し・話す相手・会話の一覧に出すキャラクターのアイコン */
+/** チャットの吹き出し・話す相手・会話の一覧に出すキャラクターのアイコン（部品の Avatar に、アイコンの URL と頭文字の色を渡す） */
 export function PersonaIcon({ apiBaseUrl, persona, size = "medium" }: PersonaIconProps) {
   const url = personaIconUrl(apiBaseUrl, { id: persona.id, iconVersion: persona.iconVersion ?? null });
-  const [failedUrl, setFailedUrl] = useState<string | null>(null);
-  const className = `persona-icon persona-icon--${size}`;
-  if (url && failedUrl !== url) {
-    return <img className={className} src={url} alt="" loading="lazy" onError={() => setFailedUrl(url)} />;
-  }
-  return (
-    <span
-      className={`${className} persona-icon--initial`}
-      style={{ "--persona-hue": hueFor(persona.id) } as React.CSSProperties}
-      aria-hidden="true"
-    >
-      {[...persona.name][0] ?? "?"}
-    </span>
-  );
+  return <Avatar src={url} name={persona.name} hue={hueFor(persona.id)} size={size === "large" ? "xlarge" : size} />;
 }

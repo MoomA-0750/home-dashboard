@@ -1,1 +1,268 @@
 /* shell の担当が足す @utility・@keyframes（Tailwind のクラスで書けないものだけ） */
+
+/*
+ * --- 画面の骨組み（AppShell・ホーム） ---
+ * サイドバーの幅（--sidebar-width）は JS がつまみに合わせて変える。サイドバーと下のタブバーは設計図の px のまま
+ */
+
+/* サイドバー・幅のつまみ・画面の3列（スマホでは1列。サイドバーは下のタブバーになる） */
+@utility shell-grid {
+  grid-template-columns: var(--sidebar-width) 5px minmax(0, 1fr);
+}
+
+/* サイドバーの縦の並び。はみ出しは切るが、選んでいる項目の影（左右 22px まで届く）は余白の外まで出す */
+@utility sidebar-rail {
+  gap: 12px;
+  padding: 12px;
+  overflow: clip;
+  overflow-clip-margin: 12px;
+}
+
+/* サイドバーの項目（80px の幅に 56px の四角。広げるとラベルが横に出る） */
+@utility nav-item {
+  flex: 0 0 56px;
+  gap: 15px;
+  padding: 0 16px;
+  border-radius: 17px;
+}
+
+/* 選んでいる項目・hover の影 */
+@utility nav-lift {
+  box-shadow: 0 7px 22px rgba(var(--shade-rgb), 0.3);
+}
+
+/* スマホの下のタブバー（下から 12px・高さ 56px・角丸 20px）。暗い地を敷き、後ろを少しぼかす */
+@utility tabbar {
+  position: fixed;
+  inset: auto 12px 12px;
+  height: 56px;
+  min-height: 56px;
+  flex-direction: row;
+  justify-content: space-around;
+  padding: 4px;
+  overflow: visible;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: rgba(var(--shade-rgb), 0.72);
+  backdrop-filter: blur(8px);
+}
+
+/* タブバーの項目（48px の四角にアイコンだけ。項目が多くて入りきらなければ、幅を詰める） */
+@utility tabbar-item {
+  flex: 0 1 48px;
+  width: 48px;
+  min-width: 0;
+  padding: 0;
+  justify-content: center;
+}
+
+/* タブバーの分（12 + 56 + 12px）。スマホで画面の下を空ける・下に出すもの（スナックバー・編集の操作帯）をその上に置く */
+@utility pb-tabbar {
+  padding-bottom: 68px;
+}
+@utility above-tabbar {
+  bottom: calc(12px + 56px + 12px + env(safe-area-inset-bottom, 0px));
+}
+
+/* 幅のつまみの印（5x70px） */
+@utility grip-bar {
+  width: 5px;
+  height: 70px;
+  border-radius: 9px;
+}
+
+/*
+ * ホーム: 「余白・時計・余白・ウィジェット・余白」の5列。3つの余白は minmax(24px, 1fr) で均等に伸び縮みする。
+ * タブレット幅では、時計を上、ウィジェットを下の2段にする
+ */
+@utility home-layout {
+  grid-template-columns: minmax(24px, 1fr) auto minmax(24px, 1fr) clamp(420px, 37vw, 710px) minmax(24px, 1fr);
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+    grid-template-rows: 42svh minmax(0, 58svh);
+  }
+}
+
+/*
+ * ホームの時計と天気・日付の大きさ（画面の幅で伸び縮み）。中の要素は --clock-size・--meta-size と、
+ * 列の幅 --clock-columns・--clock-time-columns を使う
+ */
+@utility clock-size {
+  --clock-size: clamp(90px, 10.42vw, 200px);
+  --meta-size: clamp(40px, 4.69vw, 90px);
+  --clock-columns: calc(var(--clock-size) * 2.27) calc(var(--meta-size) * 4.77);
+  --clock-time-columns: repeat(2, minmax(0, calc(var(--clock-size) * 1.135)));
+  --clock-shadow: 0 9px 22px rgba(var(--shade-rgb), 0.2);
+  --clock-thin: 200;
+  @media (max-width: 900px) {
+    --clock-size: clamp(80px, 20vw, 140px);
+    --meta-size: clamp(34px, 8.8vw, 62px);
+  }
+  @media (max-width: 620px) {
+    --clock-size: clamp(68px, 19vw, 105px);
+    --meta-size: clamp(29px, 8.2vw, 46px);
+  }
+}
+
+/* 隣の文字のキャップハイトにそろえるアイコン（文字より大きくしない） */
+@utility size-cap {
+  flex: 0 0 1cap;
+  width: 1cap;
+  height: 1cap;
+  max-width: 1em;
+  max-height: 1em;
+}
+
+/*
+ * ウィジェットの列。上の余白で先頭のウィジェットが画面の中ほどに来るようにし、下の余白で影がスクロールの端で切れないようにする
+ * （カードは 650x200px・間 30px。高さと間は WidgetRail の rowHeight・margin が持つ）。タブレット幅では下の段（58svh）に収める
+ */
+@utility widget-stack {
+  min-height: calc(100svh + 456px);
+  padding: calc(50svh - 100px) 30px 84px;
+  @media (max-width: 900px) {
+    min-height: calc(58svh + 456px);
+    padding: calc(29svh - 100px) 30px 40px;
+  }
+  /* 編集中（列に data-editing）は、下の操作帯に隠れないよう列の下を空ける */
+  [data-editing] & {
+    padding-bottom: 160px;
+  }
+}
+
+/* 追加したウィジェットの縁を光らせる（animate-reveal） */
+@theme {
+  @keyframes widget-reveal {
+    0%,
+    40% {
+      box-shadow: 0 0 0 4px rgba(var(--tint-rgb), 0.9);
+    }
+    100% {
+      box-shadow: 0 0 0 0 rgba(var(--tint-rgb), 0);
+    }
+  }
+}
+
+/*
+ * --- 音声アシスタントのパネル（px で設計） ---
+ * 状態の色は --voice-accent（data-state="error" で注意の色）
+ */
+@utility voice-backdrop {
+  --voice-accent: rgb(var(--accent-rgb));
+  background: linear-gradient(180deg, rgba(var(--shade-rgb), 0.45), rgba(var(--shade-rgb), 0.72));
+  backdrop-filter: blur(6px);
+  &[data-state="error"] {
+    --voice-accent: var(--accent-warn);
+  }
+}
+
+/* 返答が長いときは、パネルが画面からはみ出さないよう、文の欄の高さを抑えて中で送る */
+@utility voice-body {
+  max-height: calc(100svh - 140px);
+}
+
+@utility text-voice-accent {
+  color: var(--voice-accent);
+}
+
+/* 状態を表す円。聞いている間は波紋、考えている間は回転、話している間は呼吸するように動く */
+@utility voice-orb {
+  --orb-size: 120px;
+  --orb-ring: 10px;
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: var(--orb-size);
+  height: var(--orb-size);
+  border-radius: 50%;
+  color: var(--on-fill);
+  background: radial-gradient(circle at 35% 30%, rgb(var(--tint-rgb)), var(--voice-accent) 70%);
+  box-shadow: 0 0 48px -6px var(--voice-accent);
+  & .fluent-icon {
+    width: calc(var(--orb-size) * 0.37);
+    height: calc(var(--orb-size) * 0.37);
+  }
+  &::before,
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    pointer-events: none;
+  }
+  &[data-state="listening"]::before,
+  &[data-state="listening"]::after {
+    border: 2px solid var(--voice-accent);
+    animation: voice-ripple 1.8s ease-out infinite;
+  }
+  &[data-state="listening"]::after {
+    animation-delay: 0.9s;
+  }
+  &:is([data-state="transcribing"], [data-state="thinking"])::before {
+    inset: calc(-1 * var(--orb-ring));
+    background: conic-gradient(from 0deg, transparent 0 55%, var(--voice-accent));
+    -webkit-mask: radial-gradient(circle, transparent calc(var(--orb-size) / 2 + 2px), #000 calc(var(--orb-size) / 2 + 3px));
+    mask: radial-gradient(circle, transparent calc(var(--orb-size) / 2 + 2px), #000 calc(var(--orb-size) / 2 + 3px));
+    animation: voice-spin 1.1s linear infinite;
+  }
+  &[data-state="speaking"] {
+    animation: voice-breathe 1.4s ease-in-out infinite;
+  }
+  /* アバターに重ねる小さな円（右下）。話している間も呼吸させない */
+  &[data-badge] {
+    --orb-size: 52px;
+    --orb-ring: 6px;
+    position: absolute;
+    right: 6px;
+    bottom: 52px;
+    box-shadow: 0 0 24px -4px var(--voice-accent);
+  }
+  &[data-badge][data-state="speaking"] {
+    animation: none;
+  }
+  &:is([data-state="idle"], [data-state="error"]) {
+    box-shadow: none;
+    opacity: 0.85;
+  }
+  @media (max-width: 900px) {
+    &:not([data-badge]) {
+      --orb-size: 84px;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    &,
+    &::before,
+    &::after {
+      animation: none !important;
+    }
+  }
+}
+
+@keyframes voice-ripple {
+  from {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.7);
+  }
+}
+
+@keyframes voice-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+@keyframes voice-breathe {
+  50% {
+    transform: scale(1.06);
+  }
+}
+
+/* 対応するブラウザでは、文節の途中で改行しない（音声のパネルの返答） */
+@utility break-phrase {
+  word-break: auto-phrase;
+}

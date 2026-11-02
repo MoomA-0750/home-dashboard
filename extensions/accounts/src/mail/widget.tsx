@@ -75,34 +75,34 @@ function MailInboxView({ ctx, config, openDetail }: WidgetProps<MailInboxConfig>
   const { data, error } = useUnread(ctx, config.compactLimit, config.pollIntervalMs);
   if (!data) {
     return (
-      <WidgetCard className="widget-mail">
+      <WidgetCard>
         {error ? <WidgetHint tone="error">{t("loadFailed")}</WidgetHint> : <WidgetHint>{t("checking")}</WidgetHint>}
       </WidgetCard>
     );
   }
   if (data.mailboxes.length === 0 && data.errors.length === 0) {
     return (
-      <WidgetCard className="widget-mail">
+      <WidgetCard>
         <WidgetHint>{t("noAccounts")}</WidgetHint>
       </WidgetCard>
     );
   }
   return (
-    <WidgetCard className="widget-mail" onClick={openDetail} label={t("cardLabel", { n: data.unread })}>
-      <span className="widget-mail__header">
-        <Icon name="mail" className="widget-mail__icon" />
-        <span className="widget-mail__count">{data.unread}</span>
-        <span className="widget-mail__label">{t("unread")}</span>
+    <WidgetCard className="items-stretch justify-start gap-1.5" onClick={openDetail} label={t("cardLabel", { n: data.unread })}>
+      <span className="flex items-baseline gap-1.5">
+        <Icon name="mail" className="size-5.5 self-center text-muted" />
+        <span className="text-stat leading-none font-semibold tabular-nums">{data.unread}</span>
+        <span className="text-caption font-medium text-muted">{t("unread")}</span>
       </span>
       {data.errors.length > 0 && <WidgetHint tone="error">{t("cantRead", { sources: data.errors.map((e) => e.source).join(t("sourceSeparator")) })}</WidgetHint>}
-      <ul className="widget-mail__list">
+      <ul className="flex flex-col gap-1">
         {data.messages.slice(0, config.compactLimit).map((m) => (
-          <li key={m.id} className="widget-mail__item">
-            <span className="widget-mail__from">{senderName(m, locale)}</span>
-            <span className="widget-mail__subject">{m.subject}</span>
+          <li key={m.id} className="flex gap-2 text-note">
+            <span className="ellipsis w-24 shrink-0 text-muted">{senderName(m, locale)}</span>
+            <span className="ellipsis min-w-0 flex-1">{m.subject}</span>
           </li>
         ))}
-        {data.messages.length === 0 && <li className="widget-mail__empty">{t("noUnreadShort")}</li>}
+        {data.messages.length === 0 && <li className="text-note font-medium text-muted">{t("noUnreadShort")}</li>}
       </ul>
     </WidgetCard>
   );
@@ -113,7 +113,7 @@ function MailInboxDetail({ ctx, config }: WidgetDetailProps<MailInboxConfig>) {
   const locale = useLocale();
   const { data } = useUnread(ctx, 20, config.pollIntervalMs);
   return (
-    <DetailFrame title={t("detailTitle")} className="widget-mail-detail">
+    <DetailFrame title={t("detailTitle")}>
       {data?.mailboxes.map((m) => (
         <Note key={m.id}>{t("mailboxUnread", { name: m.name, n: m.unread })}</Note>
       ))}

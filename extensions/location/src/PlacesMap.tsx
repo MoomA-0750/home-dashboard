@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import L from "leaflet";
+import { cx } from "@home-dashboard/widget-sdk";
 import "leaflet/dist/leaflet.css";
 import type { Home, Place } from "./places";
 import type { MapTiles } from "./shared";
@@ -81,9 +82,18 @@ export function PlacesMap({ places, home, tiles, homeLabel, selected, onSelect, 
     if (!group) return;
     group.clearLayers();
     if (home) {
-      L.circle([home.lat, home.lon], { radius: home.radiusM, className: "location-map__home-area", interactive: false }).addTo(group);
+      // 家の半径（白い破線の円）
+      L.circle([home.lat, home.lon], {
+        radius: home.radiusM,
+        className: "fill-white stroke-white",
+        opacity: 0.6,
+        fillOpacity: 0.04,
+        weight: 1.5,
+        dashArray: "6 6",
+        interactive: false,
+      }).addTo(group);
       L.marker([home.lat, home.lon], {
-        icon: L.divIcon({ className: "location-map__home", html: homeIconHtml(homeLabel), iconSize: undefined }),
+        icon: L.divIcon({ className: MARKER, html: homeIconHtml(homeLabel), iconSize: undefined }),
         interactive: false,
         keyboard: false,
       }).addTo(group);
@@ -92,13 +102,18 @@ export function PlacesMap({ places, home, tiles, homeLabel, selected, onSelect, 
       if (!place.available || place.lat === null || place.lon === null) continue;
       const at: L.LatLngExpression = [place.lat, place.lon];
       if (place.accuracyM !== null && place.accuracyM > 0) {
-        L.circle(at, { radius: place.accuracyM, className: "location-map__accuracy", interactive: false }).addTo(group);
+        // 精度の円（アクセントの色）
+        L.circle(at, {
+          radius: place.accuracyM,
+          className: "fill-accent stroke-accent",
+          opacity: 0.6,
+          fillOpacity: 0.18,
+          weight: 1,
+          interactive: false,
+        }).addTo(group);
       }
-      const classes = ["location-map__pin"];
-      if (place.name === selected) classes.push("location-map__pin--selected");
-      if (!place.fresh) classes.push("location-map__pin--old");
       L.marker(at, {
-        icon: L.divIcon({ className: classes.join(" "), html: pinHtml(place.label), iconSize: undefined }),
+        icon: L.divIcon({ className: MARKER, html: pinHtml(place.label, place.name === selected, place.fresh), iconSize: undefined }),
         title: place.label,
         alt: place.label,
         riseOnHover: true,
@@ -126,17 +141,39 @@ export function PlacesMap({ places, home, tiles, homeLabel, selected, onSelect, 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected]);
 
-  return <div ref={element} className={tiles.standard ? "location-map location-map--standard" : "location-map"} />;
+  // Leaflet の部品（拡大・縮小・出典）の z-index が本体のメニューより上にならないよう isolate で閉じる。
+  // OpenStreetMap の明るい絵は、暗い画面に合わせて反転して沈める（自前のタイルには掛けない）
+  return (
+    <div
+      ref={element}
+      className={cx(
+        "location-map isolate min-h-80 overflow-hidden rounded-group bg-input",
+        tiles.standard && "location-map-dim",
+      )}
+    />
+  );
 }
 
 function escapeHtml(text: string): string {
   return text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 }
 
-function pinHtml(label: string): string {
-  return `<span class="location-map__dot"></span><span class="location-map__label">${escapeHtml(label)}</span>`;
+/** divIcon の札。Leaflet の既定の白い箱を消し、大きさを 0 にして、点の真ん中が座標に来るようにする */
+const MARKER = "size-0! border-0 bg-transparent";
+
+/** 端末の点（古い位置は灰色、選んでいるものは大きく）と、その下の名前の札 */
+const DOT = "location-marker-shadow absolute rounded-full border-white";
+const DOT_SIZE = { normal: "-top-2 -left-2 size-4 border-2", selected: "-top-2.75 -left-2.75 size-5.5 border-3" };
+const DOT_COLOR = { fresh: "bg-accent", old: "bg-muted" };
+const LABEL =
+  "location-marker-shadow absolute left-1/2 -translate-x-1/2 rounded-full bg-raised px-2 py-0.75 text-caption leading-tight whitespace-nowrap";
+
+function pinHtml(label: string, selected: boolean, fresh: boolean): string {
+  const dot = cx(DOT, selected ? DOT_SIZE.selected : DOT_SIZE.normal, fresh ? DOT_COLOR.fresh : DOT_COLOR.old);
+  return `<span class="${dot}"></span><span class="${cx(LABEL, "top-3 cursor-pointer text-text")}">${escapeHtml(label)}</span>`;
 }
 
+/** 家の札は点の上に出す（家にいる端末の点と札に重ならないように） */
 function homeIconHtml(label: string): string {
-  return `<span class="location-map__label location-map__label--home">${escapeHtml(label)}</span>`;
+  return `<span class="${cx(LABEL, "bottom-3.5 cursor-default text-muted")}">${escapeHtml(label)}</span>`;
 }

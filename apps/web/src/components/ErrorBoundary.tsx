@@ -1,5 +1,5 @@
 import { Component, type ReactNode } from "react";
-import { defineMessages, LocaleContext } from "@home-dashboard/widget-sdk";
+import { Button, defineMessages, LocaleContext } from "@home-dashboard/widget-sdk";
 
 const messages = defineMessages({
   ja: { failed: "{name}を表示できませんでした", retry: "もう一度表示する" },
@@ -33,11 +33,9 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, { error: Error 
     if (!this.state.error) return this.props.children;
     const locale = this.context;
     return (
-      <div className="error-boundary" role="alert">
+      <div className="flex flex-col items-start gap-2.5 p-4 text-label text-muted" role="alert">
         <p>{messages.t("failed", { name: this.props.name }, locale)}</p>
-        <button type="button" className="ui-button" onClick={() => this.setState({ error: null })}>
-          {messages.t("retry", undefined, locale)}
-        </button>
+        <Button onClick={() => this.setState({ error: null })}>{messages.t("retry", undefined, locale)}</Button>
       </div>
     );
   }

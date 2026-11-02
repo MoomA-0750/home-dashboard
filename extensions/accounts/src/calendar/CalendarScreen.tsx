@@ -31,6 +31,7 @@ import {
   startOfDay,
   updateEvent,
 } from "./client";
+import { CalendarDot } from "./CalendarDot";
 import { EventEditor } from "./EventEditor";
 import { GRID_DAYS, gridStart, MonthGrid } from "./MonthGrid";
 import type { CalendarEvent, CalendarInfo, SourceError } from "./types";
@@ -151,13 +152,13 @@ export function CalendarScreen({ ctx }: ScreenProps) {
     <>
       {bySource.length === 0 && <ScreenNotice>{t("noCalendarList")}</ScreenNotice>}
       {bySource.map(([source, list]) => (
-        <section key={source} className="calendar-list">
+        <section key={source}>
           <SectionTitle>{source}</SectionTitle>
           <List boxed label={source}>
             {list.map((c) => (
               <ListItem
                 key={c.id}
-                leading={<span className="calendar-dot" style={{ background: c.color ?? undefined }} />}
+                leading={<CalendarDot color={c.color} />}
                 title={c.name}
                 off={c.enabled === false}
                 trailing={
@@ -225,13 +226,17 @@ export function CalendarScreen({ ctx }: ScreenProps) {
       )}
       <SideLayout side={side} sideLabel={t("calendars")} narrow="below">
       {events !== null && calendars.length === 0 && errors.length === 0 && (
-        <div className="calendar-setup-row">
-          <Button icon="warning" className="calendar-setup" onClick={() => openSettings({ page: "account" })}>
+        <div className="mb-3">
+          {/* アカウントがまだ無いときの設定への入口。印だけ注意の色にし、狭い画面では折り返す */}
+          <Button
+            icon="warning"
+            className="max-w-full text-left whitespace-normal [&_.fluent-icon]:shrink-0 [&_.fluent-icon]:text-warn"
+            onClick={() => openSettings({ page: "account" })}>
             {t("noCalendars")}
           </Button>
         </div>
       )}
-      <Group className="calendar-month">
+      <Group className="mb-4">
         <MonthGrid
           month={month}
           selected={selected}
@@ -240,7 +245,7 @@ export function CalendarScreen({ ctx }: ScreenProps) {
           onMonth={(next) => setMonth(next)}
         />
       </Group>
-      <ScreenSection title={dayLabel(selected, today, locale)} className="calendar-day">
+      <ScreenSection title={dayLabel(selected, today, locale)}>
         {events === null && !loadError ? (
           <ScreenNotice>{tc("loading")}</ScreenNotice>
         ) : onSelected.length === 0 ? (
@@ -250,7 +255,7 @@ export function CalendarScreen({ ctx }: ScreenProps) {
             {onSelected.map((event) => (
               <ListItem
                 key={`${event.id}:${event.start}`}
-                leading={<span className="calendar-dot" style={{ background: colors.get(event.calendarId) ?? undefined }} />}
+                leading={<CalendarDot color={colors.get(event.calendarId)} />}
                 title={event.title}
                 detail={[eventTimeText(event, selected, locale), event.location, names.get(event.calendarId)].filter(Boolean).join(" · ")}
                 onClick={() => setEditing({ event, day: selected })}

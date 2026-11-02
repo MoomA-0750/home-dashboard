@@ -1,6 +1,16 @@
 import { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
-import { defineMessages, formatClock, Icon, useClosing, useLocale, type IconName, type Locale } from "@home-dashboard/widget-sdk";
+import {
+  Chip,
+  defineMessages,
+  Dialog,
+  formatClock,
+  List,
+  ListItem,
+  Message,
+  Note,
+  useLocale,
+  type Locale,
+} from "@home-dashboard/widget-sdk";
 import { localizeSeries } from "./units";
 
 /**
@@ -35,11 +45,10 @@ const messages = defineMessages({
     trend: "{range}の推移",
     now: "いま",
     loadFailed: "記録を読めませんでした（{status}）",
-    close: "閉じる",
     minMax: "{min}〜{max}",
     period: "期間",
     loading: "記録を読み込んでいます…",
-    note: "名前の右の「〜」の値は、この期間の最低と最高です。",
+    note: "名前の下の「〜」の値は、この期間の最低と最高です。",
   },
   en: {
     range24h: "24 hours",
@@ -48,11 +57,10 @@ const messages = defineMessages({
     trend: "Trend over {range}",
     now: "Now",
     loadFailed: "Couldn't load records ({status})",
-    close: "Close",
     minMax: "{min}–{max}",
     period: "Period",
     loading: "Loading records…",
-    note: "The range to the right of each name is the lowest and highest value in this period.",
+    note: "The range under each name is the lowest and highest value in this period.",
   },
 });
 
@@ -77,7 +85,7 @@ function Chart({ series, hours, digits }: { series: Series[]; hours: number; dig
   const t = messages.useT();
   const locale = useLocale();
   const all = series.flatMap((s) => s.points);
-  if (all.length === 0) return <p className="sensor-detail__empty">{t("noRecords")}</p>;
+  if (all.length === 0) return <Note>{t("noRecords")}</Note>;
   const end = Date.now();
   const start = end - hours * 60 * 60 * 1000;
   let min = Math.min(...all.map(([, v]) => v));
@@ -93,15 +101,15 @@ function Chart({ series, hours, digits }: { series: Series[]; hours: number; dig
 
   return (
     <svg
-      className="sensor-detail__chart"
+      className="block h-auto w-full"
       viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
       role="img"
       aria-label={t("trend", { range: t(hours <= 24 ? "range24h" : "range7d") })}
     >
       {yTicks.map((v) => (
         <g key={`y${v}`}>
-          <line className="sensor-detail__grid" x1={PAD.left} x2={CHART_WIDTH - PAD.right} y1={y(v)} y2={y(v)} />
-          <text className="sensor-detail__tick" x={PAD.left - 6} y={y(v) + 4} textAnchor="end">
+          <line className="stroke-white/10" strokeWidth={1} x1={PAD.left} x2={CHART_WIDTH - PAD.right} y1={y(v)} y2={y(v)} />
+          <text className="fill-muted text-micro" x={PAD.left - 6} y={y(v) + 4} textAnchor="end">
             {formatValue(v, digits)}
           </text>
         </g>
@@ -109,7 +117,7 @@ function Chart({ series, hours, digits }: { series: Series[]; hours: number; dig
       {xTicks.map((tick, i) => (
         <text
           key={`x${tick}`}
-          className="sensor-detail__tick"
+          className="fill-muted text-micro"
           x={x(tick)}
           y={CHART_HEIGHT - 8}
           textAnchor={i === 0 ? "start" : i === xTicks.length - 1 ? "end" : "middle"}
@@ -124,8 +132,11 @@ function Chart({ series, hours, digits }: { series: Series[]; hours: number; dig
         return (
           <polyline
             key={s.entityId}
-            className="sensor-detail__line"
-            style={{ stroke: COLORS[index % COLORS.length] }}
+            fill="none"
+            stroke={COLORS[index % COLORS.length]}
+            strokeWidth={2.5}
+            strokeLinejoin="round"
+            strokeLinecap="round"
             points={points.map(([t, v]) => `${x(Math.max(t, start)).toFixed(1)},${y(v).toFixed(1)}`).join(" ")}
           />
         );
@@ -137,21 +148,17 @@ function Chart({ series, hours, digits }: { series: Series[]; hours: number; dig
 export function SensorDetail({
   apiBaseUrl,
   title,
-  icon,
   sensors,
   digits,
   onClose,
 }: {
   apiBaseUrl: string;
   title: string;
-  icon: IconName;
   sensors: DetailSensor[];
   digits: number;
   onClose: () => void;
 }) {
   const t = messages.useT();
-  // 閉じるときは薄くなってから onClose を呼ぶ
-  const { closing, close } = useClosing(onClose);
   const [hours, setHours] = useState<number>(24);
   const [series, setSeries] = useState<Series[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -174,12 +181,6 @@ export function SensorDetail({
     };
   }, [apiBaseUrl, ids, hours]);
 
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => event.key === "Escape" && close();
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [close]);
-
   // 一覧と線の色をそろえる（記録の並びではなく、センサーの並びで色を決める）
   const ordered = series
     ? sensors.map((s) => series.find((x) => x.entityId === s.entityId)).filter((s): s is Series => !!s)
@@ -191,65 +192,43 @@ export function SensorDetail({
     return { min: Math.min(...values), max: Math.max(...values) };
   };
 
-  return createPortal(
-    <div className={`widget-picker-overlay${closing ? " is-closing" : ""}`} onClick={close}>
-      <div
-        className="widget-picker sensor-detail"
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="widget-picker__header">
-          <h2 className="sensor-detail__title">
-            <Icon name={icon} />
-            {title}
-          </h2>
-          <button type="button" className="settings-panel__close" onClick={close} aria-label={t("close")}>
-            <Icon name="dismiss" />
-          </button>
-        </div>
-
-        <ul className="sensor-detail__list">
+  return (
+    <Dialog title={title} onClose={onClose}>
+      <div className="flex flex-col gap-3">
+        <List boxed>
           {sensors.map((sensor, index) => {
             const value = Number(sensor.state);
             const stats = statsFor(sensor.entityId);
             return (
-              <li key={sensor.entityId} className="sensor-detail__row">
-                <span className="sensor-detail__dot" style={{ background: COLORS[index % COLORS.length] }} />
-                <span className="sensor-detail__name">{sensor.name}</span>
-                <span className="sensor-detail__range">
-                  {stats && t("minMax", { min: formatValue(stats.min, digits), max: formatValue(stats.max, digits) })}
-                </span>
-                <span className="sensor-detail__value">
-                  {Number.isFinite(value) ? formatValue(value, digits) : "—"}
-                  <small>{sensor.unit}</small>
-                </span>
-              </li>
+              <ListItem
+                key={sensor.entityId}
+                // 線の色の印
+                leading={<span className="size-2.5 flex-none rounded-full" style={{ background: COLORS[index % COLORS.length] }} />}
+                title={sensor.name}
+                detail={stats ? t("minMax", { min: formatValue(stats.min, digits), max: formatValue(stats.max, digits) }) : undefined}
+                trailing={
+                  <span className="text-heading font-semibold whitespace-nowrap tabular-nums">
+                    {Number.isFinite(value) ? formatValue(value, digits) : "—"}
+                    <small className="ml-0.5 text-caption font-normal text-muted">{sensor.unit}</small>
+                  </span>
+                }
+              />
             );
           })}
-        </ul>
+        </List>
 
-        <div className="sensor-detail__ranges" role="radiogroup" aria-label={t("period")}>
+        <div className="flex gap-2" role="group" aria-label={t("period")}>
           {RANGES.map((range) => (
-            <button
-              key={range.hours}
-              type="button"
-              role="radio"
-              aria-checked={hours === range.hours}
-              className={`home-chip${hours === range.hours ? " home-chip--on" : ""}`}
-              onClick={() => setHours(range.hours)}
-            >
+            <Chip key={range.hours} selected={hours === range.hours} onClick={() => setHours(range.hours)}>
               {t(range.label)}
-            </button>
+            </Chip>
           ))}
         </div>
-        {error && <p className="screen__error">{error}</p>}
-        {!error && !series && <p className="sensor-detail__empty">{t("loading")}</p>}
+        {error && <Message tone="error">{error}</Message>}
+        {!error && !series && <Note>{t("loading")}</Note>}
         {series && <Chart series={ordered} hours={hours} digits={digits} />}
-        {series && <p className="sensor-detail__note">{t("note")}</p>}
+        {series && <Note>{t("note")}</Note>}
       </div>
-    </div>,
-    document.body,
+    </Dialog>
   );
 }

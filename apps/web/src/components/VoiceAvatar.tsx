@@ -351,5 +351,5 @@ export default function VoiceAvatar({ modelUrl, state, socket, rig, override, on
     };
   }, [modelUrl]);
 
-  return <div ref={containerRef} className="voice-avatar" aria-hidden="true" />;
+  return <div ref={containerRef} className="absolute inset-0 *:block *:size-full" aria-hidden="true" />;
 }

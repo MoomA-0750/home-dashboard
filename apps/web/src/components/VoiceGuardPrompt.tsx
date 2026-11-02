@@ -1,6 +1,13 @@
 import { useState, type FormEvent } from "react";
-import { createPortal } from "react-dom";
-import { Button, ButtonRow, defineMessages, Field, Message, Note } from "@home-dashboard/widget-sdk";
+import {
+  Button,
+  ButtonRow,
+  defineMessages,
+  Dialog,
+  Field,
+  Message,
+  Note,
+} from "@home-dashboard/widget-sdk";
 import {
   answerGuard,
   approveWithPasskey,
@@ -49,12 +56,7 @@ export function VoiceGuardPrompt({ apiBaseUrl, socket }: { apiBaseUrl: string; s
   const requests = useGuardRequests(apiBaseUrl, socket);
   const request = requests[0];
   if (!request) return null;
-  return createPortal(
-    <div className="widget-picker-overlay voice-guard-overlay">
-      <GuardCard key={request.id} apiBaseUrl={apiBaseUrl} request={request} others={requests.length - 1} />
-    </div>,
-    document.body,
-  );
+  return <GuardCard key={request.id} apiBaseUrl={apiBaseUrl} request={request} others={requests.length - 1} />;
 }
 
 function GuardCard({ apiBaseUrl, request, others }: { apiBaseUrl: string; request: GuardRequest; others: number }) {
@@ -83,14 +85,19 @@ function GuardCard({ apiBaseUrl, request, others }: { apiBaseUrl: string; reques
   };
 
   return (
-    <div className="widget-picker voice-guard" role="alertdialog" aria-modal="true" aria-label={title}>
-      <div className="widget-picker__header">
-        <h2>{title}</h2>
-      </div>
-      <p className="voice-guard__what">{request.description}</p>
+    // 重なりは guard（音声のパネルより上）。答えるまで閉じない（閉じるのは中のボタン）
+    <Dialog
+      title={title}
+      onClose={() => undefined}
+      dismissible={false}
+      layer="guard"
+      role="alertdialog"
+      className="fields flex flex-col gap-3"
+    >
+      <p className="text-title leading-normal font-semibold wrap-anywhere untrim">{request.description}</p>
       <Note>{t(approve ? "approveNote" : "confirmNote")}</Note>
       {approve && password !== null ? (
-        <form className="voice-guard__password" onSubmit={submitPassword}>
+        <form className="flex flex-col gap-3" onSubmit={submitPassword}>
           <Field label={t("password")}>
             <input
               type="password"
@@ -138,6 +145,6 @@ function GuardCard({ apiBaseUrl, request, others }: { apiBaseUrl: string; reques
       )}
       {error && <Message tone="error">{error}</Message>}
       {others > 0 && <Note>{t("more", { count: others })}</Note>}
-    </div>
+    </Dialog>
   );
 }

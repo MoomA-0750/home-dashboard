@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { reducedMotion } from "@home-dashboard/widget-sdk";
+import { cx, reducedMotion } from "@home-dashboard/widget-sdk";
 import { REPEAT_MS, type NoteBubble, type NoteBurst, type StickyNote } from "./notes";
 
 /**
- * 付箋が動いている長さ。付箋の動き（web.css の sticky-note--fx-*、長くて 1.6 秒）と、
+ * 付箋が動いている長さ。付箋の動き（本体の theme/small.css の animate-sticky-*、長くて 1.6 秒）と、
  * 中の効果（紙吹雪など、粒がいちばん遅く出て消えるまで）の長いほう。これが過ぎたら外す
  */
 const PLAY_MS = 3200;
@@ -19,7 +19,7 @@ export const hasMotion = (note: Pick<StickyNote, "bubble" | "burst">) => movesBu
 
 /**
  * 動いている付箋の id。flash(id) で動かし始め、PLAY_MS 後に外す。
- * 「動きを減らす」設定では何もしない（見えないインクは動きではないので web.css 側でそのまま出る）
+ * 「動きを減らす」設定では何もしない（見えないインクは動きではないのでそのまま出る）
  */
 export function useBubbleFlash() {
   const [playing, setPlaying] = useState<ReadonlySet<string>>(new Set());
@@ -112,13 +112,21 @@ function particlesFor(effect: NoteBurst): CSSProperties[] {
 export function NoteBurstLayer({ effect }: { effect: NoteBurst }) {
   const particles = useMemo(() => particlesFor(effect), [effect]);
   if (effect === "none") return null;
+  const look = BURST_LOOK[effect];
   return (
-    <span className={`sticky-note__burst sticky-note__burst--${effect}`} aria-hidden="true">
+    <span className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
       {particles.map((style, i) => (
-        <span key={i} className="sticky-note__lane" style={style}>
-          <span className="sticky-note__piece">{effect === "hearts" ? "❤" : null}</span>
+        <span key={i} className={cx("absolute inset-0 will-change-transform", look.lane)} style={style}>
+          <span className={cx("absolute left-(--x)", look.piece)}>{effect === "hearts" ? "❤" : null}</span>
         </span>
       ))}
     </span>
   );
 }
+
+/** 効果ごとの通り道の動きと粒の形（形と動きは本体の theme/small.css の sticky-*） */
+const BURST_LOOK: Record<Exclude<NoteBurst, "none">, { lane: string; piece: string }> = {
+  confetti: { lane: "animate-sticky-fall", piece: "sticky-confetti animate-sticky-spin" },
+  balloons: { lane: "animate-sticky-rise", piece: "sticky-balloon" },
+  hearts: { lane: "animate-sticky-hearts", piece: "sticky-heart" },
+};

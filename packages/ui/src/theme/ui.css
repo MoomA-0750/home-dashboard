@@ -1,1 +1,158 @@
 /* ui の担当が足す @utility・@keyframes（Tailwind のクラスで書けないものだけ） */
+
+/* 画面（ScreenFrame）を開いたとき、中身の区画を下から上げながら出す。区画ごとに 40ms ずつずらす */
+@utility enter-stagger {
+  & > * {
+    animation: var(--animate-enter-slow);
+  }
+  & > :nth-child(2) {
+    animation-delay: 40ms;
+  }
+  & > :nth-child(3) {
+    animation-delay: 80ms;
+  }
+  & > :nth-child(n + 4) {
+    animation-delay: 120ms;
+  }
+}
+
+/* スマホの画面の高さ（下のタブバーの分を引く） */
+@utility h-screen-phone {
+  height: calc(100svh - 68px);
+}
+
+/* 小窓・メニューの高さの上限（中身が多ければ中で送る） */
+@utility max-h-dialog {
+  max-height: 80vh;
+}
+@utility max-h-menu {
+  max-height: 60vh;
+}
+
+/* 小窓の後ろの下敷き（暗さとぼかし。軽い表示では濃く、ぼかさない） */
+@utility scrim {
+  background: var(--modal-backdrop);
+  backdrop-filter: var(--modal-backdrop-blur);
+}
+
+/* メニューの中の項目の角丸（メニューの角丸 ＝ 項目の角丸 ＋ メニューの余白 6px） */
+@utility rounded-nested {
+  border-radius: calc(var(--inner-radius) - 6px);
+}
+
+/*
+ * 送る欄（一覧・やり取り）の縁で、選んだ行・吹き出しの影（左右 16px・下 30px まで届く）が切れないよう、
+ * 余白を取って同じだけ外へ広げる（並びの位置は変わらない）
+ */
+@utility shadow-room-x {
+  margin-inline: -16px;
+  padding-inline: 16px;
+}
+@utility shadow-room-b {
+  margin-bottom: -30px;
+  padding-bottom: 30px;
+}
+
+/*
+ * 壁紙にじかに置く文字の影（halo）は文字の外へ 20px ほど広がるので、はみ出しを切る1行（ellipsis）や送る欄の縁で切れて見える。
+ * 影の広がる分だけ内側に余白を取り、外側を同じだけ詰める
+ */
+@utility halo-room {
+  margin: -22px;
+  padding: 22px;
+}
+@utility halo-room-t {
+  margin-top: -22px;
+  padding-top: 22px;
+}
+
+/* 2つの欄の並び（SideLayout: 左に選ぶ欄・右に中身／ChatLayout: 左に会話の一覧・右にやり取り） */
+@utility grid-cols-side {
+  grid-template-columns: minmax(220px, 300px) minmax(0, 1fr);
+}
+@utility grid-cols-chat {
+  grid-template-columns: minmax(240px, 340px) minmax(0, 1fr);
+}
+
+/* 値のタイル（StatGrid）を幅に合わせて並べる */
+@utility grid-cols-stat {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 190px), 1fr));
+}
+
+/* 大きな数値の後ろの単位（StatTile） */
+@utility text-unit {
+  font-size: 0.4em;
+}
+
+/* 入／切のトグル（iOS・macOS の設定と同じ大きさ）。つまみは入で右へ動く */
+@utility switch-track {
+  width: 51px;
+  height: 31px;
+}
+@utility switch-knob {
+  top: 2px;
+  left: 2px;
+  width: 27px;
+  height: 27px;
+  [aria-checked="true"] > & {
+    transform: translateX(20px);
+  }
+}
+
+/* つまみ（Slider・ToggleSwitch）の影 */
+@utility knob-shadow {
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.32);
+}
+
+/* 入力欄・選ぶ欄（Field の中の input・select・textarea） */
+@utility fields {
+  & :is(input:not([type="checkbox"], [type="radio"], [type="file"], [type="range"]), select, textarea) {
+    width: 100%;
+    min-height: 44px;
+    padding: 0 var(--field-padding-x);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--inner-radius);
+    background: var(--surface-input);
+    color: var(--text-primary);
+    font: inherit;
+    font-size: var(--font-small);
+    text-shadow: none;
+  }
+  & textarea {
+    padding-block: 0.6rem;
+  }
+  & :is(input, textarea)::placeholder {
+    color: var(--text-secondary);
+  }
+  & option {
+    background: var(--surface-raised);
+  }
+}
+
+/* チャットの吹き出し。自分のものは、見分けやすいようガラスに薄い水色を重ね、右下の角を尖らせる */
+@utility bubble-mine {
+  border: 1px solid rgba(var(--accent-soft-rgb), 0.35);
+  border-bottom-right-radius: 0.3rem;
+  background:
+    var(--widget-sheen),
+    linear-gradient(0deg, rgba(var(--accent-rgb), 0.2), rgba(var(--accent-rgb), 0.3));
+  background-clip: padding-box;
+  box-shadow: var(--widget-shadow);
+  backdrop-filter: var(--widget-blur);
+}
+@utility bubble-theirs {
+  border-bottom-left-radius: 0.3rem;
+}
+
+/* 相手の名前・時刻を、顔の分だけ右へ寄せて吹き出しとそろえる（ChatRow の中の ChatFrom の後の ChatMeta） */
+@utility chat-row {
+  & > [data-chat-from] ~ [data-chat-meta] {
+    padding-left: 2.5rem;
+  }
+}
+
+/* 頭文字の丸の色（Avatar の hue） */
+@utility avatar-hue {
+  background: hsl(var(--avatar-hue) 55% 42%);
+  color: #fff;
+}

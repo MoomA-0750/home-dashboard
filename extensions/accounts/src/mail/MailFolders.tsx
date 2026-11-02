@@ -1,17 +1,26 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
-import { defineMessages, Icon, List, ListItem, motionMs, reducedMotion, SectionTitle, type IconName } from "@home-dashboard/widget-sdk";
+import { cx, defineMessages, Icon, IconButton, List, ListItem, motionMs, reducedMotion, SectionTitle, type IconName } from "@home-dashboard/widget-sdk";
 import { MAIL_FOLDERS, type FolderKey, type MailboxFolder, type MailFolder } from "./types";
 
 /**
  * Mail 画面の左の欄。上に決まったフォルダー（受信箱・送信済みなど）、下に自分で作ったメールボックスをツリーで並べる
  * （「etc/Amazon」は「etc」の下に「Amazon」）。子のあるものは右の矢印で開け閉めし、開いているものは端末に覚える。
- * 開くと子が親の行の下から、いちばん下の子を先頭に引き出され、閉じると上の子から順に親の行の下へ戻る（mail.css の mail-tree-in・out）
+ * 開くと子が親の行の下から、いちばん下の子を先頭に引き出され、閉じると上の子から順に親の行の下へ戻る（packages/ui/src/theme/media-accounts.css の mail-tree-entering・closing）
  */
 
 // 子を1つずつずらす間（開く・閉じる）と、その合計の上限（子が多くても待たせない）
 const STAGGER_IN_MS = 35;
 const STAGGER_OUT_MS = 22;
 const STAGGER_TOTAL_MS = 240;
+
+/** フォルダーの行の頭のアイコン（淡い色の角丸の四角） */
+function FolderIcon({ icon }: { icon: IconName }) {
+  return (
+    <span className="grid size-8 shrink-0 place-items-center rounded-nav bg-accent-soft/18 text-title">
+      <Icon name={icon} />
+    </span>
+  );
+}
 
 function staggers(count: number) {
   if (reducedMotion()) return { inMs: 0, outMs: 0 };
@@ -132,7 +141,7 @@ export function MailFolders({
     const root = rootRef.current;
     const node = root?.querySelector(`[data-node-id="${CSS.escape(id)}"]`);
     if (!root || !node) return [];
-    return Array.from(root.querySelectorAll<HTMLElement>(".mail-tree__row, .ui-section-title")).filter(
+    return Array.from(root.querySelectorAll<HTMLElement>("[data-tree-row]")).filter(
       (el) => !node.contains(el) && Boolean(node.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING),
     );
   };
@@ -214,7 +223,7 @@ export function MailFolders({
     const total = motionMs("base") + outMs * Math.max(childCount - 1, 0);
     // 下の行を、子の欄の高さだけ上げる。いちばん下の子（最後に戻る）と同じ遅れ・時間・動き方で、そのすぐ下に付いていく
     const node = rootRef.current?.querySelector(`[data-node-id="${CSS.escape(id)}"]`);
-    const children = node?.querySelector<HTMLElement>(":scope > .mail-tree__children");
+    const children = node?.querySelector<HTMLElement>(":scope > [data-tree-children]");
     if (children) {
       const height = children.getBoundingClientRect().height + parseFloat(getComputedStyle(children).marginTop);
       const rows = followingRows(id);
@@ -255,45 +264,43 @@ export function MailFolders({
         const folder = node.folder;
         const selected = folder !== null && current.key === folder.id && current.mailboxId === folder.mailboxId;
         return (
-          <li key={node.id} className="mail-tree__node" data-node-id={node.id} style={{ "--i": index } as CSSProperties}>
-            <ul className="mail-tree__row">
+          <li key={node.id} data-node-id={node.id} style={{ "--i": index } as CSSProperties}>
+            <ul data-tree-row>
               <ListItem
-                leading={
-                  <span className="ui-list-icon">
-                    <Icon name="mail" />
-                  </span>
-                }
+                leading={<FolderIcon icon="mail" />}
                 title={node.name}
                 selected={selected}
                 chevron={false}
                 onClick={() => (folder ? onChoose({ key: folder.id as FolderKey, mailboxId: folder.mailboxId }) : toggle(node.id, count))}
                 trailing={
                   node.children.length > 0 ? (
-                    <button
-                      type="button"
-                      className={`mail-tree__toggle${isOpen ? " mail-tree__toggle--open" : ""}`}
+                    // 開け閉めの矢印は、開くと下を向く。行の高さを変えないよう小さくし、外の余白を詰める
+                    <IconButton
+                      icon="chevron-right"
+                      label={t(isOpen ? "collapse" : "expand", { name: node.name })}
                       aria-expanded={isOpen}
-                      aria-label={t(isOpen ? "collapse" : "expand", { name: node.name })}
+                      className={cx(
+                        "-my-1.5 -mr-1.5 size-8 text-muted hover:bg-tint/8",
+                        "[&_.fluent-icon]:transition-transform [&_.fluent-icon]:duration-(--motion-fast) [&_.fluent-icon]:ease-standard",
+                        isOpen && "[&_.fluent-icon]:rotate-90",
+                      )}
                       onClick={(event) => {
                         event.stopPropagation();
                         toggle(node.id, count);
                       }}
-                    >
-                      <Icon name="chevron-right" />
-                    </button>
+                    />
                   ) : undefined
                 }
               />
             </ul>
             {shown && count > 0 && (
               <div
-                className={[
-                  "mail-tree__children",
-                  opened.has(node.id) && "mail-tree__children--entering",
-                  closing.has(node.id) && "mail-tree__children--closing",
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
+                data-tree-children
+                className={cx(
+                  "mt-1.5 pl-5 [&>ul]:mb-0",
+                  opened.has(node.id) && "mail-tree-entering",
+                  closing.has(node.id) && "mail-tree-closing",
+                )}
                 style={{ "--n": count, "--stagger-in": `${inMs}ms`, "--stagger-out": `${outMs}ms` } as CSSProperties}
               >
                 {renderNodes(node.children)}
@@ -311,11 +318,7 @@ export function MailFolders({
         {MAIL_FOLDERS.map((f) => (
           <ListItem
             key={f}
-            leading={
-              <span className="ui-list-icon">
-                <Icon name={FOLDER_ICONS[f]} />
-              </span>
-            }
+            leading={<FolderIcon icon={FOLDER_ICONS[f]} />}
             title={t(`folder_${f}`)}
             badge={f === "inbox" && unreadInbox > 0 ? String(unreadInbox) : undefined}
             selected={current.key === f}
@@ -325,8 +328,11 @@ export function MailFolders({
         ))}
       </List>
       {[...groups].map(([mailboxId, list]) => (
-        <section key={mailboxId} className="mail-tree">
-          <SectionTitle>{groupName ? groupName(mailboxId) : t("mailboxFolders")}</SectionTitle>
+        <section key={mailboxId} className="[&>ul]:mb-0">
+          {/* アカウントの見出しも、開け閉めした段より下なら行と一緒に動かす */}
+          <div data-tree-row>
+            <SectionTitle>{groupName ? groupName(mailboxId) : t("mailboxFolders")}</SectionTitle>
+          </div>
           {renderNodes(buildTree(list))}
         </section>
       ))}

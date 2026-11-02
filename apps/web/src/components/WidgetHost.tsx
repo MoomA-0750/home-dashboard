@@ -1,7 +1,11 @@
 import { memo, useState } from "react";
-import { createPortal } from "react-dom";
 import {
+  cx,
   defineMessages,
+  Dialog,
+  IconButton,
+  WidgetCard,
+  WidgetHint,
   textFor,
   useLocale,
   usePresence,
@@ -12,6 +16,10 @@ import {
   type WidgetSize,
 } from "@home-dashboard/widget-sdk";
 import { ErrorBoundary } from "./ErrorBoundary";
+
+/** 編集の操作（設定・上へ・下へ）は、カードの上で目立つ明るい塗りの丸。外すものは危ない色 */
+const EDIT_BUTTON = "fill-bright no-blur";
+const REMOVE_BUTTON = "fill-bright no-blur bg-danger-strong text-on-danger";
 import { Icon } from "./Icon";
 
 const messages = defineMessages({
@@ -21,7 +29,6 @@ const messages = defineMessages({
     moveUp: "{name}を上へ",
     moveDown: "{name}を下へ",
     remove: "{name}を削除",
-    close: "閉じる",
     unavailable: "このウィジェットの拡張機能は切ってあるか、入っていません（設定画面の「拡張機能」）",
   },
   en: {
@@ -30,7 +37,6 @@ const messages = defineMessages({
     moveUp: "Move {name} up",
     moveDown: "Move {name} down",
     remove: "Remove {name}",
-    close: "Close",
     unavailable: "This widget's extension is turned off or not installed (Settings → Extensions)",
   },
 });
@@ -61,9 +67,7 @@ export const WidgetHost = memo(function WidgetHost({
 }: WidgetHostProps) {
   const [detailOpen, setDetailOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  // 閉じるとき・編集を終えるときも、薄くなってから消す
-  const detail = usePresence(detailOpen);
-  const settings = usePresence(settingsOpen);
+  // 編集を終えるときも、薄くなってから消す（詳細・設定の小窓は Dialog が自分で薄くなってから閉じる）
   const editTools = usePresence(editMode);
   const definition = registry.get(instance.widgetId);
   const size: WidgetSize = { w: instance.w, h: instance.h };
@@ -79,49 +83,59 @@ export const WidgetHost = memo(function WidgetHost({
   const config = { ...definition?.defaultConfig, ...instance.config };
 
   return (
-    <div className={`widget-host${editMode ? " widget-host--editing" : ""}`}>
+    <div className="relative h-full">
       {editTools.shown && (
-        <div className={`widget-host__edit${editTools.closing ? " is-closing" : ""}`}>
-          <span className="widget-host__drag" aria-hidden="true" title={t("dragToReorder")}>
-            <span className="widget-host__grip" />
+        // 編集中はカードの中身を押せないよう、上に層を重ねる（押すと詳細が開いたり照明が切り替わったりするため）。
+        // 層は縦のスクロールだけ通すので、タッチ端末でも列を送れる
+        <div
+          className={cx(
+            "absolute inset-0 layer-handle flex items-center justify-between rounded-card border-2 border-dashed border-tint/55 bg-shade/35 px-4 touch-pan-y",
+            "animate-fade closing:animate-fade-out closing:pointer-events-none",
+            editTools.closing && "is-closing",
+          )}
+        >
+          {/* つまみの上だけは、スクロールではなくドラッグにする */}
+          <span
+            data-drag-handle=""
+            className="fill-bright grid h-30 w-14 cursor-grab touch-none place-items-center rounded-full active:cursor-grabbing [&_.fluent-icon]:size-7"
+            aria-hidden="true"
+            title={t("dragToReorder")}
+          >
+            <Icon name="grip" />
           </span>
-          <div className="widget-host__edit-actions">
+          <div className="flex gap-2.5">
             {SettingsComponent && (
-              <button
-                type="button"
-                className="widget-host__edit-button"
+              <IconButton
+                size="lg"
+                icon="settings"
+                className={EDIT_BUTTON}
                 onClick={() => setSettingsOpen(true)}
-                aria-label={t("settingsOf", { name })}
-              >
-                <Icon name="settings" />
-              </button>
+                label={t("settingsOf", { name })}
+              />
             )}
-            <button
-              type="button"
-              className="widget-host__edit-button"
+            <IconButton
+              size="lg"
+              icon="chevron-up"
+              className={EDIT_BUTTON}
               onClick={() => onMove(instance.instanceId, -1)}
               disabled={!canMoveUp}
-              aria-label={t("moveUp", { name })}
-            >
-              <Icon name="chevron-up" />
-            </button>
-            <button
-              type="button"
-              className="widget-host__edit-button"
+              label={t("moveUp", { name })}
+            />
+            <IconButton
+              size="lg"
+              icon="chevron-down"
+              className={EDIT_BUTTON}
               onClick={() => onMove(instance.instanceId, 1)}
               disabled={!canMoveDown}
-              aria-label={t("moveDown", { name })}
-            >
-              <Icon name="chevron-down" />
-            </button>
-            <button
-              type="button"
-              className="widget-host__edit-button widget-host__edit-button--remove"
+              label={t("moveDown", { name })}
+            />
+            <IconButton
+              size="lg"
+              icon="delete"
+              className={REMOVE_BUTTON}
               onClick={() => onRemove(instance.instanceId)}
-              aria-label={t("remove", { name })}
-            >
-              <Icon name="delete" />
-            </button>
+              label={t("remove", { name })}
+            />
           </div>
         </div>
       )}
@@ -134,79 +148,35 @@ export const WidgetHost = memo(function WidgetHost({
           openDetail={() => DetailComponent && setDetailOpen(true)}
         />
       </ErrorBoundary>
-      {/*
-        詳細ビューは body 直下にポータルで出す。
-        react-grid-layout は各アイテムを CSS transform で配置しており、transform された要素は
-        position: fixed の包含ブロックになってしまうため、ここに直接書くとオーバーレイが
-        画面全体ではなくウィジェットの矩形を基準に配置され、パネルが見切れる。
-      */}
-      {DetailComponent &&
-        detail.shown &&
-        createPortal(
-          <div className={`widget-detail-overlay${detail.closing ? " is-closing" : ""}`} onClick={() => setDetailOpen(false)}>
-            <div className="widget-detail-panel" onClick={(e) => e.stopPropagation()}>
-              <button
-                type="button"
-                className="widget-detail-panel__close"
-                onClick={() => setDetailOpen(false)}
-                aria-label={t("close")}
-              >
-                <Icon name="dismiss" />
-              </button>
-              <ErrorBoundary name={name}>
-                <DetailComponent
-                  instanceId={instance.instanceId}
-                  config={config}
-                  size={size}
-                  ctx={ctx}
-                  openDetail={() => setDetailOpen(true)}
-                  closeDetail={() => setDetailOpen(false)}
-                />
-              </ErrorBoundary>
-            </div>
-          </div>,
-          document.body,
-        )}
-      {SettingsComponent &&
-        settings.shown &&
-        createPortal(
-          <div className={`widget-detail-overlay${settings.closing ? " is-closing" : ""}`} onClick={() => setSettingsOpen(false)}>
-            <div
-              className="widget-detail-panel widget-settings"
-              role="dialog"
-              aria-modal="true"
-              aria-label={t("settingsOf", { name })}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                type="button"
-                className="widget-detail-panel__close"
-                onClick={() => setSettingsOpen(false)}
-                aria-label={t("close")}
-              >
-                <Icon name="dismiss" />
-              </button>
-              <h2 className="widget-settings__title">{t("settingsOf", { name })}</h2>
-              <SettingsComponent
-                config={config}
-                ctx={ctx}
-                onChange={(next) => onConfigChange(instance.instanceId, next)}
-              />
-            </div>
-          </div>,
-          document.body,
-        )}
+      {/* 詳細と設定は小窓（Dialog）。Dialog は body の直下に出すので、react-grid-layout の transform の中でも画面全体に重なる */}
+      {DetailComponent && detailOpen && (
+        <Dialog label={name} onClose={() => setDetailOpen(false)}>
+          <ErrorBoundary name={name}>
+            <DetailComponent
+              instanceId={instance.instanceId}
+              config={config}
+              size={size}
+              ctx={ctx}
+              openDetail={() => setDetailOpen(true)}
+              closeDetail={() => setDetailOpen(false)}
+            />
+          </ErrorBoundary>
+        </Dialog>
+      )}
+      {SettingsComponent && settingsOpen && (
+        <Dialog title={t("settingsOf", { name })} onClose={() => setSettingsOpen(false)}>
+          <SettingsComponent config={config} ctx={ctx} onChange={(next) => onConfigChange(instance.instanceId, next)} />
+        </Dialog>
+      )}
     </div>
   );
 });
 
-function UnavailableWidget({ instanceId }: WidgetProps) {
+function UnavailableWidget(_props: WidgetProps) {
   const t = messages.useT();
   return (
-    <div className="widget-card widget-card--unknown" data-instance={instanceId}>
-      <span className="widget-hint">
-        {t("unavailable")}
-      </span>
-    </div>
+    <WidgetCard>
+      <WidgetHint>{t("unavailable")}</WidgetHint>
+    </WidgetCard>
   );
 }

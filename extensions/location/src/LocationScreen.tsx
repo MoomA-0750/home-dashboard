@@ -49,10 +49,9 @@ export function LocationScreen({ ctx }: ScreenProps) {
       {data && !data.configured && <ScreenNotice>{data.message}</ScreenNotice>}
       {data?.configured && (
         <SideLayout
-          className="location-screen"
           sideLabel={t("devices")}
           side={
-            <>
+            <div className="flex flex-col gap-3.5">
               {!data.home && <Note>{t("noHomeNote")}</Note>}
               {places.length === 0 ? (
                 <Note>{t("empty")}</Note>
@@ -80,13 +79,11 @@ export function LocationScreen({ ctx }: ScreenProps) {
               )}
               {actions.result && <Message tone={actions.result.tone}>{actions.result.text}</Message>}
               {current && (
-                <div className="location-screen__actions">
-                  <PlaceActions place={current} actions={actions} mapLabel={t("appleMaps")} />
-                </div>
+                <PlaceActions place={current} actions={actions} mapLabel={t("appleMaps")} start />
               )}
               <Note>{t("privacy")}</Note>
               {data.map && <Note>{t("mapPrivacy", { provider })}</Note>}
-            </>
+            </div>
           }
         >
           {data.map && (

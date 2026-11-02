@@ -72,7 +72,22 @@ export async function tailwindForExtension(srcDir) {
     onDependency: () => {},
   });
   const scanner = new Scanner({ sources: [{ base: srcDir, pattern: "**/*", negated: false }] });
-  return optimize(compiler.build(scanner.scan()), { minify: false }).code;
+  // 本体のシート（packages/ui/src/tailwind.css）が出すクラスは出し直さない（後から読まれるシートが、
+  // 本体の区切りつきのクラスを打ち消さないように）
+  const core = await coreCandidates();
+  return optimize(compiler.build(scanner.scan().filter((c) => !core.has(c))), { minify: false }).code;
+}
+
+/** 本体のシートが出すクラスの候補（tailwind.css の @source と同じ所を探す。apps/web は Vite が自動で探す所） */
+let coreCandidateSet = null;
+async function coreCandidates() {
+  if (coreCandidateSet) return coreCandidateSet;
+  const bases = ["packages/ui/src", "packages/widget-sdk/src", "apps/web/src", "apps/web/index.html"];
+  const sources = bases.map((base) => ({ base: join(ROOT, base), pattern: "**/*", negated: false }));
+  for (const entry of await readdir(join(ROOT, "extensions"), { withFileTypes: true }))
+    if (entry.isDirectory()) sources.push({ base: join(ROOT, "extensions", entry.name, "src"), pattern: "**/*", negated: false });
+  coreCandidateSet = new Set(new Scanner({ sources: sources.filter((s) => existsSync(s.base)) }).scan());
+  return coreCandidateSet;
 }
 
 /**

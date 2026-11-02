@@ -1,5 +1,21 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { defineMessages, useLocale } from "@home-dashboard/widget-sdk";
+import {
+  Badge,
+  Button,
+  ButtonRow,
+  cx,
+  defineMessages,
+  Field,
+  Group,
+  inputClass,
+  List,
+  ListItem,
+  Message,
+  Note,
+  SectionTitle,
+  ToggleSwitch,
+  useLocale,
+} from "@home-dashboard/widget-sdk";
 import {
   addPasskey,
   changePassword,
@@ -22,7 +38,6 @@ import {
 } from "../lib/auth";
 import { useDevice } from "../lib/device";
 import type { LiteMode } from "../lib/lite";
-import { ToggleSwitch } from "./ExtensionSettings";
 
 interface AccountSettingsProps {
   apiBaseUrl: string;
@@ -218,8 +233,8 @@ export function AccountSettings({ apiBaseUrl, account, sessionId, onSignedOut }:
   const nameOf = (accountId: string) => accounts.find((a) => a.id === accountId)?.username ?? "";
 
   return (
-    <section className="account-settings">
-      <div className="account-settings__me">
+    <section>
+      <div className="mb-3 flex items-center justify-between gap-3 text-small">
         <span>
           {t("signedInBefore")}
           <strong>{account.username}</strong>
@@ -227,9 +242,8 @@ export function AccountSettings({ apiBaseUrl, account, sessionId, onSignedOut }:
         </span>
         {/* ダッシュボード端末では、うっかり押してログインが外れないよう出さない（ふつうの端末に戻すと出る） */}
         {!dashboard && (
-          <button
-            type="button"
-            className="account-settings__button"
+          <Button
+            className="shrink-0"
             disabled={busy}
             onClick={() =>
               void run(async () => {
@@ -240,219 +254,222 @@ export function AccountSettings({ apiBaseUrl, account, sessionId, onSignedOut }:
             }
           >
             {t("signOut")}
-          </button>
+          </Button>
         )}
       </div>
 
-      <details className="connection-settings__section" open={dashboard || undefined}>
-        <summary>
-          <span>{t("thisDeviceSection")}</span>
-          {dashboard && <span className="connection-settings__badge">{t("dashboardBadge")}</span>}
-        </summary>
-        <div className="settings-list__row settings-list__row--plain account-settings__device">
-          <span className="settings-list__text">
-            <span className="settings-list__title">{t("dashboardDevice")}</span>
-            <span className="settings-list__detail">{t("dashboardDeviceDetail")}</span>
-          </span>
-          <ToggleSwitch
-            checked={dashboard}
-            disabled={busy}
-            label={t("dashboardDevice")}
-            onChange={() =>
-              void run(async () => {
-                await device.update({ dashboard: !dashboard });
-                return null;
+      <Group collapsible title={t("thisDeviceSection")} badge={dashboard && <Badge>{t("dashboardBadge")}</Badge>} open={dashboard || undefined}>
+        <div>
+          {/* 選ぶ前に読んでほしい説明なので、省略せず折り返す */}
+          <List label={t("thisDeviceSection")}>
+            <ListItem
+              title={t("dashboardDevice")}
+              detail={t("dashboardDeviceDetail")}
+              wrap
+              trailing={
+                <ToggleSwitch
+                  checked={dashboard}
+                  disabled={busy}
+                  label={t("dashboardDevice")}
+                  onChange={() =>
+                    void run(async () => {
+                      await device.update({ dashboard: !dashboard });
+                      return null;
+                    })
+                  }
+                />
+              }
+            />
+            <ListItem
+              title={t("lite")}
+              detail={
+                <>
+                  {t("liteDetail")}
+                  {device.device.lite === "auto" && (
+                    <>
+                      {" "}
+                      {t("liteNow", {
+                        state: t(device.lite.active ? "liteActive" : "liteInactive"),
+                        reason: t(`reason${device.lite.reason ?? "fast"}`),
+                      })}
+                    </>
+                  )}
+                </>
+              }
+              wrap
+              trailing={
+                <select
+                  aria-label={t("lite")}
+                  className={cx(inputClass, "w-auto")}
+                  value={device.device.lite}
+                  disabled={busy}
+                  onChange={(event) =>
+                    void run(async () => {
+                      await device.update({ lite: event.target.value as LiteMode });
+                      return null;
+                    })
+                  }
+                >
+                  <option value="auto">{t("liteAuto")}</option>
+                  <option value="on">{t("liteOn")}</option>
+                  <option value="off">{t("liteOff")}</option>
+                </select>
+              }
+            />
+          </List>
+        </div>
+      </Group>
+
+      <Group collapsible title={t("changePassword")}>
+        <div>
+          <PasswordForm
+            busy={busy}
+            needsCurrent
+            onSubmit={(current, next) =>
+              run(async () => {
+                await changePassword(apiBaseUrl, account.id, current, next);
+                return t("passwordChanged");
               })
             }
           />
         </div>
-        <div className="settings-list__row settings-list__row--plain account-settings__device">
-          <span className="settings-list__text">
-            <span className="settings-list__title">{t("lite")}</span>
-            <span className="settings-list__detail">
-              {t("liteDetail")}
-              {device.device.lite === "auto" && (
-                <>
-                  {" "}
-                  {t("liteNow", {
-                    state: t(device.lite.active ? "liteActive" : "liteInactive"),
-                    reason: t(`reason${device.lite.reason ?? "fast"}`),
-                  })}
-                </>
-              )}
-            </span>
-          </span>
-          <select
-            aria-label={t("lite")}
-            value={device.device.lite}
-            disabled={busy}
-            onChange={(event) =>
-              void run(async () => {
-                await device.update({ lite: event.target.value as LiteMode });
-                return null;
+      </Group>
+
+      <Group collapsible title={t("passkeys")} badge={<Badge>{passkeys.length}</Badge>}>
+        <div>
+          <PasskeySection
+            passkeys={passkeys}
+            busy={busy}
+            deleting={deleting}
+            onAdd={(name) =>
+              run(async () => {
+                const passkey = await addPasskey(apiBaseUrl, name);
+                return passkey ? t("passkeyCreated", { name: passkey.name }) : null;
               })
             }
-          >
-            <option value="auto">{t("liteAuto")}</option>
-            <option value="on">{t("liteOn")}</option>
-            <option value="off">{t("liteOff")}</option>
-          </select>
+            onDelete={(passkey) => {
+              if (deleting !== passkey.id) return setDeleting(passkey.id);
+              setDeleting(null);
+              void run(async () => {
+                await deletePasskey(apiBaseUrl, passkey.id);
+                return t("passkeyDeleted", { name: passkey.name });
+              });
+            }}
+          />
         </div>
-      </details>
+      </Group>
 
-      <details className="connection-settings__section">
-        <summary>
-          <span>{t("changePassword")}</span>
-        </summary>
-        <PasswordForm
-          busy={busy}
-          needsCurrent
-          onSubmit={(current, next) =>
-            run(async () => {
-              await changePassword(apiBaseUrl, account.id, current, next);
-              return t("passwordChanged");
-            })
-          }
-        />
-      </details>
-
-      <details className="connection-settings__section">
-        <summary>
-          <span>{t("passkeys")}</span>
-          <span className="connection-settings__badge">{passkeys.length}</span>
-        </summary>
-        <PasskeySection
-          passkeys={passkeys}
-          busy={busy}
-          deleting={deleting}
-          onAdd={(name) =>
-            run(async () => {
-              const passkey = await addPasskey(apiBaseUrl, name);
-              return passkey ? t("passkeyCreated", { name: passkey.name }) : null;
-            })
-          }
-          onDelete={(passkey) => {
-            if (deleting !== passkey.id) return setDeleting(passkey.id);
-            setDeleting(null);
-            void run(async () => {
-              await deletePasskey(apiBaseUrl, passkey.id);
-              return t("passkeyDeleted", { name: passkey.name });
-            });
-          }}
-        />
-      </details>
-
-      <details className="connection-settings__section">
-        <summary>
-          <span>{t("sessions")}</span>
-          <span className="connection-settings__badge">{sessions.length}</span>
-        </summary>
-        <ul className="account-settings__list">
-          {sessions.map((session) => (
-            <li key={session.id}>
-              <span className="account-settings__name">
-                {session.deviceName}
-                {session.id === sessionId && <small>{t("thisDevice")}</small>}
-                {session.device.dashboard && <small>{t("dashboardBadge")}</small>}
-              </span>
-              <span className="account-settings__meta">
-                {isAdmin && session.accountId !== account.id && `${nameOf(session.accountId)} · `}
-                {t("lastUsed", {
-                  when: relativeDate(session.lastUsedAt, locale),
-                })}
-              </span>
-              <span className="account-settings__actions">
-                {session.id !== sessionId && (
-                  <button
-                    type="button"
-                    className="account-settings__button"
-                    disabled={busy}
-                    onClick={() =>
-                      void run(async () => {
-                        await setDeviceSettings(apiBaseUrl, session.id, {
-                          dashboard: !session.device.dashboard,
-                        });
-                        return null;
-                      })
-                    }
-                  >
-                    {session.device.dashboard ? t("unmakeDashboard") : t("makeDashboard")}
-                  </button>
-                )}
-                {!(session.id === sessionId && dashboard) && (
-                  <button
-                    type="button"
-                    className="account-settings__button"
-                    disabled={busy}
-                    onClick={() =>
-                      void run(async () => {
-                        await revokeSession(apiBaseUrl, session.id);
-                        if (session.id === sessionId) onSignedOut();
-                        return t("sessionRevoked", {
-                          name: session.deviceName,
-                        });
-                      })
-                    }
-                  >
-                    {t("revoke")}
-                  </button>
-                )}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </details>
+      <Group collapsible title={t("sessions")} badge={<Badge>{sessions.length}</Badge>}>
+        <div>
+          <List label={t("sessions")}>
+            {sessions.map((session) => (
+              <ListItem
+                key={session.id}
+                title={session.deviceName}
+                badge={badges([
+                  session.id === sessionId && t("thisDevice"),
+                  session.device.dashboard && t("dashboardBadge"),
+                ])}
+                detail={
+                  <>
+                    {isAdmin && session.accountId !== account.id && `${nameOf(session.accountId)} · `}
+                    {t("lastUsed", { when: relativeDate(session.lastUsedAt, locale) })}
+                  </>
+                }
+                trailing={
+                  <ButtonRow>
+                    {session.id !== sessionId && (
+                      <Button
+                        disabled={busy}
+                        onClick={() =>
+                          void run(async () => {
+                            await setDeviceSettings(apiBaseUrl, session.id, {
+                              dashboard: !session.device.dashboard,
+                            });
+                            return null;
+                          })
+                        }
+                      >
+                        {session.device.dashboard ? t("unmakeDashboard") : t("makeDashboard")}
+                      </Button>
+                    )}
+                    {!(session.id === sessionId && dashboard) && (
+                      <Button
+                        disabled={busy}
+                        onClick={() =>
+                          void run(async () => {
+                            await revokeSession(apiBaseUrl, session.id);
+                            if (session.id === sessionId) onSignedOut();
+                            return t("sessionRevoked", {
+                              name: session.deviceName,
+                            });
+                          })
+                        }
+                      >
+                        {t("revoke")}
+                      </Button>
+                    )}
+                  </ButtonRow>
+                }
+              />
+            ))}
+          </List>
+        </div>
+      </Group>
 
       {isAdmin && (
-        <details className="connection-settings__section">
-          <summary>
-            <span>{t("manageAccounts")}</span>
-            <span className="connection-settings__badge">{accounts.length}</span>
-          </summary>
-          <ul className="account-settings__list">
-            {accounts.map((other) => (
-              <li key={other.id}>
-                <span className="account-settings__name">
-                  {other.username}
-                  {other.id === account.id && <small>{t("you")}</small>}
-                </span>
-                <span className="account-settings__meta">{t(ROLE_LABELS[other.role])}</span>
-                {other.id !== account.id && (
-                  <button
-                    type="button"
-                    className="account-settings__button"
-                    disabled={busy}
-                    onClick={() => {
-                      if (deleting !== other.id) return setDeleting(other.id);
-                      setDeleting(null);
-                      void run(async () => {
-                        await deleteAccount(apiBaseUrl, other.id);
-                        return t("accountDeleted", { name: other.username });
-                      });
-                    }}
-                  >
-                    {deleting === other.id ? t("pressAgainToDelete") : t("delete")}
-                  </button>
-                )}
-              </li>
-            ))}
-          </ul>
-          <NewAccountForm
-            busy={busy}
-            onSubmit={(username, password, role) =>
-              run(async () => {
-                await createAccount(apiBaseUrl, username, password, role);
-                return t("accountCreated", { name: username });
-              })
-            }
-          />
-        </details>
+        <Group collapsible title={t("manageAccounts")} badge={<Badge>{accounts.length}</Badge>}>
+          <div>
+            <List label={t("manageAccounts")}>
+              {accounts.map((other) => (
+                <ListItem
+                  key={other.id}
+                  title={other.username}
+                  badge={other.id === account.id ? t("you") : undefined}
+                  detail={t(ROLE_LABELS[other.role])}
+                  trailing={
+                    other.id !== account.id && (
+                      <Button
+                        variant={deleting === other.id ? "danger" : "default"}
+                        disabled={busy}
+                        onClick={() => {
+                          if (deleting !== other.id) return setDeleting(other.id);
+                          setDeleting(null);
+                          void run(async () => {
+                            await deleteAccount(apiBaseUrl, other.id);
+                            return t("accountDeleted", { name: other.username });
+                          });
+                        }}
+                      >
+                        {deleting === other.id ? t("pressAgainToDelete") : t("delete")}
+                      </Button>
+                    )
+                  }
+                />
+              ))}
+            </List>
+            <NewAccountForm
+              busy={busy}
+              onSubmit={(username, password, role) =>
+                run(async () => {
+                  await createAccount(apiBaseUrl, username, password, role);
+                  return t("accountCreated", { name: username });
+                })
+              }
+            />
+          </div>
+        </Group>
       )}
 
-      {notice && <p className="connection-settings__message">{notice}</p>}
-      {error && <p className="connection-settings__message connection-settings__message--error">{error}</p>}
+      {notice && <Message>{notice}</Message>}
+      {error && <Message tone="error">{error}</Message>}
     </section>
   );
+}
+
+/** 行の名前の横に出す小さな印（いくつかあれば「・」でつなぐ） */
+function badges(labels: (string | false)[]): string | undefined {
+  return labels.filter(Boolean).join(" · ") || undefined;
 }
 
 function PasskeySection({
@@ -481,49 +498,50 @@ function PasskeySection({
 
   return (
     <>
-      <p className="account-settings__note">{t("passkeyNote")}</p>
+      <Note>{t("passkeyNote")}</Note>
       {passkeys.length > 0 && (
-        <ul className="account-settings__list">
+        <List label={t("passkeys")}>
           {passkeys.map((passkey) => (
-            <li key={passkey.id}>
-              <span className="account-settings__name">
-                {passkey.name}
-                {passkey.backedUp && <small>{t("synced")}</small>}
-              </span>
-              <span className="account-settings__meta">
-                {passkey.rpId !== here && t("usableAt", { host: passkey.rpId })}
-                {passkey.lastUsedAt
-                  ? t("lastUsed", {
-                      when: relativeDate(passkey.lastUsedAt, locale),
-                    })
-                  : t("neverUsed")}
-              </span>
-              <button
-                type="button"
-                className="account-settings__button"
-                disabled={busy}
-                onClick={() => onDelete(passkey)}
-              >
-                {deleting === passkey.id ? t("pressAgainToDelete") : t("delete")}
-              </button>
-            </li>
+            <ListItem
+              key={passkey.id}
+              title={passkey.name}
+              badge={passkey.backedUp ? t("synced") : undefined}
+              detail={
+                <>
+                  {passkey.rpId !== here && t("usableAt", { host: passkey.rpId })}
+                  {passkey.lastUsedAt
+                    ? t("lastUsed", {
+                        when: relativeDate(passkey.lastUsedAt, locale),
+                      })
+                    : t("neverUsed")}
+                </>
+              }
+              trailing={
+                <Button
+                  variant={deleting === passkey.id ? "danger" : "default"}
+                  disabled={busy}
+                  onClick={() => onDelete(passkey)}
+                >
+                  {deleting === passkey.id ? t("pressAgainToDelete") : t("delete")}
+                </Button>
+              }
+            />
           ))}
-        </ul>
+        </List>
       )}
       {unavailable ? (
-        <p className="account-settings__note">{unavailable}</p>
+        <Note>{unavailable}</Note>
       ) : (
         <form onSubmit={submit}>
-          <fieldset disabled={busy}>
-            <label className="connection-settings__field">
-              <span>{t("passkeyName")}</span>
+          <fieldset disabled={busy} className="min-w-0">
+            <Field label={t("passkeyName")}>
               <input value={name} maxLength={40} onChange={(e) => setName(e.target.value)} />
-            </label>
-            <div className="connection-settings__actions">
-              <button type="submit" className="connection-settings__save">
+            </Field>
+            <ButtonRow>
+              <Button type="submit" variant="primary">
                 {t("createPasskey")}
-              </button>
-            </div>
+              </Button>
+            </ButtonRow>
           </fieldset>
         </form>
       )}
@@ -558,37 +576,34 @@ function PasswordForm({
 
   return (
     <form onSubmit={submit}>
-      <fieldset disabled={busy}>
+      <fieldset disabled={busy} className="min-w-0">
         {needsCurrent && (
-          <label className="connection-settings__field">
-            <span>{t("currentPassword")}</span>
+          <Field label={t("currentPassword")}>
             <input
               type="password"
               autoComplete="current-password"
               value={current}
               onChange={(e) => setCurrent(e.target.value)}
             />
-          </label>
+          </Field>
         )}
-        <label className="connection-settings__field">
-          <span>{t("newPassword")}</span>
+        <Field label={t("newPassword")}>
           <input type="password" autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} />
-        </label>
-        <label className="connection-settings__field">
-          <span>{t("confirmPassword")}</span>
+        </Field>
+        <Field label={t("confirmPassword")}>
           <input
             type="password"
             autoComplete="new-password"
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
           />
-        </label>
-        {mismatch && <p className="connection-settings__message--error">{t("passwordMismatch")}</p>}
-        <div className="connection-settings__actions">
-          <button type="submit" className="connection-settings__save" disabled={!next || mismatch}>
+        </Field>
+        {mismatch && <Message tone="error">{t("passwordMismatch")}</Message>}
+        <ButtonRow>
+          <Button type="submit" variant="primary" disabled={!next || mismatch}>
             {t("change")}
-          </button>
-        </div>
+          </Button>
+        </ButtonRow>
       </fieldset>
     </form>
   );
@@ -615,11 +630,10 @@ function NewAccountForm({
   };
 
   return (
-    <form onSubmit={submit} className="account-settings__new">
-      <h4>{t("addAccount")}</h4>
-      <fieldset disabled={busy}>
-        <label className="connection-settings__field">
-          <span>{t("username")}</span>
+    <form onSubmit={submit}>
+      <SectionTitle>{t("addAccount")}</SectionTitle>
+      <fieldset disabled={busy} className="min-w-0">
+        <Field label={t("username")}>
           <input
             value={username}
             autoComplete="off"
@@ -628,28 +642,26 @@ function NewAccountForm({
             maxLength={32}
             onChange={(e) => setUsername(e.target.value)}
           />
-        </label>
-        <label className="connection-settings__field">
-          <span>{t("password")}</span>
+        </Field>
+        <Field label={t("password")}>
           <input
             type="password"
             autoComplete="new-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
-        </label>
-        <label className="connection-settings__field">
-          <span>{t("role")}</span>
+        </Field>
+        <Field label={t("role")}>
           <select value={role} onChange={(e) => setRole(e.target.value as Role)}>
             <option value="member">{t("memberOption")}</option>
             <option value="admin">{t("adminOption")}</option>
           </select>
-        </label>
-        <div className="connection-settings__actions">
-          <button type="submit" className="connection-settings__save" disabled={!username.trim() || !password}>
+        </Field>
+        <ButtonRow>
+          <Button type="submit" variant="primary" disabled={!username.trim() || !password}>
             {t("add")}
-          </button>
-        </div>
+          </Button>
+        </ButtonRow>
       </fieldset>
     </form>
   );

@@ -43,3 +43,91 @@ button {
   text-box-trim: trim-both;
 }
 
+
+/*
+ * 画面全体の枠（@home-dashboard/ui/shell の AppShell。data-shell を付ける）の壁紙。
+ * 文字の後ろの暗さは、壁紙を測って場所ごとに足す（::after の --wallpaper-dim-*。壁紙を読み込んだときに測る。wallpaperTheme.ts）
+ */
+[data-shell] {
+  background-color: #071226;
+  background-image: var(--dash-background-image), var(--dash-background-fallback);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: cover, cover;
+}
+
+[data-shell]::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      to right,
+      rgba(var(--shade-rgb), var(--wallpaper-dim-1, 0.4)) 12%,
+      rgba(var(--shade-rgb), var(--wallpaper-dim-2, 0)) 42%,
+      rgba(var(--shade-rgb), var(--wallpaper-dim-3, 0)) 67%,
+      rgba(var(--shade-rgb), var(--wallpaper-dim-4, 0)) 90%
+    ),
+    radial-gradient(circle at 74% 42%, rgba(var(--accent-rgb), 0.13), transparent 34%),
+    linear-gradient(180deg, rgba(var(--shade-rgb), 0.18), rgba(var(--shade-rgb), 0.55));
+}
+
+/*
+ * 夜の表示（本体の lib/useNight.ts が <html data-night> と --night-darkness を付ける）。
+ * 壁紙はほぼ黒まで沈め、その上で画面全体（文字・ウィジェット・音声アシスタントも）に暗幕を重ねる。
+ * 暗幕は押す操作を下へ通すので、暗いまま普段どおり触れる
+ */
+[data-night] [data-shell] {
+  background-image:
+    linear-gradient(rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.85)),
+    var(--dash-background-image),
+    var(--dash-background-fallback);
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-night);
+  pointer-events: none;
+  background: #000;
+  opacity: 0;
+  transition: opacity 1.2s ease;
+}
+
+[data-night] body::after {
+  opacity: var(--night-darkness, 0.75);
+}
+
+/* サイドバーの幅を変えている間（Shell の SidebarHandle が body に data-resizing を付ける） */
+body[data-resizing] {
+  cursor: col-resize;
+  user-select: none;
+}
+
+/*
+ * ウィジェットの列（react-grid-layout を1列で使う。WidgetRail）。並べ替えの間の置き場所はカードと同じ角丸の薄い板にし、
+ * 読み込んだとき・サイドバーの幅を変えたときは大きさを動かさない（編集中の並べ替えの動きだけ残す。重さを抑える）。
+ * react-grid-layout の CSS は層の外（main.tsx）で読むので、!important で上書きする
+ */
+.react-grid-item.react-grid-placeholder {
+  border-radius: var(--card-radius);
+  background: rgba(var(--tint-rgb), 0.18) !important;
+  opacity: 1 !important;
+}
+
+.react-grid-item > .react-resizable-handle {
+  right: 14px !important;
+  bottom: 14px !important;
+  opacity: 0.6;
+}
+
+.react-grid-layout,
+.react-grid-item {
+  transition: none !important;
+}
+
+[data-editing] .react-grid-item.cssTransforms:not(.react-draggable-dragging, .resizing) {
+  transition: transform var(--motion-base) var(--ease-out) !important;
+}

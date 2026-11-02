@@ -4,7 +4,7 @@ import type { WidgetRuntimeContext } from "@home-dashboard/widget-sdk";
 /**
  * 夜の表示（部屋が暗い・電気が消えているときに画面をぐっと暗くする）。サーバーの /api/night を読み、
  * 夜に入った・出たの知らせ（night-updated）ですぐ替える。夜の間は <html data-night> と --night-darkness を付け、
- * theme.css が背景と文字を暗くする
+ * styles/base.css が背景と文字を暗くする
  */
 
 export interface NightSignal {

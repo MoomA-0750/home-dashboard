@@ -1,7 +1,7 @@
 # Icons
 
 Microsoft Fluent UI System Icons を SVG のまま置いてある。
-`.fluent-icon`（`packages/ui/src/theme.css`）が CSS マスクとして読み込むため、
+`Icon`（`packages/ui/src/Icon.tsx`）が CSS マスクとして読み込むため、
 SVG 内の色は使われず、親要素の `color` がそのままアイコンの色になる。
 
 追加するときはこのディレクトリに SVG を置き、`packages/widget-sdk/src/Icon.tsx` の

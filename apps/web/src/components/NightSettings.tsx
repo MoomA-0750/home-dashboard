@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { defineMessages, List, ListItem, Note, Slider } from "@home-dashboard/widget-sdk";
+import { defineMessages, List, ListItem, Message, Note, SectionTitle, Slider } from "@home-dashboard/widget-sdk";
+import { choiceMark, SLIDER_ROW, SLIDER_ROW_LABEL, STACK } from "./settingsStyles";
 import { Icon } from "./Icon";
 import { NightConditions } from "./NightConditions";
 import type { NightState } from "../lib/useNight";
@@ -92,15 +93,15 @@ export function NightSettings({ apiBaseUrl, night, isAdmin, onChange }: NightSet
   const reasons = (night?.signals ?? []).map((s) => s.reason).filter(Boolean);
 
   return (
-    <section className="night-settings">
+    <section className={STACK}>
       <Note>{t("note")}</Note>
-      <h4 className="settings-detail__subtitle">{t("now")}</h4>
-      <p className={night?.active ? "night-settings__now night-settings__now--on" : "night-settings__now"}>
+      <SectionTitle>{t("now")}</SectionTitle>
+      <p className={night?.active ? "inline-flex items-center gap-2 font-semibold text-accent" : "inline-flex items-center gap-2 font-semibold text-muted"}>
         <Icon name="weather-moon" />
         <span>{night?.active ? t("activeNow") : t("inactiveNow")}</span>
       </p>
       {reasons.length > 0 && <Note>{t("because", { reason: reasons.join(" / ") })}</Note>}
-      <h4 className="settings-detail__subtitle">{t("when")}</h4>
+      <SectionTitle>{t("when")}</SectionTitle>
       <List boxed label={t("when")}>
         {modes.map((option) => (
           <ListItem
@@ -108,18 +109,19 @@ export function NightSettings({ apiBaseUrl, night, isAdmin, onChange }: NightSet
             title={option.label}
             detail={option.detail}
             selected={option.id === mode}
-            trailing={<Icon name="checkmark" className={option.id === mode ? undefined : "settings-choice__off"} />}
+            trailing={<Icon name="checkmark" className={choiceMark(option.id === mode)} />}
             chevron={false}
             onClick={isAdmin ? () => void save({ mode: option.id }) : undefined}
           />
         ))}
       </List>
       {mode === "auto" && night && <NightConditions apiBaseUrl={apiBaseUrl} night={night} isAdmin={isAdmin} onChange={onChange} />}
-      <h4 className="settings-detail__subtitle">{t("darknessLabel")}</h4>
+      <SectionTitle>{t("darknessLabel")}</SectionTitle>
       <Note>{t("darknessNote")}</Note>
-      <div className="wallpaper-dim__strength">
-        <span>{t("darkness", { value: percent(darkness) })}</span>
+      <div className={SLIDER_ROW}>
+        <span className={SLIDER_ROW_LABEL}>{t("darkness", { value: percent(darkness) })}</span>
         <Slider
+          className="flex-1"
           value={darkness}
           min={0.3}
           max={0.95}
@@ -135,7 +137,7 @@ export function NightSettings({ apiBaseUrl, night, isAdmin, onChange }: NightSet
         />
       </div>
       {!isAdmin && <Note>{t("adminOnly")}</Note>}
-      {error && <p className="connection-settings__message connection-settings__message--error">{error}</p>}
+      {error && <Message tone="error">{error}</Message>}
     </section>
   );
 }

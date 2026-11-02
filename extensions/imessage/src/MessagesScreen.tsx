@@ -4,14 +4,17 @@ import {
   AvatarStack,
   ChatBubble,
   ChatComposer,
+  ChatFile,
   ChatFileChips,
   ChatFrom,
   ChatHeader,
   ChatIconButton,
+  ChatImage,
   ChatLayout,
   ChatLog,
   ChatMeta,
   ChatRow,
+  cx,
   formatClock,
   formatPastDay,
   Icon,
@@ -84,20 +87,23 @@ function Attachment({ ctx, attachment }: { ctx: Ctx; attachment: AttachmentView 
   const t = strings.useT();
   if (attachment.id && attachment.kind === "image") {
     const src = fileUrl(ctx, "attachments", attachment.id);
+    const alt = attachment.preview ? t("imagePreview") : t("image");
+    // ステッカーは縁を付けず、小さく出す
+    if (!attachment.sticker) return <ChatImage src={src} alt={alt} />;
     return (
-      <a className={`imsg-image${attachment.sticker ? " imsg-image--sticker" : ""}`} href={src} target="_blank" rel="noreferrer">
-        <img src={src} alt={attachment.preview ? t("imagePreview") : t("image")} loading="lazy" />
+      <a className="block" href={src} target="_blank" rel="noreferrer">
+        <img className="block max-h-30 max-w-30" src={src} alt={alt} loading="lazy" />
       </a>
     );
   }
   if (attachment.id && attachment.kind === "audio") {
-    return <audio className="imsg-audio" controls preload="none" src={fileUrl(ctx, "attachments", attachment.id)} />;
+    return <audio className="w-75 max-w-full" controls preload="none" src={fileUrl(ctx, "attachments", attachment.id)} />;
   }
   return (
-    <span className="imsg-file">
-      <Icon name={attachment.kind === "image" ? "image" : attachment.kind === "video" ? "play" : attachment.kind === "audio" ? "mic" : "attach"} />
-      {t("viewOnDevice", { kind: t(attachment.kind) })}
-    </span>
+    <ChatFile
+      icon={attachment.kind === "image" ? "image" : attachment.kind === "video" ? "play" : attachment.kind === "audio" ? "mic" : "attach"}
+      name={t("viewOnDevice", { kind: t(attachment.kind) })}
+    />
   );
 }
 
@@ -117,14 +123,21 @@ function Bubble({ ctx, message, mine }: { ctx: Ctx; message: MessageView; mine: 
   const link = safeLink(message.link?.url);
   const hasBody = text || message.link || message.replyTo;
   return (
-    <div className={`imsg-message${mine ? " imsg-message--mine" : ""}`}>
+    // 1通の中身（画像・録音・吹き出し・リアクション）を縦に並べる。相手のものは ChatFrom の中なので幅いっぱい
+    <div
+      className={cx(
+        "flex min-w-0 flex-col gap-1 [&>*]:max-w-full",
+        mine ? "max-w-4/5 items-end self-end" : "max-w-full items-start",
+      )}
+    >
       {message.attachments.map((attachment, index) => (
         <Attachment key={attachment.id ?? index} ctx={ctx} attachment={attachment} />
       ))}
       {hasBody && (
         <ChatBubble mine={mine}>
           {message.replyTo && (
-            <span className="imsg-quote">
+            // 返信先の引用。吹き出しの中の上に、薄く1〜2行
+            <span className="untrim mb-1 line-clamp-2 border-l-2 border-line pl-2.5 text-note leading-normal text-muted">
               {message.replyTo.sender ? `${message.replyTo.sender}: ` : ""}
               {message.replyTo.text}
               {message.replyTo.trimmed && "…"}
@@ -133,15 +146,20 @@ function Bubble({ ctx, message, mine }: { ctx: Ctx; message: MessageView; mine: 
           {text}
           {message.trimmed && "…"}
           {link && (
-            <a className="imsg-link" href={link.href} target="_blank" rel="noreferrer">
-              <span className="imsg-link__site">{message.link!.siteName || link.hostname}</span>
-              {message.link!.title && <span className="imsg-link__title">{message.link!.title}</span>}
+            <a
+              className="mt-1.5 flex flex-col gap-1 rounded-inner bg-tint/10 px-2.5 py-1.5 leading-tight text-current no-underline"
+              href={link.href}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <span className="untrim text-caption text-muted">{message.link!.siteName || link.hostname}</span>
+              {message.link!.title && <span className="untrim text-label font-semibold">{message.link!.title}</span>}
             </a>
           )}
         </ChatBubble>
       )}
       {message.reactions.length > 0 && (
-        <span className="imsg-reactions" title={message.reactions.flatMap((r) => r.senders).join("・")}>
+        <span className="untrim text-note leading-tight" title={message.reactions.flatMap((r) => r.senders).join("・")}>
           {message.reactions.map((r) => `${r.emoji}${r.count > 1 ? r.count : ""}`).join(" ")}
         </span>
       )}
@@ -358,7 +376,9 @@ export function MessagesScreen({ ctx, switcher }: ChatAppProps) {
               return (
                 <ChatRow key={message.id} mine={mine} gap={last}>
                   {!mine && chat.isGroup && startsGroup && message.sender && (
-                    <span className="ui-chat__meta ui-chat__meta--indent">{message.sender}</span>
+                    <div className="pl-10">
+                      <ChatMeta>{message.sender}</ChatMeta>
+                    </div>
                   )}
                   {mine ? (
                     <Bubble ctx={ctx} message={message} mine />

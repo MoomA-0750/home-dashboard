@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import GridLayout, { WidthProvider, type Layout } from "react-grid-layout";
 import {
   defineMessages,
@@ -35,6 +35,9 @@ const messages = defineMessages({
 const CARD_HEIGHT = 200;
 const CARD_GAP = 30;
 
+/** ウィジェットの列（ホームの4列目。タブレット幅では時計の下の段） */
+const RAIL = "col-start-4 min-h-0 overflow-y-auto tablet:col-start-1 tablet:row-start-2";
+
 interface WidgetRailProps {
   instances: WidgetInstance[];
   registry: WidgetRegistry;
@@ -64,6 +67,8 @@ export const WidgetRail = memo(function WidgetRail({
 }: WidgetRailProps) {
   const railRef = useRef<HTMLElement>(null);
   const t = messages.useT();
+  // 縁を光らせているウィジェット
+  const [glowingId, setGlowingId] = useState<string | null>(null);
   const order = [...instances].sort((a, b) => a.y - b.y).map((instance) => instance.instanceId);
 
   // 追加したウィジェットはレールの末尾に入り、画面の外で見えないので、そこまでスクロールして光らせる
@@ -73,13 +78,17 @@ export const WidgetRail = memo(function WidgetRail({
       const element = railRef.current?.querySelector<HTMLElement>(`[data-instance-id="${revealInstanceId}"]`);
       if (element) {
         element.scrollIntoView({ behavior: scrollBehavior(), block: "center" });
-        element.classList.add("widget-host--revealed");
-        setTimeout(() => element.classList.remove("widget-host--revealed"), motionMs("reveal"));
+        setGlowingId(revealInstanceId);
       }
       onRevealed();
     }, 100);
     return () => clearTimeout(timer);
   }, [revealInstanceId, onRevealed]);
+  useEffect(() => {
+    if (!glowingId) return;
+    const timer = setTimeout(() => setGlowingId(null), motionMs("reveal"));
+    return () => clearTimeout(timer);
+  }, [glowingId]);
   const layout: Layout[] = instances.map((instance) => {
     const def = registry.get(instance.widgetId);
     return {
@@ -105,9 +114,9 @@ export const WidgetRail = memo(function WidgetRail({
 
   if (instances.length === 0) {
     return (
-      <aside className="widget-rail" aria-label={t("widgets")}>
+      <aside className={RAIL} aria-label={t("widgets")}>
         <div className="widget-stack">
-          <p className="widget-rail__empty">
+          <p className="halo text-note font-medium text-muted">
             {editMode ? t("emptyEditing") : t("empty")}
           </p>
         </div>
@@ -116,10 +125,10 @@ export const WidgetRail = memo(function WidgetRail({
   }
 
   return (
-    <aside ref={railRef} className={`widget-rail${editMode ? " widget-rail--editing" : ""}`} aria-label={t("widgets")}>
+    <aside ref={railRef} className={RAIL} data-editing={editMode || undefined} aria-label={t("widgets")}>
       <div className="widget-stack">
         <ResponsiveGridLayout
-          className="canvas-grid"
+          className="relative"
           layout={layout}
           cols={1}
           rowHeight={CARD_HEIGHT}
@@ -128,12 +137,17 @@ export const WidgetRail = memo(function WidgetRail({
           isDraggable={editMode}
           isResizable={editMode}
           // カード全体をつかめるようにすると、タッチ端末で列をスクロールできなくなるので、つまみだけで動かす
-          draggableHandle=".widget-host__drag"
+          draggableHandle="[data-drag-handle]"
           onLayoutChange={handleLayoutChange}
           compactType="vertical"
         >
           {instances.map((instance) => (
-            <div key={instance.instanceId} data-instance-id={instance.instanceId}>
+            <div
+              key={instance.instanceId}
+              data-instance-id={instance.instanceId}
+              data-revealed={glowingId === instance.instanceId || undefined}
+              className="rounded-card data-revealed:animate-reveal"
+            >
               <WidgetHost
                 instance={instance}
                 registry={registry}

@@ -30,12 +30,13 @@ const ALLOWED_CSS = new Set([
   "packages/ui/src/tailwind-theme.css",
   "packages/ui/src/styles/tokens.css",
   "packages/ui/src/styles/base.css",
+  "packages/ui/src/styles/components.css",
 ]);
 /** Tailwind のクラスで書けないもの（@utility・@keyframes）を置く所 */
 const ALLOWED_CSS_DIR = "packages/ui/src/theme/";
 
-/** Tailwind のクラスではないが使ってよいもの（JS が付け外しする印・外の部品が決めた名前） */
-const ALLOWED_HOOKS = new Set(["is-closing", "is-scrolling", "fluent-icon"]);
+/** Tailwind のクラスではないが使ってよいもの（JS が付け外しする印・外の部品が決めた名前・styles/components.css の面のクラス） */
+const ALLOWED_HOOKS = new Set(["is-closing", "is-scrolling", "fluent-icon", "glass", "raised"]);
 const ALLOWED_PREFIXES = ["react-grid-", "react-resizable", "leaflet-"];
 
 /** 調べるファイル（画面側のソース） */

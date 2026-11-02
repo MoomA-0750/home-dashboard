@@ -1,14 +1,17 @@
 import { useCallback } from "react";
-import { defineWidget, Icon, usePolledResource, type WidgetProps , WidgetCard } from "@home-dashboard/widget-sdk";
+import { cx, defineWidget, IconButton, usePolledResource, WidgetCard, WidgetHint, type WidgetProps } from "@home-dashboard/widget-sdk";
+import { Artwork } from "./Artwork";
 import { messages } from "./i18n";
 import { useMusicProviders, useSelectedMusicProvider } from "./providers";
-import "./media.css";
 
 /**
  * ホームのメディアのウィジェット。Media 画面と同じ音楽アプリ（右上で選んだもの。wave・Spotify）の再生中の曲を出し、操作する。
  * 画面と同じ /api/ext/media/providers/<id>/* を読むので、画面で選び直すとウィジェットも切り替わる。
  * 操作したらすぐ読み直し、ほかの端末での操作は数秒ごとの読み直しで追いつく。
  */
+
+/** 曲名などの大きな1行（カードの見出しの大きさ） */
+const TITLE = "ellipsis text-card font-semibold leading-tight";
 
 interface MediaWidgetConfig {
   pollIntervalMs: number;
@@ -53,46 +56,38 @@ function MediaWidgetView({ ctx, config }: WidgetProps<MediaWidgetConfig>) {
 
   if (!provider) {
     return (
-      <WidgetCard className="widget-media widget-media--idle">
-        <div className="widget-media__meta">
-          <p className="widget-media__title">{t("noApps")}</p>
-          <span className="widget-hint">{t("noAppsHint")}</span>
-        </div>
+      <WidgetCard>
+        <p className={TITLE}>{t("noApps")}</p>
+        <WidgetHint>{t("noAppsHint")}</WidgetHint>
       </WidgetCard>
     );
   }
 
   // 読み込み中に前の音楽アプリの表示が残らないよう、いまの音楽アプリの名前を添える
-  const providerLabel = <span className="widget-media__provider">{provider.name}</span>;
+  const providerLabel = <span className="text-micro text-muted">{provider.name}</span>;
 
   if (error && !data) {
     return (
-      <WidgetCard className="widget-media widget-media--idle">
-        <div className="widget-media__meta">
-          {providerLabel}
-          <p className="widget-media__title">{t("unreachable", { name: provider.name })}</p>
-        </div>
+      <WidgetCard>
+        {providerLabel}
+        <p className={TITLE}>{t("unreachable", { name: provider.name })}</p>
       </WidgetCard>
     );
   }
   if (data && !data.configured) {
     return (
-      <WidgetCard className="widget-media widget-media--idle">
-        <div className="widget-media__meta">
-          {providerLabel}
-          <p className="widget-media__title">{t("notConnectedShort", { name: provider.name })}</p>
-          <span className="widget-hint">{t("notConnectedHint", { name: provider.name })}</span>
-        </div>
+      <WidgetCard>
+        {providerLabel}
+        <p className={TITLE}>{t("notConnectedShort", { name: provider.name })}</p>
+        <WidgetHint>{t("notConnectedHint", { name: provider.name })}</WidgetHint>
       </WidgetCard>
     );
   }
   if (!data?.track) {
     return (
-      <WidgetCard className="widget-media widget-media--idle">
-        <div className="widget-media__meta">
-          {providerLabel}
-          <p className="widget-media__title">{data ? t("notPlaying") : t("loading")}</p>
-        </div>
+      <WidgetCard>
+        {providerLabel}
+        <p className={TITLE}>{data ? t("notPlaying") : t("loading")}</p>
       </WidgetCard>
     );
   }
@@ -102,57 +97,43 @@ function MediaWidgetView({ ctx, config }: WidgetProps<MediaWidgetConfig>) {
   const nextRepeat = data.repeat === "off" ? "context" : data.repeat === "context" ? "track" : "off";
 
   return (
-    <WidgetCard className="widget-media">
-      <div className="widget-media__meta">
+    <WidgetCard className="flex-row items-center justify-between gap-5">
+      <div className="flex min-w-0 flex-col gap-1">
         {providerLabel}
-        <p className="widget-media__title">{data.track.title}</p>
-        <p className="widget-media__artist muted">{data.track.artist}</p>
-        <div className="widget-media__controls" aria-label={t("player")}>
+        <p className={TITLE}>{data.track.title}</p>
+        <p className="ellipsis text-small text-muted">{data.track.artist}</p>
+        <div className="mt-1 flex items-center gap-1" aria-label={t("player")}>
+          {/* シャッフル・リピートはオン/オフのトグルなので、オンのときだけ明るく塗る（オフは控えめな色） */}
           {canShuffle && (
-            <button
-              type="button"
-              className={`widget-media__toggle${data.shuffle ? " widget-media__toggle--on" : ""}`}
-              aria-label={t("shuffle")}
-              aria-pressed={data.shuffle}
+            <IconButton
+              icon="shuffle"
+              label={t("shuffle")}
+              selected={data.shuffle}
+              className={cx(!data.shuffle && "text-muted")}
               onClick={() => void control("shuffle", !data.shuffle)}
-            >
-              <Icon name="shuffle" />
-            </button>
+            />
           )}
-          <button type="button" aria-label={t("previous")} onClick={() => void control("previous")}>
-            <Icon name="previous" />
-          </button>
-          <button
-            type="button"
-            className="widget-media__play"
-            aria-label={data.isPlaying ? t("pause") : t("play")}
+          <IconButton icon="previous" label={t("previous")} onClick={() => void control("previous")} />
+          <IconButton
+            icon={data.isPlaying ? "pause" : "play"}
+            selected
+            aria-pressed={undefined}
+            label={data.isPlaying ? t("pause") : t("play")}
             onClick={() => void control(data.isPlaying ? "pause" : "play")}
-          >
-            <Icon name={data.isPlaying ? "pause" : "play"} />
-          </button>
-          <button type="button" aria-label={t("next")} onClick={() => void control("next")}>
-            <Icon name="next" />
-          </button>
+          />
+          <IconButton icon="next" label={t("next")} onClick={() => void control("next")} />
           {canRepeat && (
-            <button
-              type="button"
-              className={`widget-media__toggle${data.repeat !== "off" ? " widget-media__toggle--on" : ""}`}
-              aria-label={t("repeat")}
-              aria-pressed={data.repeat !== "off"}
+            <IconButton
+              icon="repeat"
+              label={t("repeat")}
+              selected={data.repeat !== "off"}
+              className={cx(data.repeat === "off" && "text-muted")}
               onClick={() => void control("repeat", nextRepeat)}
-            >
-              <Icon name="repeat" />
-            </button>
+            />
           )}
         </div>
       </div>
-      {data.track.artUrl ? (
-        <img className="widget-media__art" src={data.track.artUrl} alt="" />
-      ) : (
-        <div className="widget-media__art widget-media__art--placeholder" aria-hidden="true">
-          {data.track.title.slice(0, 1)}
-        </div>
-      )}
+      <Artwork url={data.track.artUrl} className="size-35 shrink-0 rounded-inner phone:size-23" />
     </WidgetCard>
   );
 }

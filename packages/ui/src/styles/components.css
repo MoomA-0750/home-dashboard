@@ -1,0 +1,22 @@
+/*
+ * 面のクラス（ガラス・浮かせる面）。Tailwind の utilities より弱い components の層に置く（tailwind.css）。
+ * こうすると、同じ要素に付けた bg-*・border-*・fill-bright・shadow-none などが、いつも面のクラスに勝つ
+ * （utilities に置くと、出る順で面のクラスが後になり、危ない色の地などを打ち消してしまう）。
+ * 本体のシートが出すので、拡張機能もこのクラスを使える
+ */
+
+/* ガラスの面（5つ1組）。入れ物・カード・ボタンはこれを付ける（自分で縁や影を書かない） */
+.glass {
+  border: 1px solid var(--glass-border);
+  background: var(--widget-sheen), var(--widget-bg);
+  background-clip: padding-box;
+  box-shadow: var(--widget-shadow);
+  backdrop-filter: var(--widget-blur);
+}
+
+/* 浮かせる面（小窓・メニュー）。ぼかさず、ほぼ不透明 */
+.raised {
+  border: 1px solid var(--glass-border);
+  background: var(--surface-raised);
+  box-shadow: var(--widget-shadow);
+}

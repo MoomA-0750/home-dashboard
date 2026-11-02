@@ -1,6 +1,9 @@
 import { useState, type CSSProperties, type KeyboardEvent, type PointerEvent, type ReactNode } from "react";
+import { cx } from "./cx";
 import { Icon, type IconName } from "./Icon";
 import { defineMessages } from "./i18n";
+import { ScreenFrame } from "./ScreenFrame";
+import { BackButton, List, ListItem } from "./ui";
 
 const messages = defineMessages({
   ja: { mainMenu: "メインメニュー", sidebarWidth: "サイドバーの幅" },
@@ -31,20 +34,30 @@ export function Sidebar({
 }) {
   const t = messages.useT();
   return (
-    <nav className="sidebar" aria-label={label ?? t("mainMenu")}>
+    <nav
+      className="sidebar-rail layer-base flex min-w-0 flex-col phone:tabbar phone:layer-tabbar"
+      aria-label={label ?? t("mainMenu")}
+    >
       {items.map((item) => {
         const on = typeof active === "function" ? active(item.id) : item.id === active;
         return (
           <button
             key={item.id}
             type="button"
-            className={`nav-button${on ? " nav-button--active" : ""}`}
+            className={cx(
+              "nav-item press flex w-full cursor-pointer items-center overflow-hidden border-0 text-left whitespace-nowrap text-text",
+              "enabled:hover:fill-bright enabled:hover:nav-lift disabled:cursor-default disabled:opacity-40 phone:tabbar-item",
+              on && "fill-bright nav-lift",
+            )}
             aria-label={item.ariaLabel ?? item.label}
             aria-current={on ? "page" : undefined}
             onClick={() => onSelect(item.id)}
           >
             {typeof item.icon === "string" ? <Icon name={item.icon} /> : <Icon src={item.icon.src} />}
-            <span className="nav-button__label">{item.label}</span>
+            {/* サイドバーを広げたときだけラベルを出す（80px のときはアイコンだけ） */}
+            <span className="change -translate-x-2 opacity-0 in-data-expanded:translate-x-0 in-data-expanded:opacity-100 phone:hidden">
+              {item.label}
+            </span>
           </button>
         );
       })}
@@ -66,12 +79,12 @@ export function SidebarHandle({ width, onResize }: { width: number; onResize: (w
     const startWidth = width;
 
     target.setPointerCapture(event.pointerId);
-    document.body.classList.add("is-resizing");
+    document.body.dataset.resizing = "";
 
     const onMove = (moveEvent: globalThis.PointerEvent) => onResize(startWidth + moveEvent.clientX - startX);
     const onUp = () => {
       target.releasePointerCapture(event.pointerId);
-      document.body.classList.remove("is-resizing");
+      delete document.body.dataset.resizing;
       target.removeEventListener("pointermove", onMove);
       target.removeEventListener("pointerup", onUp);
       target.removeEventListener("pointercancel", onUp);
@@ -92,7 +105,10 @@ export function SidebarHandle({ width, onResize }: { width: number; onResize: (w
 
   return (
     <div
-      className="sidebar-handle"
+      className={cx(
+        "layer-handle relative flex cursor-col-resize touch-none items-center justify-center bg-transparent p-0 outline-0 phone:hidden",
+        "*:change *:bg-tint/60 hover:*:bg-tint hover:*:ring-4 hover:*:ring-accent-soft/20 focus-visible:*:bg-tint focus-visible:*:ring-4 focus-visible:*:ring-accent-soft/20",
+      )}
       role="separator"
       aria-label={t("sidebarWidth")}
       aria-orientation="vertical"
@@ -103,7 +119,7 @@ export function SidebarHandle({ width, onResize }: { width: number; onResize: (w
       onPointerDown={handlePointerDown}
       onKeyDown={handleKeyDown}
     >
-      <span className="sidebar-handle__grip" aria-hidden="true" />
+      <span className="grip-bar" aria-hidden="true" />
     </div>
   );
 }
@@ -113,8 +129,9 @@ export function clampSidebarWidth(width: number): number {
 }
 
 /**
- * 画面全体の枠（.app-shell）。サイドバーと幅のつまみを置き、幅は storageKey の名前で端末に覚える。
- * children に、選んだ画面（ScreenFrame など）を入れる
+ * 画面全体の枠。サイドバーと幅のつまみを置き、幅は storageKey の名前で端末に覚える。
+ * children に、選んだ画面（ScreenFrame など）を入れる（サイドバー・つまみの右の列に入る。スマホではサイドバーが下のタブバーになる）。
+ * 壁紙・壁紙を暗くする幕・夜の表示は、data-shell を目印に styles/base.css が付ける
  */
 export function AppShell({
   items,
@@ -148,7 +165,9 @@ export function AppShell({
   };
   return (
     <div
-      className={`app-shell${width > SIDEBAR_LABEL_THRESHOLD ? " app-shell--sidebar-expanded" : ""}`}
+      data-shell=""
+      data-expanded={width > SIDEBAR_LABEL_THRESHOLD || undefined}
+      className="shell-grid grid h-svh grid-rows-1 overflow-hidden phone:grid-cols-1 phone:pb-tabbar"
       style={{ "--sidebar-width": `${width}px` } as CSSProperties}
     >
       <Sidebar items={items} active={active} onSelect={onSelect} />
@@ -167,7 +186,8 @@ export interface SettingsNavItem {
 
 /**
  * 設定画面の形（macOS の設定のように、左に大きな項目の一覧、選ぶと右に中身）。狭い画面では一覧と中身が入れ替わり、
- * 中身の上の「戻る」で一覧に戻る。children に、選んだ項目の中身を入れる
+ * 中身の上の「戻る」で一覧に戻る。children に、選んだ項目の中身を入れる。
+ * 画面の枠は ScreenFrame（fill: 画面は送らず、左の一覧と右の中身がそれぞれ送る）、項目は List と ListItem
  */
 export function SettingsLayout({
   title,
@@ -192,46 +212,45 @@ export function SettingsLayout({
   children: ReactNode;
 }) {
   return (
-    <section className="screen settings-screen" aria-label={title}>
-      <div className="screen__inner settings-screen__inner">
-        <header className="screen__header">
-          <h1>{title}</h1>
-        </header>
+    <ScreenFrame title={title} fill>
+      <div className="flex min-h-0 flex-1 gap-7">
+        {/* 左: 大きな項目の一覧（macOS の設定のように、選ぶと右に中身が出る） */}
+        <nav
+          className={cx("min-h-0 w-60 shrink-0 overflow-y-auto pr-1 tablet:w-full", pageOpen && "tablet:hidden")}
+          aria-label={navLabel}
+        >
+          <List>
+            {items.map((item) => (
+              <ListItem
+                key={item.id}
+                title={item.label}
+                leading={
+                  <span className="grid size-8 shrink-0 place-items-center rounded-nav bg-accent-soft/20 text-title">
+                    <Icon name={item.icon} />
+                  </span>
+                }
+                selected={item.id === page}
+                onClick={() => onSelect(item.id)}
+              />
+            ))}
+          </List>
+        </nav>
 
-        <div className={`settings-panel__columns${pageOpen ? " settings-panel__columns--page-open" : ""}`}>
-          {/* 左: 大きな項目の一覧（macOS の設定のように、選ぶと右に中身が出る） */}
-          <nav className="settings-nav" aria-label={navLabel}>
-            <ul>
-              {items.map((item) => (
-                <li key={item.id}>
-                  <button
-                    type="button"
-                    className={`settings-nav__item${item.id === page ? " settings-nav__item--on" : ""}`}
-                    aria-current={item.id === page ? "page" : undefined}
-                    onClick={() => onSelect(item.id)}
-                  >
-                    <span className="settings-nav__icon">
-                      <Icon name={item.icon} />
-                    </span>
-                    <span className="settings-nav__label">{item.label}</span>
-                    <Icon name="chevron-right" className="settings-nav__chevron" />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </nav>
-
-          {/* 右: 選んだ項目の中身。狭い画面では一覧と入れ替わり、見出しの名前の「戻る」で一覧に戻る */}
-          <div className="settings-detail">
-            <button type="button" className="settings-detail__back settings-detail__back--page" onClick={onBack}>
-              <Icon name="chevron-left" />
-              <span>{title}</span>
-            </button>
-            <h3 className="settings-detail__title">{items.find((item) => item.id === page)?.label}</h3>
-            {children}
+        {/* 右: 選んだ項目の中身。狭い画面では一覧と入れ替わり、見出しの名前の「戻る」で一覧に戻る。
+            文字の影が送りの枠で切れないよう、影の広がる分だけ内側に余白を取り、外側を同じだけ詰める（halo-room）。入力欄は fields でそろえる */}
+        <div
+          className={cx(
+            "halo-room fields min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain *:animate-enter",
+            !pageOpen && "tablet:hidden",
+          )}
+        >
+          <div className="hidden tablet:block">
+            <BackButton label={title} onClick={onBack} />
           </div>
+          <h3 className="mt-1 mb-4 text-heading font-semibold">{items.find((item) => item.id === page)?.label}</h3>
+          {children}
         </div>
       </div>
-    </section>
+    </ScreenFrame>
   );
 }

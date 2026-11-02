@@ -1,7 +1,19 @@
 import { useState } from "react";
-import { Badge, Check, defineMessages, List, ListItem, Message, Note, SectionTitle } from "@home-dashboard/widget-sdk";
+import {
+  Badge,
+  Check,
+  cx,
+  defineMessages,
+  inputClass,
+  List,
+  ListItem,
+  Message,
+  Note,
+  SectionTitle,
+  ToggleSwitch,
+} from "@home-dashboard/widget-sdk";
 import { Icon } from "./Icon";
-import { ToggleSwitch } from "./ExtensionSettings";
+import { choiceMark } from "./settingsStyles";
 import type { GuardSettingsControl, GuardTool, PersonalPolicy, ToolLevel } from "../lib/voiceGuard";
 
 const messages = defineMessages({
@@ -108,22 +120,20 @@ export function VoicePrivacySettings({ guard, isAdmin }: { guard: GuardSettingsC
   return (
     <>
       <SectionTitle>{t("privacy")}</SectionTitle>
-      <ul className="settings-list settings-list--boxed">
-        <li>
-          <div className="settings-list__row settings-list__row--plain">
-            <span className="settings-list__text">
-              <span className="settings-list__title">{t("guest")}</span>
-              <span className="settings-list__detail">{t("guestDetail")}</span>
-            </span>
+      <List boxed label={t("guest")}>
+        <ListItem
+          title={t("guest")}
+          detail={t("guestDetail")}
+          trailing={
             <ToggleSwitch
               checked={settings.guest}
               disabled={busy}
               label={t("guest")}
               onChange={() => void run(() => guard.setGuest(!settings.guest))}
             />
-          </div>
-        </li>
-      </ul>
+          }
+        />
+      </List>
       <Note>{t("guestNote")}</Note>
       <SectionTitle>{t("personal")}</SectionTitle>
       <List boxed label={t("personal")}>
@@ -133,7 +143,7 @@ export function VoicePrivacySettings({ guard, isAdmin }: { guard: GuardSettingsC
             title={t(policy.label)}
             detail={t(policy.detail)}
             selected={settings.personal === policy.id}
-            trailing={<Icon name="checkmark" className={settings.personal === policy.id ? undefined : "settings-choice__off"} />}
+            trailing={<Icon name="checkmark" className={choiceMark(settings.personal === policy.id)} />}
             chevron={false}
             onClick={isAdmin && !busy ? () => void run(() => guard.save({ personal: policy.id })) : undefined}
           />
@@ -169,38 +179,45 @@ export function VoiceToolChecks({ guard }: { guard: GuardSettingsControl }) {
     return LEVELS.slice(LEVELS.indexOf(tool.declared) + 1);
   };
 
+  // 名前 | 印 | 段。外の道具は、名前の下に「家の人の情報を返す」を置く
   const renderTool = (tool: GuardTool) => (
-    <li key={tool.name} className="voice-guard-tools__item">
-      <span className="voice-guard-tools__name" title={tool.name}>
-        {tool.label}
-      </span>
-      <span className="voice-guard-tools__badges">
-        {tool.personal && <Badge>{t("personalBadge")}</Badge>}
-        {tool.untrusted && <Badge>{t("untrustedBadge")}</Badge>}
-      </span>
-      <select
-        aria-label={t("levelLabel", { name: tool.label })}
-        value={tool.override?.level ?? ""}
-        disabled={busy}
-        onChange={(event) => void update(tool, { level: (event.target.value || null) as ToolLevel | null })}
-      >
-        <option value="">
-          {t(tool.kind === "external" ? "undecided" : "asDeclared", { level: levelName(tool.declared) })}
-        </option>
-        {choices(tool).map((level) => (
-          <option key={level} value={level}>
-            {t(level)}
-          </option>
-        ))}
-      </select>
-      {tool.kind === "external" && (
-        <span className="voice-guard-tools__personal">
+    <ListItem
+      key={tool.name}
+      title={<span title={tool.name}>{tool.label}</span>}
+      detail={
+        tool.kind === "external" && (
           <Check checked={tool.personal} disabled={busy} onChange={(personal) => void update(tool, { personal })}>
             {t("personalCheck")}
           </Check>
+        )
+      }
+      trailing={
+        <span className="flex items-center gap-2 phone:flex-col phone:items-end">
+          {(tool.personal || tool.untrusted) && (
+            <span className="flex gap-1">
+              {tool.personal && <Badge>{t("personalBadge")}</Badge>}
+              {tool.untrusted && <Badge>{t("untrustedBadge")}</Badge>}
+            </span>
+          )}
+          <select
+            className={cx(inputClass, "w-60 phone:w-40")}
+            aria-label={t("levelLabel", { name: tool.label })}
+            value={tool.override?.level ?? ""}
+            disabled={busy}
+            onChange={(event) => void update(tool, { level: (event.target.value || null) as ToolLevel | null })}
+          >
+            <option value="">
+              {t(tool.kind === "external" ? "undecided" : "asDeclared", { level: levelName(tool.declared) })}
+            </option>
+            {choices(tool).map((level) => (
+              <option key={level} value={level}>
+                {t(level)}
+              </option>
+            ))}
+          </select>
         </span>
-      )}
-    </li>
+      }
+    />
   );
 
   const groups: { kind: GuardTool["kind"]; title: "dashboardTools" | "builtinTools" | "externalTools" }[] = [
@@ -210,17 +227,19 @@ export function VoiceToolChecks({ guard }: { guard: GuardSettingsControl }) {
   ];
 
   return (
-    <section className="voice-guard-tools" aria-label={t("tools")}>
+    <section className="mt-6" aria-label={t("tools")}>
       <SectionTitle>{t("tools")}</SectionTitle>
       <Note>{t("toolsNote")}</Note>
       {groups.map(({ kind, title }) => {
         const tools = guard.tools.filter((tool) => tool.kind === kind);
         return (
           <div key={kind}>
-            <h5 className="voice-mcp__group">{t(title)}</h5>
+            <SectionTitle>{t(title)}</SectionTitle>
             {kind === "external" && <Note>{t("externalNote")}</Note>}
             {tools.length > 0 ? (
-              <ul className="voice-mcp__list">{tools.map(renderTool)}</ul>
+              <List boxed label={t(title)}>
+                {tools.map(renderTool)}
+              </List>
             ) : (
               <Note>{t("noExternal")}</Note>
             )}

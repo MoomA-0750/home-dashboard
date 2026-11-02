@@ -1,6 +1,19 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { browserSupportsWebAuthnAutofill } from "@simplewebauthn/browser";
-import { defineMessages, getDisplay, getLocale, normalizeDisplay } from "@home-dashboard/widget-sdk";
+import {
+  Button,
+  defineMessages,
+  Field,
+  getDisplay,
+  getLocale,
+  Message,
+  normalizeDisplay,
+  Note,
+  Notice,
+} from "@home-dashboard/widget-sdk";
+
+/** ログインの画面（画面の真ん中に、浮かせた面を1つ置く） */
+const SCREEN = "flex min-h-svh items-center justify-center px-4 py-6";
 import {
   defaultDeviceName,
   fetchAuthStatus,
@@ -113,8 +126,8 @@ export function AuthGate({ apiBaseUrl, children }: AuthGateProps) {
 
   if (!status) {
     return (
-      <div className="auth-screen">
-        <p className="auth-screen__wait">{unreachable ? t("unreachable") : t("loading")}</p>
+      <div className={SCREEN}>
+        <p className="text-muted">{unreachable ? t("unreachable") : t("loading")}</p>
       </div>
     );
   }
@@ -208,96 +221,91 @@ function SignInForm({ apiBaseUrl, setup, onSignedIn }: { apiBaseUrl: string; set
   };
 
   return (
-    <div className="auth-screen">
-      <form className="auth-card" onSubmit={submit}>
-        <h1>{setup ? t("setupTitle") : t("signIn")}</h1>
+    <div className={SCREEN}>
+      <form className="raised flex w-104 max-w-full flex-col gap-4 rounded-card p-8 phone:p-5" onSubmit={submit}>
+        <h1 className="text-heading font-semibold">{setup ? t("setupTitle") : t("signIn")}</h1>
         {linked !== null && !setup && (
-          <p className="auth-card__notice" role="status">
-            {linked} {t("linkedElsewhere")}
-          </p>
+          <div role="status">
+            <Notice>
+              {linked} {t("linkedElsewhere")}
+            </Notice>
+          </div>
         )}
-        <p className="auth-card__lead">
-          {setup ? t("setupLead") : t("signInLead")}
-        </p>
-        {setup && (
-          <label className="auth-card__field">
-            <span>{t("setupCode")}</span>
+        <Note>{setup ? t("setupLead") : t("signInLead")}</Note>
+        {/* 入力欄のあいだは Field の下の余白にする */}
+        <div className="flex flex-col">
+          {setup && (
+            <Field label={t("setupCode")}>
+              <input
+                value={setupCode}
+                autoComplete="one-time-code"
+                autoCapitalize="characters"
+                spellCheck={false}
+                autoFocus
+                maxLength={16}
+                aria-describedby="setup-code-hint"
+                onChange={(e) => setSetupCode(e.target.value)}
+              />
+              <small id="setup-code-hint" className="text-caption leading-normal font-medium text-muted">
+                {t("setupCodeHint")}
+              </small>
+            </Field>
+          )}
+          <Field label={t("username")}>
             <input
-              value={setupCode}
-              autoComplete="one-time-code"
-              autoCapitalize="characters"
+              value={username}
+              autoComplete={passkeyReady ? "username webauthn" : "username"}
+              autoCapitalize="none"
               spellCheck={false}
-              autoFocus
-              maxLength={16}
-              aria-describedby="setup-code-hint"
-              onChange={(e) => setSetupCode(e.target.value)}
+              autoFocus={!setup}
+              maxLength={32}
+              onChange={(e) => setUsername(e.target.value)}
             />
-            <small id="setup-code-hint" className="auth-card__hint">
-              {t("setupCodeHint")}
-            </small>
-          </label>
-        )}
-        <label className="auth-card__field">
-          <span>{t("username")}</span>
-          <input
-            value={username}
-            autoComplete={passkeyReady ? "username webauthn" : "username"}
-            autoCapitalize="none"
-            spellCheck={false}
-            autoFocus={!setup}
-            maxLength={32}
-            onChange={(e) => setUsername(e.target.value)}
-          />
-        </label>
-        <label className="auth-card__field">
-          <span>{t("password")}{setup && t("passwordRule")}</span>
-          <input
-            type="password"
-            value={password}
-            autoComplete={setup ? "new-password" : "current-password"}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </label>
-        {setup && (
-          <label className="auth-card__field">
-            <span>{t("passwordConfirm")}</span>
+          </Field>
+          <Field label={`${t("password")}${setup ? t("passwordRule") : ""}`}>
             <input
               type="password"
-              value={confirm}
-              autoComplete="new-password"
-              onChange={(e) => setConfirm(e.target.value)}
+              value={password}
+              autoComplete={setup ? "new-password" : "current-password"}
+              onChange={(e) => setPassword(e.target.value)}
             />
-          </label>
-        )}
-        <label className="auth-card__field">
-          <span>{t("deviceName")}</span>
-          <input value={deviceName} maxLength={40} onChange={(e) => setDeviceName(e.target.value)} />
-        </label>
-        {error && (
-          <p className="auth-card__error" role="alert">
-            {error}
-          </p>
-        )}
-        <button
+          </Field>
+          {setup && (
+            <Field label={t("passwordConfirm")}>
+              <input
+                type="password"
+                value={confirm}
+                autoComplete="new-password"
+                onChange={(e) => setConfirm(e.target.value)}
+              />
+            </Field>
+          )}
+          <Field label={t("deviceName")}>
+            <input value={deviceName} maxLength={40} onChange={(e) => setDeviceName(e.target.value)} />
+          </Field>
+        </div>
+        {error && <Message tone="error">{error}</Message>}
+        <Button
           type="submit"
-          className="auth-card__submit"
+          variant="primary"
+          size="lg"
+          className="w-full"
           disabled={sending || !username.trim() || !password || (setup && !setupCode.trim())}
         >
           {sending ? t("checking") : setup ? t("createAndSignIn") : t("signIn")}
-        </button>
+        </Button>
         {passkeyReady && (
           <>
-            <p className="auth-card__or" aria-hidden="true">
+            {/* 「または」の両脇に線を引く */}
+            <p
+              className="flex items-center gap-3 text-note text-muted before:flex-1 before:border-t before:border-glass-border after:flex-1 after:border-t after:border-glass-border"
+              aria-hidden="true"
+            >
               {t("or")}
             </p>
-            <button
-              type="button"
-              className="auth-card__submit auth-card__submit--secondary"
-              disabled={sending}
-              onClick={() => void signInByPasskey()}
-            >
+            <Button size="lg" className="w-full" disabled={sending} onClick={() => void signInByPasskey()}>
               {t("passkey")}
-            </button>
+            </Button>
           </>
         )}
       </form>

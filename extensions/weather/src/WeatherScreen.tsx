@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import {
+  cx,
   extensionApiUrl,
   formatClock,
   formatTemperature,
@@ -103,11 +104,24 @@ function tempColor(c: number): string {
   return `hsl(${Math.round(hue)} 85% 62%)`;
 }
 
-/** 0〜max の目盛りの上の、今の位置 */
-function Meter({ value, max, gradient }: { value: number; max: number; gradient: string }) {
+/** 目盛りの色（UV 指数・大気質の区分の色。theme/home-assistant.css） */
+const SCALES = { uv: "weather-uv-scale", aqi: "weather-aqi-scale" } as const;
+
+/** 帯の上の今の位置の印 */
+function Dot({ left }: { left: number }) {
   return (
-    <span className="weather-meter" style={{ background: gradient }} aria-hidden="true">
-      <span className="weather-dot" style={{ left: `${Math.min(100, Math.max(0, (value / max) * 100))}%` }} />
+    <span
+      className="absolute top-1/2 size-2.5 -translate-1/2 rounded-full border-2 border-black/45 bg-white"
+      style={{ left: `${Math.min(100, Math.max(0, left))}%` }}
+    />
+  );
+}
+
+/** 0〜max の目盛りの上の、今の位置 */
+function Meter({ value, max, scale }: { value: number; max: number; scale: keyof typeof SCALES }) {
+  return (
+    <span className={cx("relative block h-1.5 rounded-full", SCALES[scale])} aria-hidden="true">
+      <Dot left={(value / max) * 100} />
     </span>
   );
 }
@@ -201,13 +215,14 @@ export function WeatherScreen({ ctx }: ScreenProps) {
     <ScreenFrame title={{ ja: "天気", en: "Weather" }} actions={actions}>
       {panel}
       {error ? <ScreenNotice tone="error">{t("staleError")}</ScreenNotice> : null}
-      <div className="weather-top">
-      <ScreenSection className="weather-section">
-        <Group className="weather-now">
-          <Icon name={weatherIcon(current.code, current.isDay)} className="weather-now__icon" />
-          <span className="ui-stat__value">{deg(current.temperatureC)}</span>
-          <span className="weather-now__text">
-            <strong>{conditionText(current.code, current.condition, locale)}</strong>
+      {/* 今の天気と1時間ごと。広い画面では横に並べ、高さをそろえる（中身の幅で枠が画面の外へ広がらないよう min-w-0） */}
+      <div className="grid grid-cols-1 gap-x-8 wide:grid-cols-3">
+      <ScreenSection className="mb-3.5 min-w-0 wide:flex wide:flex-col">
+        <Group className="flex min-w-0 items-center gap-4 wide:flex-1">
+          <Icon name={weatherIcon(current.code, current.isDay)} className="size-12" />
+          <span className="text-stat leading-none font-semibold">{deg(current.temperatureC)}</span>
+          <span className="flex min-w-0 flex-col gap-1.5 text-label leading-tight text-muted">
+            <strong className="text-title leading-tight text-text">{conditionText(current.code, current.condition, locale)}</strong>
             {today && (
               <span>{t("highLow", { max: deg(today.maxC), min: deg(today.minC) })}</span>
             )}
@@ -216,15 +231,16 @@ export function WeatherScreen({ ctx }: ScreenProps) {
         </Group>
       </ScreenSection>
 
-      <ScreenSection className="weather-section">
-        <Group>
-          <ol className="weather-hourly">
+      <ScreenSection className="mb-3.5 min-w-0 wide:col-span-2 wide:flex wide:flex-col">
+        <Group className="flex min-w-0 items-center wide:flex-1">
+          {/* 1時間ごと（横に流す。上下もはみ出しを切るので、字の上下が欠けないだけ余白を取る） */}
+          <ol className="weather-scroll-row m-0 flex w-full list-none snap-x snap-proximity gap-1 py-1.5">
             {hourly.map((hour, i) => (
-              <li key={hour.time} className="weather-hourly__hour">
-                <span className="weather-hourly__time">{i === 0 ? t("now") : t("hour", { h: new Date(hour.time).getHours() })}</span>
-                <Icon name={weatherIcon(hour.code, hour.isDay)} className="weather-hourly__icon" />
-                <span className="weather-rain">{hour.precipitationProbability >= 20 ? `${hour.precipitationProbability}%` : ""}</span>
-                <span className="weather-hourly__temp">{deg(hour.temperatureC)}</span>
+              <li key={hour.time} className="flex shrink-0 grow basis-14 snap-start flex-col items-center gap-1 leading-tight tabular-nums">
+                <span className="text-note text-muted">{i === 0 ? t("now") : t("hour", { h: new Date(hour.time).getHours() })}</span>
+                <Icon name={weatherIcon(hour.code, hour.isDay)} className="my-0.5 size-6.5" />
+                <span className="weather-rain h-4 text-caption">{hour.precipitationProbability >= 20 ? `${hour.precipitationProbability}%` : ""}</span>
+                <span className="font-semibold">{deg(hour.temperatureC)}</span>
               </li>
             ))}
           </ol>
@@ -232,13 +248,14 @@ export function WeatherScreen({ ctx }: ScreenProps) {
       </ScreenSection>
       </div>
 
-      <div className="screen__columns">
-        <ScreenSection className="weather-section">
+      {/* 広い画面では10日間と詳しい値を2列に */}
+      <div className="grid grid-cols-1 items-start gap-x-8 wide:grid-cols-2">
+        <ScreenSection className="mb-3.5 min-w-0">
           <List boxed label={t("daysForecast", { n: daily.length })}>
             {daily.map((day, i) => (
               <ListItem
                 key={day.date}
-                leading={<Icon name={weatherIcon(day.code, true)} className="weather-daily__icon" />}
+                leading={<Icon name={weatherIcon(day.code, true)} className="size-6" />}
                 title={dayName(day.date, i, t, locale)}
                 detail={[
                   conditionText(day.code, day.condition, locale),
@@ -247,22 +264,24 @@ export function WeatherScreen({ ctx }: ScreenProps) {
                   .filter(Boolean)
                   .join(" · ")}
                 trailing={
-                  <span className="weather-range" aria-label={t("rangeAria", { min: deg(day.minC), max: deg(day.maxC) })}>
-                    <span className="weather-range__min">{deg(day.minC)}</span>
-                    <span className="weather-range__bar">
+                  // 最低〜最高の帯（スマホの幅では帯を短くして、天気の説明を切らない）
+                  <span
+                    className="flex flex-none items-center gap-2.5 tabular-nums phone:gap-1.5"
+                    aria-label={t("rangeAria", { min: deg(day.minC), max: deg(day.maxC) })}
+                  >
+                    <span className="w-9 text-right text-muted phone:w-7">{deg(day.minC)}</span>
+                    <span className="relative block h-1.5 w-36 rounded-full bg-line phone:w-14">
                       <span
-                        className="weather-range__fill"
+                        className="absolute inset-y-0 rounded-full"
                         style={{
                           left: `${((day.minC - low) / span) * 100}%`,
                           width: `${Math.max(4, ((day.maxC - day.minC) / span) * 100)}%`,
                           background: `linear-gradient(90deg, ${tempColor(day.minC)}, ${tempColor(day.maxC)})`,
                         }}
                       />
-                      {i === 0 && (
-                        <span className="weather-dot" style={{ left: `${((current.temperatureC - low) / span) * 100}%` }} />
-                      )}
+                      {i === 0 && <Dot left={((current.temperatureC - low) / span) * 100} />}
                     </span>
-                    <span>{deg(day.maxC)}</span>
+                    <span className="w-9 phone:w-7">{deg(day.maxC)}</span>
                   </span>
                 }
               />
@@ -270,11 +289,11 @@ export function WeatherScreen({ ctx }: ScreenProps) {
           </List>
         </ScreenSection>
 
-        <ScreenSection className="weather-section">
+        <ScreenSection className="mb-3.5 min-w-0">
           <StatGrid>
             <StatTile icon="uv" label={t("uvIndex")} value={Math.round(current.uvIndex)} note={t("todayMax", { n: Math.round(today?.uvIndexMax ?? 0) })}>
               <span>{uvLevel(current.uvIndex, t)}</span>
-              <Meter value={current.uvIndex} max={11} gradient="linear-gradient(90deg, #4ade80, #facc15, #fb923c, #f87171, #c084fc)" />
+              <Meter value={current.uvIndex} max={11} scale="uv" />
             </StatTile>
             {today && (
               <StatTile
@@ -285,9 +304,9 @@ export function WeatherScreen({ ctx }: ScreenProps) {
               />
             )}
             <StatTile icon="wind" label={t("wind")} value={current.windSpeed.toFixed(1)} unit="m/s" note={t("gust", { n: current.windGust.toFixed(1) })}>
-              <span className="weather-wind">
+              <span className="flex items-center gap-1.5">
                 {/* 風が吹いていく向き（吹いてくる向きの反対）へ矢印を回す */}
-                <span className="weather-wind__arrow" style={{ transform: `rotate(${current.windDirection + 180}deg)` }}>
+                <span className="inline-flex" style={{ transform: `rotate(${current.windDirection + 180}deg)` }}>
                   <Icon name="arrow-up" />
                 </span>
                 {t("windFrom", { dir: direction })}
@@ -333,11 +352,7 @@ export function WeatherScreen({ ctx }: ScreenProps) {
                 note={airQuality.pm25 !== null ? `PM2.5 ${airQuality.pm25.toFixed(1)} µg/m³` : undefined}
               >
                 <span>{aqiLevel(airQuality.usAqi, t)}</span>
-                <Meter
-                  value={airQuality.usAqi}
-                  max={300}
-                  gradient="linear-gradient(90deg, #4ade80, #facc15 17%, #fb923c 33%, #f87171 50%, #c084fc 67%, #9f1239)"
-                />
+                <Meter value={airQuality.usAqi} max={300} scale="aqi" />
               </StatTile>
             )}
           </StatGrid>

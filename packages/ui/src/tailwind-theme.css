@@ -8,14 +8,6 @@
  * 色の多くは、壁紙に合わせて実行中に差し替える :root の変数（styles/tokens.css）を指す（inline で、その場で読む）。
  */
 
-/* 画面ごとの @utility・@keyframes（Tailwind のクラスで書けないもの。必要な分だけ） */
-@import "./theme/ui.css";
-@import "./theme/shell.css";
-@import "./theme/settings.css";
-@import "./theme/home-assistant.css";
-@import "./theme/media-accounts.css";
-@import "./theme/small.css";
-
 @theme {
   --color-*: initial;
   --text-*: initial;
@@ -117,6 +109,15 @@
   }
 }
 
+/* 画面ごとの @utility・@keyframes（Tailwind のクラスで書けないもの。必要な分だけ）。
+   上の @theme で既定の値を消した後に読む（先に読むと、ここで足した --animate-* なども消える） */
+@import "./theme/ui.css";
+@import "./theme/shell.css";
+@import "./theme/settings.css";
+@import "./theme/home-assistant.css";
+@import "./theme/media-accounts.css";
+@import "./theme/small.css";
+
 /* 実行中に差し替える値を指すもの（壁紙に合わせた色・サイドバーの幅で変わる字の大きさなど） */
 @theme inline {
   /* テーマの色（壁紙に合わせて差し替える）。bg-accent/40 のように不透明度も付けられる */
@@ -191,15 +192,6 @@
 /* 閉じる動きの間（usePresence・useClosing が付ける） */
 @custom-variant closing (&.is-closing);
 
-/* ガラスの面（5つ1組）。入れ物・カード・ボタンはこれを付ける（自分で縁や影を書かない） */
-@utility glass {
-  border: 1px solid var(--glass-border);
-  background: var(--widget-sheen), var(--widget-bg);
-  background-clip: padding-box;
-  box-shadow: var(--widget-shadow);
-  backdrop-filter: var(--widget-blur);
-}
-
 /* ガラスの中のガラス・ほぼ不透明な塗りは、後ろをぼかさない（見た目はほぼ同じで、描く手間だけ減る） */
 @utility no-blur {
   backdrop-filter: none;
@@ -210,13 +202,6 @@
   border-color: transparent;
   background: var(--fill);
   color: var(--on-fill);
-}
-
-/* 浮かせる面（小窓・メニュー）。ぼかさず、ほぼ不透明 */
-@utility raised {
-  border: 1px solid var(--glass-border);
-  background: var(--surface-raised);
-  box-shadow: var(--widget-shadow);
 }
 
 /* 壁紙にじかに置く文字の影 */

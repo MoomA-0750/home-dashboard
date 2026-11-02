@@ -3,7 +3,7 @@ import type { WidgetRuntimeContext } from "@home-dashboard/widget-sdk";
 import { applyShading, applyTheme, getAnalysis, measureDims, measureHue, setAnalysis } from "@home-dashboard/ui/wallpaper";
 
 /**
- * 壁紙（背景の写真）。設定画面で選んだ画像をサーバーから読み、theme.css の --dash-background-image を差し替える。
+ * 壁紙（背景の写真）。設定画面で選んだ画像をサーバーから読み、styles/tokens.css の --dash-background-image を差し替える。
  * 選んでいなければ既定の写真（/background.jpg）のまま。ほかの端末で変えたら、知らせを受けてすぐ替える。
  */
 

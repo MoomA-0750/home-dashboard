@@ -5,6 +5,7 @@ import {
   List,
   ListItem,
   Note,
+  SectionTitle,
   defineMessages,
   useLocale,
   usePolling,
@@ -15,6 +16,7 @@ import {
 } from "@home-dashboard/widget-sdk";
 import { addDays, dayLabel, eventOnDay, eventTimeText, fetchCalendars, fetchEvents, startOfDay } from "./client";
 import type { CalendarEvent } from "./types";
+import { CalendarDot } from "./CalendarDot";
 import { MonthGrid } from "./MonthGrid";
 
 /**
@@ -77,7 +79,7 @@ function AgendaView({ ctx, config, size, openDetail }: WidgetProps<Config>) {
   const groups = data ? upcoming(data.events, 2) : [];
   let left = room;
   return (
-    <WidgetCard className="calendar-widget" onClick={openDetail} label={t("cardLabel")}>
+    <WidgetCard className="justify-start gap-2.5" onClick={openDetail} label={t("cardLabel")}>
       {Boolean(error) && !data && <WidgetHint tone="error">{t("loadFailed")}</WidgetHint>}
       {data && data.calendars.length === 0 && (
         <>
@@ -85,19 +87,19 @@ function AgendaView({ ctx, config, size, openDetail }: WidgetProps<Config>) {
           <WidgetHint>{t("noCalendarsShort")}</WidgetHint>
         </>
       )}
-      {data && data.calendars.length > 0 && groups.length === 0 && <span className="calendar-widget__empty">{t("emptyTwoDays")}</span>}
+      {data && data.calendars.length > 0 && groups.length === 0 && <span className="text-muted">{t("emptyTwoDays")}</span>}
       {groups.map(({ day, events }) => {
         if (left <= 0) return null;
         const shown = events.slice(0, left - 1);
         left -= shown.length + 1;
         return (
-          <div key={day.getTime()} className="calendar-widget__day">
-            <span className="calendar-widget__label">{dayLabel(day, undefined, locale)}</span>
+          <div key={day.getTime()} className="flex w-full min-w-0 flex-col gap-1">
+            <span className="text-note font-medium text-muted">{dayLabel(day, undefined, locale)}</span>
             {shown.map((event) => (
-              <span key={`${event.id}:${event.start}`} className="calendar-widget__event">
-                <span className="calendar-dot" style={{ background: colors.get(event.calendarId) ?? undefined }} />
-                <span className="calendar-widget__time">{eventTimeText(event, day, locale)}</span>
-                <span className="calendar-widget__title">{event.title}</span>
+              <span key={`${event.id}:${event.start}`} className="flex min-w-0 items-center gap-2.5 text-body">
+                <CalendarDot color={colors.get(event.calendarId)} />
+                <span className="min-w-18 shrink-0 text-muted tabular-nums">{eventTimeText(event, day, locale)}</span>
+                <span className="ellipsis">{event.title}</span>
               </span>
             ))}
           </div>
@@ -115,7 +117,7 @@ function AgendaDetail({ ctx, config }: WidgetDetailProps<Config>) {
   const names = new Map(data?.calendars.map((c) => [c.id, c.name]) ?? []);
   const groups = data ? upcoming(data.events, 7) : [];
   return (
-    <DetailFrame title={t("detailTitle")} className="calendar-detail">
+    <DetailFrame title={t("detailTitle")}>
       {data?.errors.map((e) => (
         <Note key={e.source}>
           {e.source}: {e.message}
@@ -130,12 +132,12 @@ function AgendaDetail({ ctx, config }: WidgetDetailProps<Config>) {
       {data && data.calendars.length > 0 && groups.length === 0 && <Note>{t("emptyWeek")}</Note>}
       {groups.map(({ day, events }) => (
         <section key={day.getTime()}>
-          <h3 className="calendar-detail__day">{dayLabel(day, undefined, locale)}</h3>
+          <SectionTitle>{dayLabel(day, undefined, locale)}</SectionTitle>
           <List>
             {events.map((event) => (
               <ListItem
                 key={`${event.id}:${event.start}`}
-                leading={<span className="calendar-dot" style={{ background: colors.get(event.calendarId) ?? undefined }} />}
+                leading={<CalendarDot color={colors.get(event.calendarId)} />}
                 title={event.title}
                 detail={[eventTimeText(event, day, locale), event.location, names.get(event.calendarId)].filter(Boolean).join(" · ")}
               />

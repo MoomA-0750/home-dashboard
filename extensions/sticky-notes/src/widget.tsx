@@ -1,8 +1,12 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import {
+  Badge,
   Button,
   ButtonRow,
   Check,
+  Chip,
+  cx,
+  IconButton,
   DetailFrame,
   Field,
   Message,
@@ -231,31 +235,74 @@ function useUntilText(t: T) {
 
 type NoteLook = Pick<StickyNote, "color" | "alignX" | "alignY" | "bubble" | "burst">;
 
-function noteClass(note: NoteLook, index: number, extra: { large?: boolean; playing?: boolean; inked?: boolean }) {
-  return [
-    "sticky-note",
-    `sticky-note--${note.color}`,
-    `sticky-note--x-${note.alignX}`,
-    `sticky-note--y-${note.alignY}`,
-    `sticky-note--tilt${index % 3}`,
-    extra.large && "sticky-note--large",
-    extra.playing && `sticky-note--fx-${note.bubble}`,
-    extra.inked && "sticky-note--ink",
-  ]
-    .filter(Boolean)
-    .join(" ");
+/** 紙の色（色そのものは本体の theme/small.css の sticky-paper-*） */
+const PAPER: Record<NoteColor, string> = {
+  yellow: "sticky-paper-yellow",
+  pink: "sticky-paper-pink",
+  blue: "sticky-paper-blue",
+  green: "sticky-paper-green",
+};
+
+/** 付箋ごとに少しずつ傾ける（並べたときに手で貼ったように見せる） */
+const TILT = ["-rotate-1", "rotate-1", "rotate-0"];
+
+/** 付箋の動き（効果の間だけ付ける）。見えないインクは動きではないので付けない */
+const BUBBLE_FX: Record<NoteBubble, string> = {
+  none: "",
+  slam: "z-1 animate-sticky-slam",
+  loud: "z-1 animate-sticky-loud",
+  gentle: "animate-sticky-gentle",
+  ink: "",
+};
+/** 付箋の動きに合わせた、中の文の動き */
+const BUBBLE_WORDS: Record<NoteBubble, string> = {
+  none: "",
+  slam: "",
+  loud: "font-semibold",
+  gentle: "animate-sticky-gentle-words",
+  ink: "",
+};
+
+/** 横の揃え（文と、書いた人の行） */
+const ALIGN_X: Record<NoteAlignX, { words: string; meta: string }> = {
+  start: { words: "text-left", meta: "justify-start" },
+  center: { words: "text-center", meta: "justify-center" },
+  end: { words: "text-right", meta: "justify-end" },
+};
+/**
+ * 縦の揃えは auto の余白で付ける。justify-content で中央・下に寄せると、入りきらない文の頭が上で切れて読めなくなるが、
+ * auto の余白は入りきらないときに 0 になるので、そのときは上から出る
+ */
+const ALIGN_Y: Record<NoteAlignY, string> = { top: "", middle: "my-auto", bottom: "mt-auto" };
+
+/** 付箋 1 枚（紙・傾き・動き）。中の文と書いた人の行は NoteBody が並べる */
+function noteClass(note: NoteLook, index: number, extra: { large?: boolean; playing?: boolean }) {
+  return cx(
+    "sticky-paper relative flex min-h-0 flex-col gap-1 overflow-hidden px-3 pt-3 pb-2 text-left",
+    PAPER[note.color],
+    TILT[index % 3],
+    extra.large && "min-h-32",
+    extra.playing && BUBBLE_FX[note.bubble],
+  );
 }
 
 function NoteBody({
+  note,
   text,
   meta,
   inked,
+  large,
+  playing,
   burst,
   t,
 }: {
+  note: NoteLook;
   text: string;
   meta?: ReactNode;
   inked: boolean;
+  /** 詳細の大きな付箋（字を大きくし、入りきらない分もぼかさない） */
+  large?: boolean;
+  playing?: boolean;
   /** 動いている間だけ渡す（紙吹雪などを付箋の中で起こす） */
   burst?: NoteBurst;
   t: T;
@@ -263,10 +310,27 @@ function NoteBody({
   return (
     <>
       {burst && <NoteBurstLayer effect={burst} />}
-      <span className="sticky-note__text">
-        <span className="sticky-note__words">{text}</span>
+      {/* 文字と書いた人の行は、効果の粒より手前に出す（伝言は効果の間も読める）。入りきらない分は下をぼかして切る */}
+      <span
+        className={cx(
+          "relative z-1 flex min-h-0 flex-1 flex-col overflow-hidden",
+          !large && "mask-b-from-85%",
+          inked && "sticky-ink after:animate-sticky-ink motion-reduce:after:animate-none",
+        )}
+      >
+        <span
+          className={cx(
+            "untrim leading-tight whitespace-pre-wrap wrap-anywhere",
+            large ? "text-title" : "text-body",
+            ALIGN_X[note.alignX].words,
+            ALIGN_Y[note.alignY],
+            playing && BUBBLE_WORDS[note.bubble],
+          )}
+        >
+          {text}
+        </span>
       </span>
-      {inked && <span className="sticky-note__ink-hint">{t("inkHint")}</span>}
+      {inked && <span className="relative z-1 text-micro text-current/60">{t("inkHint")}</span>}
       {meta}
     </>
   );
@@ -275,10 +339,10 @@ function NoteBody({
 function NoteMeta({ note, t }: { note: StickyNote; t: T }) {
   const until = useUntilText(t)(note.expiresAt);
   return (
-    <span className="sticky-note__meta">
-      {note.from && <span className="sticky-note__from">{note.from}</span>}
+    <span className={cx("relative z-1 flex flex-wrap gap-x-2 gap-y-1 text-micro text-current/65", ALIGN_X[note.alignX].meta)}>
+      {note.from && <span className="font-semibold">{note.from}</span>}
       <span>{ago(note.createdAt, t)}</span>
-      {until && <span className="sticky-note__until">{until}</span>}
+      {until && <span className="rounded-full bg-black/8 px-1">{until}</span>}
     </span>
   );
 }
@@ -301,37 +365,44 @@ function StickyNotesView({ ctx, config, size, openDetail }: WidgetProps<StickyNo
   useArrivals(data, flash);
 
   return (
-    <WidgetCard className="sticky-notes" label={t("title")}>
+    <WidgetCard className="flex-row-reverse items-stretch justify-start gap-3" label={t("title")}>
       {/* 付箋にカードの高さを全部使わせるため、見出しは置かず、＋と枚数を右の縦の列にまとめる */}
-      <div className="sticky-notes__side">
-        <button type="button" className="sticky-notes__add ui-glass" onClick={openDetail} aria-label={t("add")}>
-          ＋
-        </button>
-        {data && data.length > 0 && <span className="sticky-notes__count">{t("count", { n: data.length })}</span>}
+      <div className="flex flex-col items-center gap-2">
+        <IconButton icon="add" label={t("add")} onClick={openDetail} />
+        {data && data.length > 0 && <Badge tone="dim">{t("count", { n: data.length })}</Badge>}
       </div>
       {Boolean(error) && !data && <WidgetHint tone="error">{t("loadFailed")}</WidgetHint>}
       {data && data.length === 0 && (
-        <button type="button" className="sticky-notes__empty" onClick={openDetail}>
+        <button
+          type="button"
+          className="press flex min-w-0 flex-1 cursor-pointer flex-col items-center justify-center gap-1 rounded-inner border border-dashed border-glass-border text-muted"
+          onClick={openDetail}
+        >
           {t("empty")}
-          <span className="widget-hint">{t("emptyHint")}</span>
+          <span className="text-caption">{t("emptyHint")}</span>
         </button>
       )}
       {data && data.length > 0 && (
         // 高さ 1 段につき付箋 1 列。はみ出した分は横にめくって見る
-        <div className="sticky-notes__board" style={{ gridTemplateRows: `repeat(${Math.max(1, size.h)}, minmax(0, 1fr))` }}>
+        <div
+          className="sticky-columns grid min-h-0 min-w-0 flex-1 gap-3 overflow-x-auto overflow-y-hidden p-1"
+          style={{ gridTemplateRows: `repeat(${Math.max(1, size.h)}, minmax(0, 1fr))` }}
+        >
           {data.map((note, i) => {
             const inked = note.bubble === "ink" && !revealed.has(note.id);
             return (
               <button
                 key={note.id}
                 type="button"
-                className={noteClass(note, i, { playing: playing.has(note.id), inked })}
+                className={cx(noteClass(note, i, { playing: playing.has(note.id) }), "press cursor-pointer")}
                 // 見えないインクは、1 回目に押したらその場で読めるようにする（詳細は 2 回目から）
                 onClick={inked ? () => reveal(note.id) : openDetail}
               >
                 <NoteBody
+                  note={note}
                   text={note.text}
                   inked={inked}
+                  playing={playing.has(note.id)}
                   burst={playing.has(note.id) ? note.burst : undefined}
                   t={t}
                   meta={<NoteMeta note={note} t={t} />}
@@ -370,18 +441,19 @@ function Choices<V extends string>({
   text: (value: V) => string;
 }) {
   return (
-    <div className="sticky-notes-choices" role="radiogroup" aria-label={label}>
+    <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={label}>
       {values.map((v) => (
-        <button
+        // 1 つだけ選ぶので、押す・押さないの aria-pressed ではなく radio として読ませる
+        <Chip
           key={v}
-          type="button"
           role="radio"
           aria-checked={value === v}
-          className={`sticky-notes-choices__chip ui-glass${value === v ? " sticky-notes-choices__chip--on" : ""}`}
+          aria-pressed={undefined}
+          selected={value === v}
           onClick={() => onChange(v)}
         >
           {text(v)}
-        </button>
+        </Chip>
       ))}
     </div>
   );
@@ -446,81 +518,95 @@ function NoteForm({ ctx, t }: { ctx: WidgetRuntimeContext; t: T }) {
   const inked = bubble === "ink" && !inkRevealed;
 
   return (
-    <form className="sticky-notes-form" onSubmit={(e) => void submit(e)}>
-      <div className="sticky-notes-form__fields">
-        <Field label={t("text")}>
-          <textarea
-            rows={3}
-            value={text}
-            maxLength={MAX_TEXT}
-            placeholder={t("textPlaceholder")}
-            autoFocus
-            onChange={(e) => setText(e.target.value)}
-          />
-        </Field>
-        <div className="sticky-notes-form__row">
-          <Field label={t("from")}>
-            <input value={from} maxLength={MAX_FROM} onChange={(e) => setFrom(e.target.value)} />
+    <form className="mb-6 flex flex-col gap-4" onSubmit={(e) => void submit(e)}>
+      <div className="flex gap-6 phone:flex-col">
+        <div className="flex min-w-0 flex-1 flex-col gap-3">
+          <Field label={t("text")}>
+            <textarea
+              className="resize-y"
+              rows={3}
+              value={text}
+              maxLength={MAX_TEXT}
+              placeholder={t("textPlaceholder")}
+              autoFocus
+              onChange={(e) => setText(e.target.value)}
+            />
           </Field>
-          <Field label={t("expires")}>
-            <select value={expires} onChange={(e) => setExpires(e.target.value as NoteExpires)}>
-              {NOTE_EXPIRES.map((value) => (
-                <option key={value} value={value}>
-                  {t(`expires_${value}`)}
-                </option>
-              ))}
-            </select>
-          </Field>
-        </div>
-        <Field label={t("color")}>
-          <div className="sticky-notes-form__colors" role="radiogroup" aria-label={t("color")}>
-            {NOTE_COLORS.map((value) => (
-              <button
-                key={value}
-                type="button"
-                role="radio"
-                aria-checked={color === value}
-                aria-label={t(`color_${value}`)}
-                className={`sticky-notes-form__swatch sticky-note--${value}`}
-                onClick={() => setColor(value)}
-              />
-            ))}
+          <div className="grid grid-cols-2 gap-3 phone:grid-cols-1">
+            <Field label={t("from")}>
+              <input value={from} maxLength={MAX_FROM} onChange={(e) => setFrom(e.target.value)} />
+            </Field>
+            <Field label={t("expires")}>
+              <select value={expires} onChange={(e) => setExpires(e.target.value as NoteExpires)}>
+                {NOTE_EXPIRES.map((value) => (
+                  <option key={value} value={value}>
+                    {t(`expires_${value}`)}
+                  </option>
+                ))}
+              </select>
+            </Field>
           </div>
-        </Field>
-        <div className="sticky-notes-form__row">
-          <Field label={t("alignX")}>
-            <Choices label={t("alignX")} values={NOTE_ALIGN_X} value={alignX} onChange={setAlignX} text={(v) => t(`alignX_${v}`)} />
+          <Field label={t("color")}>
+            <div className="flex gap-3" role="radiogroup" aria-label={t("color")}>
+              {NOTE_COLORS.map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  role="radio"
+                  aria-checked={color === value}
+                  aria-label={t(`color_${value}`)}
+                  className={cx(
+                    "press size-10 cursor-pointer rounded-art border-2 border-transparent bg-(--sticky-paper)",
+                    "aria-checked:border-text aria-checked:ring-2 aria-checked:ring-shade/50",
+                    PAPER[value],
+                  )}
+                  onClick={() => setColor(value)}
+                />
+              ))}
+            </div>
           </Field>
-          <Field label={t("alignY")}>
-            <Choices label={t("alignY")} values={NOTE_ALIGN_Y} value={alignY} onChange={setAlignY} text={(v) => t(`alignY_${v}`)} />
+          <div className="grid grid-cols-2 gap-3 phone:grid-cols-1">
+            <Field label={t("alignX")}>
+              <Choices label={t("alignX")} values={NOTE_ALIGN_X} value={alignX} onChange={setAlignX} text={(v) => t(`alignX_${v}`)} />
+            </Field>
+            <Field label={t("alignY")}>
+              <Choices label={t("alignY")} values={NOTE_ALIGN_Y} value={alignY} onChange={setAlignY} text={(v) => t(`alignY_${v}`)} />
+            </Field>
+          </div>
+          <Field label={t("bubble")}>
+            <Choices label={t("bubble")} values={NOTE_BUBBLES} value={bubble} onChange={chooseBubble} text={(v) => t(`bubble_${v}`)} />
           </Field>
+          <Field label={t("burst")}>
+            <Choices label={t("burst")} values={NOTE_BURSTS} value={burst} onChange={chooseBurst} text={(v) => t(`burst_${v}`)} />
+          </Field>
+          <Check checked={repeat} disabled={!hasMotion({ bubble, burst })} onChange={setRepeat}>
+            {t("repeat")}
+          </Check>
         </div>
-        <Field label={t("bubble")}>
-          <Choices label={t("bubble")} values={NOTE_BUBBLES} value={bubble} onChange={chooseBubble} text={(v) => t(`bubble_${v}`)} />
-        </Field>
-        <Field label={t("burst")}>
-          <Choices label={t("burst")} values={NOTE_BURSTS} value={burst} onChange={chooseBurst} text={(v) => t(`burst_${v}`)} />
-        </Field>
-        <Check checked={repeat} disabled={!hasMotion({ bubble, burst })} onChange={setRepeat}>
-          {t("repeat")}
-        </Check>
-      </div>
-      <div className="sticky-notes-form__preview" aria-label={t("preview")}>
-        <span className="sticky-notes-form__preview-label">{t("preview")}</span>
+        {/* 背の低い壁掛けの画面では小窓の中をスクロールするので、見本は見えるところに残す（1 列のときは下の付箋に重ならないよう貼り付けない） */}
         <div
-          className={noteClass(preview, 0, { large: true, playing: playing.has(PREVIEW_ID), inked })}
-          onClick={inked ? () => setInkRevealed(true) : undefined}
+          className="sticky top-0 flex w-52 shrink-0 flex-col gap-3 self-start phone:static phone:w-auto phone:self-stretch"
+          aria-label={t("preview")}
         >
-          <NoteBody
-            text={text.trim() || t("previewPlaceholder")}
-            inked={inked}
-            burst={playing.has(PREVIEW_ID) ? burst : undefined}
-            t={t}
-          />
+          <span className="text-note text-muted">{t("preview")}</span>
+          <div
+            className={cx(noteClass(preview, 0, { large: true, playing: playing.has(PREVIEW_ID) }), "h-44")}
+            onClick={inked ? () => setInkRevealed(true) : undefined}
+          >
+            <NoteBody
+              note={preview}
+              text={text.trim() || t("previewPlaceholder")}
+              inked={inked}
+              large
+              playing={playing.has(PREVIEW_ID)}
+              burst={playing.has(PREVIEW_ID) ? burst : undefined}
+              t={t}
+            />
+          </div>
+          <Button icon="arrow-sync" onClick={replay} disabled={!hasMotion({ bubble, burst })}>
+            {t("replay")}
+          </Button>
         </div>
-        <Button icon="arrow-sync" onClick={replay} disabled={!hasMotion({ bubble, burst })}>
-          {t("replay")}
-        </Button>
       </div>
       {error && <Message tone="error">{error}</Message>}
       <ButtonRow>
@@ -563,36 +649,39 @@ function StickyNotesDetail({ ctx, config }: WidgetDetailProps<StickyNotesConfig>
   };
 
   return (
-    <DetailFrame title={t("detailTitle")} className="sticky-notes-detail">
+    <DetailFrame title={t("detailTitle")} className="w-208 max-w-full phone:w-auto">
       <NoteForm ctx={ctx} t={t} />
       {error && <Message tone="error">{error}</Message>}
       {data && data.length > 0 && (
-        <section className="sticky-notes-detail__board" aria-label={t("board")}>
+        <section className="sticky-board gap-4" aria-label={t("board")}>
           {data.map((note, i) => {
             const inked = note.bubble === "ink" && !revealed.has(note.id);
             return (
               <div
                 key={note.id}
-                className={noteClass(note, i, { large: true, playing: playing.has(note.id), inked })}
+                className={cx(noteClass(note, i, { large: true, playing: playing.has(note.id) }), "cursor-pointer")}
                 onClick={() => replay(note)}
               >
                 <NoteBody
+                  note={note}
                   text={note.text}
                   inked={inked}
+                  large
+                  playing={playing.has(note.id)}
                   burst={playing.has(note.id) ? note.burst : undefined}
                   t={t}
                   meta={<NoteMeta note={note} t={t} />}
                 />
-                <button
-                  type="button"
-                  className={`sticky-note__peel ${armed === note.id ? "sticky-note__peel--armed" : ""}`}
+                <Button
+                  variant={armed === note.id ? "danger" : "default"}
+                  className="relative z-1 self-end"
                   onClick={(e) => {
                     e.stopPropagation();
                     void peel(note.id);
                   }}
                 >
                   {armed === note.id ? t("peelConfirm") : t("peel")}
-                </button>
+                </Button>
               </div>
             );
           })}

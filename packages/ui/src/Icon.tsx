@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { cx } from "./cx";
 
 /**
  * Fluent UI System Icons を CSS マスクとして描画する。
@@ -104,12 +105,19 @@ interface IconProps {
   label?: string;
 }
 
+/**
+ * 大きさは 24px（className の size-5 などで変える）。部品の中のアイコンをまとめて変えるときは、
+ * 目印の fluent-icon で選ぶ（`[&_.fluent-icon]:size-5`）
+ */
 export function Icon({ name, src, className, label }: IconProps) {
   const url = src ?? `/icons/${ICON_FILES[name ?? "unknown"]}.svg`;
   const style = { "--fluent-icon": `url("${url}")` } as CSSProperties;
   return (
     <span
-      className={className ? `fluent-icon ${className}` : "fluent-icon"}
+      className={cx(
+        "fluent-icon inline-block size-6 flex-none bg-current mask-(--fluent-icon) mask-contain mask-center mask-no-repeat",
+        className,
+      )}
       style={style}
       role={label ? "img" : undefined}
       aria-label={label}

@@ -2,10 +2,11 @@
 /**
  * 拡張機能のひな形を作る道具。
  *
- *   pnpm new:extension <id> [--name 名前] [--widget] [--screen] [--server] [--provides <口の id>] [--dir <置き場>]
+ *   pnpm new:extension <id> [--name 名前] [--widget] [--screen] [--server] [--states] [--provides <口の id>] [--dir <置き場>]
  *
  * - 何も選ばなければ、ウィジェットとサーバー側を作る
  * - --provides music などで、ほかの拡張機能の機能の口へ入るものを作る（Media の音楽アプリなど。口の形は口を持つ拡張機能の型を見る）
+ * - --states で、本体が読める「家の状態」の値（照度・オンオフなど。夜の表示の条件に使える）を差し出すものを作る
  * - 置き場の既定は extensions/<id>（本体の拡張機能）。外で作るなら --dir で別の場所にする
  * できたら pnpm install のあと、pnpm build:extension <置き場> [--zip] で組み立てる（docs/extensions.md）
  */
@@ -25,7 +26,7 @@ const flag = (name) => args.includes(name);
 const id = args.find((arg, i) => !arg.startsWith("--") && !args[i - 1]?.match(/^--(name|provides|dir)$/));
 if (!id || !/^[a-z0-9][a-z0-9-]{0,39}$/.test(id)) {
   console.error(
-    "使い方: pnpm new:extension <id> [--name 名前] [--widget] [--screen] [--server] [--provides <口の id>] [--dir <置き場>]\n" +
+    "使い方: pnpm new:extension <id> [--name 名前] [--widget] [--screen] [--server] [--states] [--provides <口の id>] [--dir <置き場>]\n" +
       "id は小文字の英数字と - で40文字まで",
   );
   process.exit(1);
@@ -35,7 +36,8 @@ const provides = option("--provides");
 const chosen = flag("--widget") || flag("--screen") || flag("--server");
 const withWidget = flag("--widget") || (!chosen && !provides);
 const withScreen = flag("--screen");
-const withServer = flag("--server") || !chosen || Boolean(provides);
+const withStates = flag("--states");
+const withServer = flag("--server") || !chosen || Boolean(provides) || withStates;
 const dir = resolve(option("--dir") ?? join(ROOT, "extensions", id));
 if (existsSync(dir)) {
   console.error(`${relative(process.cwd(), dir)} はもうあります`);
@@ -134,6 +136,21 @@ ${
 `
     : ""
 }
+${
+  withStates
+    ? `
+    // 本体が読める「家の状態」の値（docs/extensions.md の「家の状態の値」）。家の人は設定の「夜の表示」で、
+    // この値を条件に選べる。kind は "number"（未満・より上で比べる）か "onoff"。読めないときは value: null
+    const readings = async () => [
+      { id: "example", name: "${name}の値", kind: "number" as const, value: null, unit: null },
+    ];
+    api.provideStates({
+      list: readings,
+      read: async (ids) => (await readings()).filter((reading) => ids.includes(reading.id)),
+    });
+`
+    : ""
+}
     // 音声アシスタント（Claude）に渡すツール。要らなければ消す
     api.tool({
       name: "${id.replace(/-/g, "_")}_status",
@@ -168,7 +185,8 @@ if (withWidget) {
 
 /**
  * ${name}のウィジェット。見た目は本体の部品（WidgetCard・WidgetHint・DetailFrame など）で組み、
- * 自分の CSS（web.css）には中身の並べ方だけを書く。
+ * 中身の並べ方（flex・gap・字の大きさの段など）だけを Tailwind のクラスで書く。CSS のファイルは作らない
+ * （使えるクラスは docs/design-system.md の「0. 書き方」。組み立てが、使ったクラスだけを dist/web.css に出す）。
  */
 
 interface Config {
@@ -189,8 +207,8 @@ async function fetchStatus(ctx: WidgetProps["ctx"]): Promise<Status> {
 function ${pascal}View({ ctx, config, openDetail }: WidgetProps<Config>) {
   const { data, error } = usePolling(() => fetchStatus(ctx), config.pollIntervalMs);
   return (
-    <WidgetCard className="${id}-widget" onClick={openDetail} label="${name}（詳しく見る）">
-      <span className="${id}-widget__title">${name}</span>
+    <WidgetCard className="gap-1.5 text-left" onClick={openDetail} label="${name}（詳しく見る）">
+      <span className="text-title font-semibold">${name}</span>
       {error ? (
         <WidgetHint tone="error">読めませんでした</WidgetHint>
       ) : (
@@ -271,26 +289,12 @@ if (webEntries.length > 0) {
     "src/web.tsx",
     `import { ${[...webImports].join(", ")} } from "@home-dashboard/widget-sdk";
 ${webParts.join("\n")}
-import "./web.css";
 
-// 画面側。React と @home-dashboard/widget-sdk は本体のものを使う（ビルドの道具が同梱しないようにつなぐ）
+// 画面側。React と @home-dashboard/widget-sdk は本体のものを使う（ビルドの道具が同梱しないようにつなぐ）。
+// 見た目は Tailwind のクラスで書く（CSS のファイルは作らない）
 export default defineWebExtension({
   ${webEntries.join(",\n  ")},
 });
-`,
-  );
-  files.set(
-    "src/web.css",
-    `/* ${name}。クラス名は、ほかとぶつからないよう拡張機能の id で始める。色・角丸・余白は本体の部品に任せ、ここには並べ方だけを書く */
-
-.${id}-widget {
-  gap: 0.35rem;
-}
-
-.${id}-widget__title {
-  font-size: 1.1rem;
-  font-weight: 600;
-}
 `,
   );
 }

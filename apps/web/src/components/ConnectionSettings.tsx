@@ -1,5 +1,19 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
-import { defineMessages, useLocale } from "@home-dashboard/widget-sdk";
+import {
+  Badge,
+  Button,
+  ButtonLink,
+  ButtonRow,
+  Check,
+  defineMessages,
+  Field,
+  Group,
+  Message,
+  Note,
+  Notice,
+  SectionTitle,
+  useLocale,
+} from "@home-dashboard/widget-sdk";
 import { localizeSection, type ManifestLocales } from "../lib/manifestText";
 
 type FieldKind = "text" | "url" | "secret" | "number" | "boolean";
@@ -124,16 +138,14 @@ export function ConnectionSection({ apiBaseUrl, sectionId }: { apiBaseUrl: strin
     return found ? localizeSection(found, locale) : null;
   }, [data, sectionId, locale]);
 
-  if (error) return <p className="connection-settings__message connection-settings__message--error">{error}</p>;
+  if (error) return <Message tone="error">{error}</Message>;
   if (!data) return null;
   // 切ってある拡張機能や、設定の項目が無い拡張機能では出さない
   if (!section) return null;
   return (
-    <section className="connection-settings">
-      <h4 className="settings-detail__subtitle">{t("connectionSettings")}</h4>
-      {!data.editable && (
-        <p className="connection-settings__notice">{t("adminOnly")}</p>
-      )}
+    <section>
+      <SectionTitle>{t("connectionSettings")}</SectionTitle>
+      {!data.editable && <Notice>{t("adminOnly")}</Notice>}
       <SectionForm key={section.id} apiBaseUrl={apiBaseUrl} section={section} editable={data.editable} onSaved={load} />
     </section>
   );
@@ -212,10 +224,14 @@ function StepText({ text, fields }: { text: string; fields: FieldView[] }) {
     if (!field) {
       nodes.push(`{${parts[i]}}${tail}`);
     } else if (field.isSet && field.value !== null) {
-      nodes.push(<code key={i}>{`${String(field.value).replace(/\/$/, "")}${tail}`}</code>);
+      nodes.push(
+        <code key={i} className="rounded-art bg-tint/15 px-1 text-text wrap-anywhere">
+          {`${String(field.value).replace(/\/$/, "")}${tail}`}
+        </code>,
+      );
     } else {
       nodes.push(
-        <span key={i} className="connection-settings__placeholder">
+        <span key={i} className="font-semibold text-text">
           {`<${shortLabel(field.label)}>`}
         </span>,
         tail,
@@ -342,23 +358,19 @@ function PanelForm({
     });
 
   return (
-    <div className="connection-settings__section connection-settings__section--open">
+    <Group>
       {(panel.title || showBadge) && (
-        <div className="connection-settings__head">
-          {panel.title && <h5 className="connection-settings__group-title">{panel.title}</h5>}
-          {showBadge && (
-            <p className={`connection-settings__badge${configured ? " connection-settings__badge--on" : ""}`}>
-              {configured ? t("configured") : t("unset")}
-            </p>
-          )}
+        <div className="mb-3 flex items-center justify-between gap-2">
+          {panel.title && <h5 className="text-label font-semibold">{panel.title}</h5>}
+          {showBadge && <Badge on={configured}>{configured ? t("configured") : t("unset")}</Badge>}
         </div>
       )}
       <form onSubmit={submit}>
-        {panel.note && <p className="connection-settings__note">{panel.note}</p>}
+        {panel.note && <Note>{panel.note}</Note>}
         {panel.steps.length > 0 && (
-          <details className="connection-settings__steps">
-            <summary>{t("steps")}</summary>
-            <ol>
+          <details className="mb-3 text-note leading-normal">
+            <summary className="inline-flex min-h-8 cursor-pointer items-center text-text underline">{t("steps")}</summary>
+            <ol className="mt-1.5 flex list-decimal flex-col gap-1.5 pl-6 text-muted">
               {panel.steps.map((step, i) => (
                 <li key={i}>
                   <StepText text={step} fields={allFields} />
@@ -367,62 +379,55 @@ function PanelForm({
             </ol>
           </details>
         )}
-        <fieldset disabled={!editable || busy}>
-          {panel.fields.map((field) => (
-            <div key={field.key} className="connection-settings__field">
-              {field.kind === "boolean" ? (
-                <label className="connection-settings__check">
-                  <input
-                    type="checkbox"
-                    checked={draft[field.key] === true}
-                    onChange={(e) => setDraft({ ...draft, [field.key]: e.target.checked })}
-                  />
-                  <span>{field.label}</span>
-                </label>
-              ) : (
-                <label>
-                  <span>{field.label}</span>
-                  <input
-                    type={field.kind === "secret" ? "password" : "text"}
-                    inputMode={field.kind === "number" ? "decimal" : field.kind === "url" ? "url" : undefined}
-                    autoComplete="off"
-                    spellCheck={false}
-                    placeholder={
-                      field.kind === "secret"
-                        ? field.isSet
-                          ? t("secretSet")
-                          : t("unset")
-                        : (field.placeholder ?? "")
-                    }
-                    value={String(draft[field.key] ?? "")}
-                    onChange={(e) => setDraft({ ...draft, [field.key]: e.target.value })}
-                  />
-                </label>
-              )}
-              <span className="connection-settings__source">
+        <fieldset disabled={!editable || busy} className="min-w-0 disabled:opacity-60">
+          {panel.fields.map((field) => {
+            const source = (
+              <span className="flex flex-wrap items-center gap-2">
                 {t(SOURCE_LABELS[field.source])}
                 {field.env && t("envName", { env: field.env })}
                 {field.source === "settings" && (
-                  <button type="button" onClick={() => void reset(field)}>
+                  <button type="button" className="cursor-pointer text-text underline" onClick={() => void reset(field)}>
                     {t("resetToEnv")}
                   </button>
                 )}
               </span>
-            </div>
-          ))}
-          <div className="connection-settings__actions">
+            );
+            return field.kind === "boolean" ? (
+              <div key={field.key}>
+                <Check checked={draft[field.key] === true} onChange={(checked) => setDraft({ ...draft, [field.key]: checked })}>
+                  {field.label}
+                </Check>
+                <small className="mb-3 block text-caption text-muted">{source}</small>
+              </div>
+            ) : (
+              <Field key={field.key} label={field.label} hint={source}>
+                <input
+                  type={field.kind === "secret" ? "password" : "text"}
+                  inputMode={field.kind === "number" ? "decimal" : field.kind === "url" ? "url" : undefined}
+                  autoComplete="off"
+                  spellCheck={false}
+                  placeholder={
+                    field.kind === "secret"
+                      ? field.isSet
+                        ? t("secretSet")
+                        : t("unset")
+                      : (field.placeholder ?? "")
+                  }
+                  value={String(draft[field.key] ?? "")}
+                  onChange={(e) => setDraft({ ...draft, [field.key]: e.target.value })}
+                />
+              </Field>
+            );
+          })}
+          <ButtonRow>
             {panel.fields.length > 0 && (
-              <button type="submit" className="connection-settings__save">
+              <Button type="submit" variant="primary">
                 {t("save")}
-              </button>
+              </Button>
             )}
-            {panel.test && (
-              <button type="button" onClick={() => void testConnection(panel.test!)}>
-                {t("testConnection")}
-              </button>
-            )}
+            {panel.test && <Button onClick={() => void testConnection(panel.test!)}>{t("testConnection")}</Button>}
             {panel.links.map((link) => (
-              <a
+              <ButtonLink
                 key={link.href}
                 // 外のページ（https）はそのまま、本体の中の道はサーバーの頭を付ける
                 href={link.href.startsWith("https://") ? link.href : `${apiBaseUrl}${link.href}`}
@@ -430,16 +435,12 @@ function PanelForm({
                 rel="noreferrer"
               >
                 {link.label}
-              </a>
+              </ButtonLink>
             ))}
-          </div>
+          </ButtonRow>
         </fieldset>
-        {message && (
-          <p className={`connection-settings__message${message.ok ? "" : " connection-settings__message--error"}`}>
-            {message.text}
-          </p>
-        )}
+        {message && <Message tone={message.ok ? "ok" : "error"}>{message.text}</Message>}
       </form>
-    </div>
+    </Group>
   );
 }

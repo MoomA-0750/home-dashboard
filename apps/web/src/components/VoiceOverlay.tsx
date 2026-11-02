@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
-import { defineMessages, motionMs } from "@home-dashboard/widget-sdk";
+import { cx, defineMessages, IconButton, motionMs } from "@home-dashboard/widget-sdk";
 import { ACTIVE_VOICE_STATES, type VoicePersona, type VoiceSnapshot, type VoiceState } from "../lib/useVoiceAssistant";
 import { Icon } from "./Icon";
 
@@ -56,7 +56,7 @@ interface VoiceOverlayProps {
 
 function VoiceOrb({ state, badge = false }: { state: VoiceState; badge?: boolean }) {
   return (
-    <div className={`voice-orb${badge ? " voice-orb--badge" : ""}`} data-state={state} aria-hidden="true">
+    <div className="voice-orb" data-state={state} data-badge={badge || undefined} aria-hidden="true">
       <Icon name="mic" />
     </div>
   );
@@ -132,19 +132,24 @@ export function VoiceOverlay({ snapshot, avatarUrl, avatarRig, socket, onCancel 
 
   return (
     <div
-      className={`voice-overlay${closing ? " voice-overlay--closing" : ""}`}
+      className={cx(
+        "voice-backdrop fixed inset-0 layer-voice flex items-center justify-center p-8",
+        "animate-fade closing:animate-fade-out closing:pointer-events-none",
+        closing && "is-closing",
+      )}
       data-state={state}
       onClick={() => !active && close()}
     >
       <section
-        className="voice-panel"
+        className="glass relative flex w-full max-w-275 max-h-full items-center gap-10 overflow-hidden rounded-card py-10 pr-22 pl-10 animate-pop tablet:flex-col tablet:items-start tablet:gap-6 tablet:p-8"
         role="status"
         aria-live="polite"
         aria-label={t("voiceAssistant")}
         onClick={(event) => event.stopPropagation()}
       >
         {avatarUrl && avatarUrl !== failedAvatarUrl ? (
-          <div className="voice-figure">
+          // パネルの下端から生えているように見せる（下はパネルの縁まで伸ばす）
+          <div className="relative -mb-10 -ml-2.5 min-h-75 w-62 shrink-0 self-stretch tablet:-mt-8 tablet:mb-0 tablet:min-h-47 tablet:w-37">
             <Suspense fallback={null}>
               <VoiceAvatar
                 modelUrl={avatarUrl}
@@ -162,28 +167,27 @@ export function VoiceOverlay({ snapshot, avatarUrl, avatarRig, socket, onCancel 
         ) : (
           <VoiceOrb state={state} />
         )}
-        <div className="voice-panel__body">
-          <p className="voice-panel__status">{status}</p>
-          {prompt && <p className="voice-panel__transcript">{prompt}</p>}
-          {state === "error" && snapshot.error && <p className="voice-panel__error">{snapshot.error}</p>}
+        <div className="voice-body flex min-w-0 flex-col gap-4.5">
+          <p className="text-voice-accent text-title font-semibold">{status}</p>
+          {prompt && <p className="text-heading leading-normal text-muted untrim">{prompt}</p>}
+          {state === "error" && snapshot.error && <p className="text-title text-muted">{snapshot.error}</p>}
           {/* 返答の途中の文は改行から始まることがあるので、前後の改行を落として出す（上に余白が出ないように） */}
           {snapshot.response?.trim() && (
-            <p ref={responseRef} className="voice-panel__response">
+            // 対応するブラウザでは文節の途中で改行しない
+            <p ref={responseRef} className="min-h-0 overflow-y-auto text-card leading-normal whitespace-pre-line untrim break-phrase tablet:text-heading">
               {snapshot.response.trim()}
             </p>
           )}
         </div>
-        <button
-          type="button"
-          className="voice-panel__close"
-          aria-label={active ? t("cancel") : t("close")}
+        <IconButton
+          icon="dismiss"
+          className="absolute top-8 right-8"
+          label={active ? t("cancel") : t("close")}
           onClick={() => {
             if (active) onCancel();
             setVisible(false);
           }}
-        >
-          <Icon name="dismiss" />
-        </button>
+        />
       </section>
     </div>
   );

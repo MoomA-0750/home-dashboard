@@ -6,6 +6,8 @@ import {
   usePolling,
   type WidgetDetailProps,
   type WidgetProps,
+  cx,
+  Note,
   ProgressBar,
   DetailFrame,
   WidgetCard,
@@ -121,7 +123,15 @@ const ratio = (used: number | null, total: number | null) =>
 
 /** 8割を超えたら注意、9割5分を超えたら警告 */
 const levelOf = (value: number | null) =>
-  value === null ? "" : value >= 0.95 ? " homelab-usage--hot" : value >= 0.8 ? " homelab-usage--warm" : "";
+  value === null ? "ok" : value >= 0.95 ? "hot" : value >= 0.8 ? "warm" : "ok";
+
+/** 割合の高さごとの色（バーの色・数値の色） */
+const BAR_COLOR = {
+  ok: "",
+  warm: "[--progress-color:var(--accent-warn)]",
+  hot: "[--progress-color:var(--danger-strong)]",
+} as const;
+const VALUE_COLOR = { ok: "", warm: "text-warn", hot: "text-danger-strong" } as const;
 
 const percent = (value: number | null) => (value === null ? "—" : `${Math.round(value * 100)}%`);
 
@@ -145,21 +155,30 @@ function usages(r: Resources, t: T) {
 function UsageBars({ resources }: { resources: Resources }) {
   const t = messages.useT();
   return (
-    <div className="homelab-node__usage">
+    <div className="flex flex-col gap-1.5">
       {usages(resources, t).map((u) => (
-        <div key={u.label} className={`homelab-usage${levelOf(u.value)}`} title={u.detail}>
-          <span className="homelab-usage__label">{u.label}</span>
-          <ProgressBar value={u.value ?? 0} />
-          <span className="homelab-usage__value">{percent(u.value)}</span>
+        <div key={u.label} className="flex items-center gap-2 text-caption" title={u.detail}>
+          <span className="w-12 shrink-0 text-muted">{u.label}</span>
+          <ProgressBar value={u.value ?? 0} className={cx("flex-1", BAR_COLOR[levelOf(u.value)])} />
+          <span className="w-9 shrink-0 text-right tabular-nums">{percent(u.value)}</span>
         </div>
       ))}
     </div>
   );
 }
 
+/** 応答があるか（緑 / 注意の色）の丸い印 */
 const Dot = ({ online }: { online: boolean }) => (
-  <span className={`widget-homelab__dot ${online ? "widget-homelab__dot--ok" : "widget-homelab__dot--warn"}`} />
+  <span className={cx("size-2.5 shrink-0 rounded-full", online ? "bg-ok" : "bg-warn")} />
 );
+
+/** 名前と連続稼働時間の行（ウィジェットと詳細で同じ形） */
+const headClass = "flex items-center gap-2 text-body";
+const nameClass = "ellipsis font-semibold";
+const uptimeClass = "ml-auto shrink-0 text-note font-normal text-muted";
+
+/** 何台もあるときの、割合の欄（右寄せで同じ幅） */
+const valueCellClass = "w-12 shrink-0 text-right";
 
 function HomelabStatusView({ ctx, config, openDetail }: WidgetProps<HomelabStatusConfig>) {
   const t = messages.useT();
@@ -170,17 +189,17 @@ function HomelabStatusView({ ctx, config, openDetail }: WidgetProps<HomelabStatu
   if (hosts.length === 1 && hosts[0].resources) {
     const host = hosts[0];
     return (
-      <WidgetCard className="widget-homelab widget-homelab--single" onClick={openDetail}>
-        <span className="homelab-node__head">
+      <WidgetCard className="items-stretch gap-2.5 text-left" onClick={openDetail}>
+        <span className={headClass}>
           <Dot online={host.online} />
-          <span className="homelab-node__name">{host.name}</span>
-          <span className="homelab-node__uptime">
+          <span className={nameClass}>{host.name}</span>
+          <span className={uptimeClass}>
             {t("uptime", { time: formatUptime(host.resources!.uptimeSec, t) })}
           </span>
         </span>
         <UsageBars resources={host.resources!} />
         {host.guests && (
-          <span className="homelab-node__guests">
+          <span className="text-caption text-muted">
             {t("guests", { running: host.guests.running, total: host.guests.total })}
           </span>
         )}
@@ -190,28 +209,28 @@ function HomelabStatusView({ ctx, config, openDetail }: WidgetProps<HomelabStatu
 
   // 何台もあるときは、1台1行で割合を並べる
   return (
-    <WidgetCard className="widget-homelab widget-homelab--list" onClick={openDetail} label={t("openDetail")}>
-      <span className="homelab-list">
-        <span className="homelab-list__head" aria-hidden="true">
-          <span />
-          <span>CPU</span>
-          <span>{t("memory")}</span>
-          <span>{t("disk")}</span>
+    <WidgetCard className="items-stretch text-left" onClick={openDetail} label={t("openDetail")}>
+      <span className="flex flex-col gap-1.5 overflow-hidden text-label">
+        <span className="flex gap-1.5 text-micro text-muted" aria-hidden="true">
+          <span className="flex-1" />
+          <span className={valueCellClass}>CPU</span>
+          <span className={valueCellClass}>{t("memory")}</span>
+          <span className={valueCellClass}>{t("disk")}</span>
         </span>
         {hosts.map((host) => (
-          <span key={host.id} className="homelab-list__row">
-            <span className="homelab-list__name">
+          <span key={host.id} className="flex items-center gap-1.5">
+            <span className="flex min-w-0 flex-1 items-center gap-2">
               <Dot online={host.online} />
-              <span>{host.name}</span>
+              <span className={nameClass}>{host.name}</span>
             </span>
             {host.resources ? (
               usages(host.resources, t).map((u) => (
-                <span key={u.label} className={`homelab-list__value${levelOf(u.value)}`}>
+                <span key={u.label} className={cx(valueCellClass, "tabular-nums", VALUE_COLOR[levelOf(u.value)])}>
                   {percent(u.value)}
                 </span>
               ))
             ) : (
-              <span className="homelab-list__state">
+              <span className="text-right text-caption text-muted">
                 {host.online
                   ? host.latencyMs !== null
                     ? t("latency", { ms: host.latencyMs })
@@ -232,21 +251,21 @@ function HomelabStatusDetail({ ctx, config }: WidgetDetailProps<HomelabStatusCon
   const { data } = usePolling(() => fetchStatus(ctx.apiBaseUrl), config.pollIntervalMs);
 
   return (
-    <DetailFrame title={t("title")} className="widget-homelab-detail">
-      {data && data.hosts.length === 0 && <p className="homelab-detail__facts">{t("noHosts")}</p>}
+    <DetailFrame title={t("title")}>
+      {data && data.hosts.length === 0 && <Note>{t("noHosts")}</Note>}
       {data?.hosts.map((host) => {
         const r = host.resources;
         return (
-          <section key={host.id} className="homelab-detail__node">
-            <h3 className="homelab-node__head">
+          <section key={host.id} className="mb-5 flex flex-col gap-2.5">
+            <h3 className={headClass}>
               <Dot online={host.online} />
-              <span className="homelab-node__name">{host.name}</span>
-              <span className="homelab-node__uptime">
+              <span className={nameClass}>{host.name}</span>
+              <span className={uptimeClass}>
                 {r ? t("uptime", { time: formatUptime(r.uptimeSec, t) }) : ""}
               </span>
             </h3>
             {r && <UsageBars resources={r} />}
-            <p className="homelab-detail__facts">
+            <p className="text-note text-muted">
               {[
                 textFor(TYPE_LABELS[host.type], locale),
                 host.address,
@@ -260,11 +279,11 @@ function HomelabStatusDetail({ ctx, config }: WidgetDetailProps<HomelabStatusCon
                 .filter(Boolean)
                 .join(t("factSeparator"))}
             </p>
-            {host.error && <p className="homelab-detail__error">{host.error}</p>}
+            {host.error && <p className="text-note text-warn">{host.error}</p>}
           </section>
         );
       })}
-      {data && data.hosts.length > 0 && <p className="homelab-detail__note">{t("editHint")}</p>}
+      {data && data.hosts.length > 0 && <Note>{t("editHint")}</Note>}
     </DetailFrame>
   );
 }
