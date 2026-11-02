@@ -102,10 +102,13 @@ def test_starts_claude_with_restricted_permissions(make_conversation):
             "dashboard": {
                 "type": "http",
                 "url": "http://127.0.0.1:8787/mcp",
-                "headers": {"Authorization": "Bearer secret"},
+                "headers": {"Authorization": "${HOME_DASHBOARD_MCP_SECRET_0}"},
             }
         }
     }
+    # トークンは ps で誰からも読める引数には載せず、環境変数で渡す
+    assert not any("secret" in a for a in args)
+    assert start["secrets"] == {"HOME_DASHBOARD_MCP_SECRET_0": "Bearer secret"}
 
 
 class FakeGuard:

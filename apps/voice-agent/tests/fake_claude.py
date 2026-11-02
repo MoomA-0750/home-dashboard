@@ -40,7 +40,7 @@ def text_delta(text: str) -> dict:
     }
 
 
-record(event="start", args=args)
+record(event="start", args=args, secrets={k: v for k, v in os.environ.items() if k.startswith("HOME_DASHBOARD_MCP_SECRET_")})
 if "--resume" in args and not SESSION_FILE.exists():
     emit({"type": "result", "subtype": "error_during_execution", "is_error": True})
     sys.exit(1)

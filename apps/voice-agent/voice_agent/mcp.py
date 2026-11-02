@@ -185,8 +185,10 @@ class McpPlan:
     def args(self) -> list[str]:
         args = []
         if self.servers:
-            # ファイルではなく文字列で渡す（トークンをディスクに書かないため）
-            args += ["--mcp-config", json.dumps({"mcpServers": self.servers})]
+            # ファイルではなく文字列で渡す（トークンをディスクに書かないため）。引数は ps で誰からも読めるので、
+            # ヘッダーと env の値は ${...} にして中身は env() で渡す（Claude Code が読むときに展開する）
+            servers, _ = _hide_secrets(self.servers)
+            args += ["--mcp-config", json.dumps({"mcpServers": servers})]
         if self.connector_urls:
             # claude.ai のコネクターは --mcp-config では渡せず、--strict-mcp-config を付けると全部読まれなくなる。
             # 付けずに、許可リストで選んだものだけに絞る（プラグインのMCPなど、ほかのものは読まれない）。
@@ -198,6 +200,36 @@ class McpPlan:
         else:
             args += ["--strict-mcp-config"]
         return args
+
+
+    def env(self) -> dict[str, str]:
+        """args() の ${...} の中身。claude を起動するときの環境変数に足す（/proc/<pid>/environ は本人しか読めない）"""
+        return _hide_secrets(self.servers)[1]
+
+
+SECRET_ENV_PREFIX = "HOME_DASHBOARD_MCP_SECRET_"
+
+
+def _hide_secrets(servers: dict[str, dict]) -> tuple[dict[str, dict], dict[str, str]]:
+    hidden: dict[str, dict] = {}
+    env: dict[str, str] = {}
+    for name, server in servers.items():
+        server = dict(server)
+        for key in ("headers", "env"):
+            values = server.get(key)
+            if not isinstance(values, dict):
+                continue
+            replaced = {}
+            for k, v in values.items():
+                # もとから ${...} を使っているもの（~/.claude.json の登録）はそのまま。展開は一度きりなので包むと壊れる
+                if isinstance(v, str) and v and "${" not in v:
+                    var = f"{SECRET_ENV_PREFIX}{len(env)}"
+                    env[var] = v
+                    v = f"${{{var}}}"
+                replaced[k] = v
+            server[key] = replaced
+        hidden[name] = server
+    return hidden, env
 
 
 def _allow_entry(name: str, server: dict) -> dict:

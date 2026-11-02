@@ -516,7 +516,9 @@ systemctl --user enable --now home-dashboard-voice-agent
 
 - `--restricted`: ユーザー/プロジェクトの設定ファイル（許可ルール・hooks）を読まず、コマンド実行系のツールを外す
 - `--strict-mcp-config` + `--mcp-config`: 既定では**ダッシュボードのMCPサーバー（`/mcp`）だけ**を読み込む
-  （Gmail・カレンダー等のコネクタやユーザー設定のMCPサーバーは、下の「コネクター・MCP」で選んだものだけ）
+  （Gmail・カレンダー等のコネクタやユーザー設定のMCPサーバーは、下の「コネクター・MCP」で選んだものだけ）。
+  ヘッダー（トークン）と env の値は引数に書かず `${HOME_DASHBOARD_MCP_SECRET_n}` にし、中身は claude の環境変数で渡す
+  （引数は `ps` で同じ機の誰からも読めるため。Claude Code が `--mcp-config` を読むときに展開する）
 - `--tools`: 組み込みツールは既定で **WebSearch と WebFetch だけ**
 - `--permission-prompt-tool stdio`: どの道具も事前には許さない。使うたびの「使ってよいか」の問い合わせを、エージェントが
   サーバーの道具の確かめ（下の「音声アシスタントの道具の確かめ」）へ回す

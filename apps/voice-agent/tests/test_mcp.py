@@ -2,7 +2,7 @@
 
 import json
 
-from voice_agent.mcp import CustomServer, McpCatalog, McpSelection, build_plan, parse_list
+from voice_agent.mcp import CustomServer, McpCatalog, McpPlan, McpSelection, build_plan, parse_list
 
 LIST_OUTPUT = """Checking MCP server health…
 
@@ -75,6 +75,20 @@ def test_custom_server_with_token():
         "url": "https://ha.example/mcp",
         "headers": {"Authorization": "Bearer secret"},
     }
+    args = plan.args()
+    assert not any("secret" in a for a in args)
+    mcp = json.loads(args[args.index("--mcp-config") + 1])["mcpServers"]
+    assert mcp["home-assistant"]["headers"] == {"Authorization": "${HOME_DASHBOARD_MCP_SECRET_0}"}
+    assert plan.env() == {"HOME_DASHBOARD_MCP_SECRET_0": "Bearer secret"}
+
+
+def test_existing_env_references_are_kept():
+    """~/.claude.json の登録がもとから ${...} を使っていれば、そのまま渡す（展開は一度きり）"""
+    plan = McpPlan(servers={"x": {"type": "stdio", "command": "x", "env": {"A": "${MY_TOKEN}", "B": "plain"}}})
+    args = plan.args()
+    env = json.loads(args[args.index("--mcp-config") + 1])["mcpServers"]["x"]["env"]
+    assert env == {"A": "${MY_TOKEN}", "B": "${HOME_DASHBOARD_MCP_SECRET_0}"}
+    assert plan.env() == {"HOME_DASHBOARD_MCP_SECRET_0": "plain"}
 
 
 def test_selection_from_message_rejects_bad_custom_entries():

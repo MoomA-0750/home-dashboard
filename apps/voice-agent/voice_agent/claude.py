@@ -226,6 +226,8 @@ class ClaudeConversation:
         self._lock = asyncio.Lock()
         self._mcp_selection = McpSelection()
         self._mcp_catalog = McpCatalog()
+        # --mcp-config の ${...} の中身（トークンを引数に載せないため、環境変数で渡す）
+        self._secret_env: dict[str, str] = {}
         self._guest = False
         self._owner: str | None = None
         config.claude_cwd.mkdir(parents=True, exist_ok=True)
@@ -308,6 +310,7 @@ class ClaudeConversation:
         # 設定画面で選んだコネクター・MCPサーバー（何も選んでいなければダッシュボードのMCPだけ）
         plan = build_plan(dashboard, self._mcp_selection, self._mcp_catalog)
         args += plan.args()
+        self._secret_env = plan.env()
         system_prompt = build_system_prompt(self._personas, c.dashboard_mcp)
         args += ["--append-system-prompt", system_prompt]
         if c.claude_model:
@@ -367,6 +370,7 @@ class ClaudeConversation:
         proc = await asyncio.create_subprocess_exec(
             *self._args(self._session_id, self._new_session),
             cwd=self._config.claude_cwd,
+            env={**os.environ, **self._secret_env},
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
