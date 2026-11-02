@@ -2,7 +2,7 @@
 var m = globalThis.__homeDashboard?.modules?.["@home-dashboard/widget-sdk"];
 if (!m) throw new Error("\u672C\u4F53\u306E @home-dashboard/widget-sdk \u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093\uFF08\u30C0\u30C3\u30B7\u30E5\u30DC\u30FC\u30C9\u306E\u4E2D\u3067\u8AAD\u307F\u8FBC\u3093\u3067\u304F\u3060\u3055\u3044\uFF09");
 var widget_sdk_default = m.default ?? m;
-var { Avatar, AvatarStack, BackButton, Badge, Button, ButtonLink, ButtonRow, ChatBubble, ChatComposer, ChatFrom, ChatHeader, ChatIconButton, ChatLayout, ChatLog, ChatMeta, ChatPending, ChatRow, Check, CodeBlock, DetailFrame, Dialog, FeatureProvidersContext, Field, Group, Icon, LOCALES, List, ListItem, LocaleContext, Message, Note, Notice, PillMenu, ScreenFrame, ScreenNotice, ScreenSection, SectionTitle, StatGrid, StatTile, ToggleSwitch, WidgetCard, WidgetHint, WidgetRegistry, defineMessages, defineWebExtension, defineWidget, extensionApiUrl, formatClock, formatPastDay, getLocale, intlLocale, setCurrentLocale, textFor, useFeatureProviders, useLocale, usePolledResource, usePolling, weatherConditionText, weatherIcon, widgetRegistry } = m;
+var { Avatar, AvatarStack, BackButton, Badge, Button, ButtonLink, ButtonRow, ChatAttachments, ChatBubble, ChatComposer, ChatFile, ChatFileChips, ChatFrom, ChatHeader, ChatIconButton, ChatImage, ChatLayout, ChatLog, ChatMeta, ChatPending, ChatRow, Check, Chip, CodeBlock, DEFAULT_DISPLAY, DetailFrame, Dialog, DisplayContext, FeatureProvidersContext, Field, Group, Icon, IconButton, LOCALES, List, ListIcon, ListItem, ListNoChevron, LocaleContext, Message, NarrowOnly, Note, Notice, PillMenu, PollingActiveContext, ProgressBar, ScreenFrame, ScreenNotice, ScreenSection, SectionTitle, SideLayout, Slider, StatGrid, StatTile, StatusDot, ToggleSwitch, WidgetCard, WidgetHint, WidgetRegistry, buttonClass, convertReading, convertTemperature, cx, defineMessages, defineWebExtension, defineWidget, extensionApiUrl, formatClock, formatDate, formatPastDay, formatTemperature, formatTime, getDisplay, getLocale, inputClass, intlLocale, motionMs, normalizeDisplay, openSettings, reducedMotion, scrollBehavior, setCurrentDisplay, setCurrentLocale, showSnackbar, startOfWeek, temperatureUnit, textFor, useClosing, useDateFormat, useDisplay, useFeatureProviders, useLocale, usePolledResource, usePolling, usePresence, useSettingsLinks, useSnackbars, useTemperature, useTimeFormat, weatherConditionText, weatherIcon, widgetRegistry } = m;
 
 // host-module:react/jsx-runtime
 var m2 = globalThis.__homeDashboard?.modules?.["react/jsx-runtime"];
@@ -77,7 +77,7 @@ function formatDuration(ms, t) {
   const minutes = Math.floor(ms % (60 * 60 * 1e3) / (60 * 1e3));
   return hours > 0 ? t("hoursMinutes", { h: hours, m: minutes }) : t("minutes", { m: minutes });
 }
-function formatTime(iso, locale) {
+function formatTime2(iso, locale) {
   const d = new Date(iso);
   if (locale !== "ja") return formatClock(d, locale);
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
@@ -86,38 +86,39 @@ function ClaudeUsageView({ ctx, config, openDetail }) {
   const t = messages.useT();
   const { data, loading } = usePolling(() => fetchUsage(ctx.apiBaseUrl), config.pollIntervalMs);
   if (loading && !data) {
-    return /* @__PURE__ */ jsx("div", { className: "widget-card widget-usage", children: t("aggregating") });
+    return /* @__PURE__ */ jsx(WidgetCard, { children: t("aggregating") });
   }
   if (data && !data.configured) {
-    return /* @__PURE__ */ jsxs("div", { className: "widget-card widget-usage widget-usage--unconfigured", children: [
+    return /* @__PURE__ */ jsxs(WidgetCard, { children: [
       t("notFound"),
-      /* @__PURE__ */ jsx("span", { className: "widget-hint", children: data.reason })
+      /* @__PURE__ */ jsx(WidgetHint, { children: data.reason })
     ] });
   }
   const today = data?.today;
   const block = data?.block;
   const blockProgress = block ? Math.min(1, 1 - block.remainingMs / (5 * 60 * 60 * 1e3)) : 0;
-  return /* @__PURE__ */ jsxs("button", { type: "button", className: "widget-card widget-usage", onClick: openDetail, children: [
-    /* @__PURE__ */ jsx("span", { className: "widget-usage__label", children: t("todayLabel") }),
-    /* @__PURE__ */ jsx("span", { className: "widget-usage__value", children: formatTokens(today?.tokens.total ?? 0) }),
-    /* @__PURE__ */ jsxs("span", { className: "widget-usage__sub", children: [
+  return /* @__PURE__ */ jsxs(WidgetCard, { className: "items-stretch justify-start gap-1 tabular-nums", onClick: openDetail, children: [
+    /* @__PURE__ */ jsx("span", { className: "text-caption font-medium text-muted", children: t("todayLabel") }),
+    /* @__PURE__ */ jsx("span", { className: "text-stat font-semibold leading-none", children: formatTokens(today?.tokens.total ?? 0) }),
+    /* @__PURE__ */ jsxs("span", { className: "text-caption font-medium text-muted", children: [
       today?.messages ?? 0,
       " msg / ",
       today?.sessions ?? 0,
       " session"
     ] }),
-    block ? /* @__PURE__ */ jsxs("div", { className: "widget-usage__block", children: [
-      /* @__PURE__ */ jsx("div", { className: "widget-usage__bar", children: /* @__PURE__ */ jsx("div", { className: "widget-usage__bar-fill", style: { width: `${blockProgress * 100}%` } }) }),
-      /* @__PURE__ */ jsx("span", { className: "widget-usage__sub", children: t("blockRemaining", {
+    block ? /* @__PURE__ */ jsxs("div", { className: "mt-auto flex flex-col gap-1", children: [
+      /* @__PURE__ */ jsx(ProgressBar, { value: blockProgress }),
+      /* @__PURE__ */ jsx("span", { className: "text-caption font-medium text-muted", children: t("blockRemaining", {
         remaining: formatDuration(block.remainingMs, t),
         tokens: formatTokens(block.tokens.total)
       }) })
-    ] }) : /* @__PURE__ */ jsx("span", { className: "widget-usage__sub", children: t("noActiveBlock") })
+    ] }) : /* @__PURE__ */ jsx("span", { className: "text-caption font-medium text-muted", children: t("noActiveBlock") })
   ] });
 }
+var rowsClass = "flex flex-col gap-1 text-label tabular-nums [&>li]:flex [&>li]:justify-between [&>li]:gap-6";
 function TokenBreakdown({ tokens }) {
   const t = messages.useT();
-  return /* @__PURE__ */ jsxs("ul", { className: "widget-usage-detail__breakdown", children: [
+  return /* @__PURE__ */ jsxs("ul", { className: rowsClass, children: [
     /* @__PURE__ */ jsxs("li", { children: [
       /* @__PURE__ */ jsx("span", { children: t("input") }),
       /* @__PURE__ */ jsx("span", { children: tokens.input.toLocaleString() })
@@ -134,7 +135,7 @@ function TokenBreakdown({ tokens }) {
       /* @__PURE__ */ jsx("span", { children: t("cacheRead") }),
       /* @__PURE__ */ jsx("span", { children: tokens.cacheRead.toLocaleString() })
     ] }),
-    /* @__PURE__ */ jsxs("li", { className: "widget-usage-detail__breakdown-total", children: [
+    /* @__PURE__ */ jsxs("li", { className: "mt-1 border-t border-glass-border pt-1.5 font-semibold", children: [
       /* @__PURE__ */ jsx("span", { children: t("total") }),
       /* @__PURE__ */ jsx("span", { children: tokens.total.toLocaleString() })
     ] })
@@ -144,45 +145,44 @@ function ClaudeUsageDetail({ ctx, config }) {
   const t = messages.useT();
   const locale = useLocale();
   const { data } = usePolling(() => fetchUsage(ctx.apiBaseUrl), config.pollIntervalMs);
-  if (!data?.configured) return /* @__PURE__ */ jsx("div", { className: "widget-detail", children: t("loading") });
+  if (!data?.configured) return /* @__PURE__ */ jsx(DetailFrame, { children: t("loading") });
   const maxDaily = Math.max(1, ...data.daily.map((d) => d.total));
-  return /* @__PURE__ */ jsxs("div", { className: "widget-detail widget-usage-detail", children: [
-    /* @__PURE__ */ jsx("h2", { children: t("title") }),
+  return /* @__PURE__ */ jsxs(DetailFrame, { title: t("title"), className: "flex flex-col gap-5", children: [
     /* @__PURE__ */ jsxs("section", { children: [
-      /* @__PURE__ */ jsx("h3", { children: t("today", { date: data.today.date }) }),
+      /* @__PURE__ */ jsx(SectionTitle, { children: t("today", { date: data.today.date }) }),
       /* @__PURE__ */ jsx(TokenBreakdown, { tokens: data.today.tokens }),
-      /* @__PURE__ */ jsx("ul", { className: "widget-usage-detail__models", children: data.today.byModel.map((m3) => /* @__PURE__ */ jsxs("li", { children: [
-        /* @__PURE__ */ jsx("span", { className: "widget-usage-detail__model", children: m3.model }),
+      /* @__PURE__ */ jsx("ul", { className: rowsClass, children: data.today.byModel.map((m3) => /* @__PURE__ */ jsxs("li", { children: [
+        /* @__PURE__ */ jsx("span", { className: "text-muted", children: m3.model }),
         /* @__PURE__ */ jsx("span", { children: formatTokens(m3.total) })
       ] }, m3.model)) })
     ] }),
     data.block && /* @__PURE__ */ jsxs("section", { children: [
-      /* @__PURE__ */ jsx("h3", { children: t("currentBlock", {
-        start: formatTime(data.block.startsAt, locale),
-        end: formatTime(data.block.endsAt, locale)
+      /* @__PURE__ */ jsx(SectionTitle, { children: t("currentBlock", {
+        start: formatTime2(data.block.startsAt, locale),
+        end: formatTime2(data.block.endsAt, locale)
       }) }),
-      /* @__PURE__ */ jsx("p", { className: "widget-note", children: t("blockSummary", {
+      /* @__PURE__ */ jsx(Note, { children: t("blockSummary", {
         remaining: formatDuration(data.block.remainingMs, t),
         messages: data.block.messages,
         tokens: formatTokens(data.block.tokens.total)
       }) })
     ] }),
     data.projects.length > 0 && /* @__PURE__ */ jsxs("section", { children: [
-      /* @__PURE__ */ jsx("h3", { children: t("byProject") }),
-      /* @__PURE__ */ jsx("ul", { className: "widget-usage-detail__models", children: data.projects.map((p) => /* @__PURE__ */ jsxs("li", { children: [
-        /* @__PURE__ */ jsx("span", { className: "widget-usage-detail__model", children: p.name }),
+      /* @__PURE__ */ jsx(SectionTitle, { children: t("byProject") }),
+      /* @__PURE__ */ jsx("ul", { className: rowsClass, children: data.projects.map((p) => /* @__PURE__ */ jsxs("li", { children: [
+        /* @__PURE__ */ jsx("span", { className: "text-muted", children: p.name }),
         /* @__PURE__ */ jsx("span", { children: formatTokens(p.total) })
       ] }, p.name)) })
     ] }),
     /* @__PURE__ */ jsxs("section", { children: [
-      /* @__PURE__ */ jsx("h3", { children: t("daily") }),
-      /* @__PURE__ */ jsx("ul", { className: "widget-usage-detail__daily", children: data.daily.map((d) => /* @__PURE__ */ jsxs("li", { children: [
-        /* @__PURE__ */ jsx("span", { className: "widget-usage-detail__date", children: d.date.slice(5) }),
-        /* @__PURE__ */ jsx("span", { className: "widget-usage-detail__daily-bar", children: /* @__PURE__ */ jsx("span", { style: { width: `${d.total / maxDaily * 100}%` } }) }),
-        /* @__PURE__ */ jsx("span", { className: "widget-usage-detail__daily-value", children: formatTokens(d.total) })
+      /* @__PURE__ */ jsx(SectionTitle, { children: t("daily") }),
+      /* @__PURE__ */ jsx("ul", { className: "flex flex-col gap-1 text-note tabular-nums", children: data.daily.map((d) => /* @__PURE__ */ jsxs("li", { className: "flex items-center gap-2", children: [
+        /* @__PURE__ */ jsx("span", { className: "w-12 shrink-0 text-muted", children: d.date.slice(5) }),
+        /* @__PURE__ */ jsx(ProgressBar, { value: d.total / maxDaily, className: "flex-1 [--progress-color:rgb(var(--accent-soft-rgb))]" }),
+        /* @__PURE__ */ jsx("span", { className: "w-14 shrink-0 text-right text-muted", children: formatTokens(d.total) })
       ] }, d.date)) })
     ] }),
-    /* @__PURE__ */ jsx("p", { className: "widget-note", children: t("noCost") })
+    /* @__PURE__ */ jsx(Note, { children: t("noCost") })
   ] });
 }
 var usage_widget_default = defineWidget({
@@ -263,10 +263,7 @@ function formatRemaining(ms, t) {
 function formatResetTime(date, now, locale) {
   const time = formatClock(date, locale);
   if (date.toDateString() === now.toDateString()) return time;
-  if (locale !== "ja") {
-    return `${date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} ${time}`;
-  }
-  return `${date.getMonth() + 1}/${date.getDate()}\uFF08${"\u65E5\u6708\u706B\u6C34\u6728\u91D1\u571F"[date.getDay()]}\uFF09${time}`;
+  return `${formatDate(date, "monthDayWeekday", locale)} ${time}`;
 }
 function formatAgo(ms, t) {
   const minutes = Math.round(ms / 6e4);
@@ -275,6 +272,11 @@ function formatAgo(ms, t) {
   if (hours < 24) return t("hoursAgo", { n: hours });
   return t("daysAgo", { n: Math.round(hours / 24) });
 }
+var LEVEL_COLOR = {
+  ok: "[--limit-color:var(--accent-ok)]",
+  warm: "[--limit-color:var(--accent-warn)]",
+  hot: "[--limit-color:var(--danger-strong)]"
+};
 function level(percent) {
   if (percent >= 90) return "hot";
   if (percent >= 75) return "warm";
@@ -288,27 +290,17 @@ function LimitRow({ window, now }) {
   const percent = reset ? 0 : Math.round(window.usedPercent);
   const known = KIND_LABELS[window.kind];
   const label = known ? textFor(known, locale) : window.kind;
-  return /* @__PURE__ */ jsxs("div", { className: `widget-limits__row widget-limits__row--${reset ? "ok" : level(window.usedPercent)}`, children: [
-    /* @__PURE__ */ jsxs("div", { className: "widget-limits__head", children: [
-      /* @__PURE__ */ jsx("span", { className: "widget-limits__label", children: label }),
-      /* @__PURE__ */ jsxs("span", { className: "widget-limits__percent", children: [
+  const tone = reset ? "ok" : level(window.usedPercent);
+  return /* @__PURE__ */ jsxs("div", { className: cx("flex min-w-0 flex-col justify-end gap-1.5", LEVEL_COLOR[tone]), children: [
+    /* @__PURE__ */ jsxs("div", { className: "flex items-baseline justify-between gap-2", children: [
+      /* @__PURE__ */ jsx("span", { className: "text-small font-semibold", children: label }),
+      /* @__PURE__ */ jsxs("span", { className: "text-stat leading-none font-semibold text-(--limit-color)", children: [
         reset ? "\u2014" : percent,
-        !reset && /* @__PURE__ */ jsx("small", { children: "%" })
+        !reset && /* @__PURE__ */ jsx("small", { className: "ml-0.5 text-small font-normal", children: "%" })
       ] })
     ] }),
-    /* @__PURE__ */ jsx(
-      "div",
-      {
-        className: "widget-limits__bar",
-        role: "meter",
-        "aria-label": t("usageOf", { label }),
-        "aria-valuemin": 0,
-        "aria-valuemax": 100,
-        "aria-valuenow": percent,
-        children: /* @__PURE__ */ jsx("span", { className: "widget-limits__bar-fill", style: { width: `${percent}%` } })
-      }
-    ),
-    /* @__PURE__ */ jsx("span", { className: "widget-limits__sub", children: reset ? t("resetDone") : resetsAt ? t("remaining", {
+    /* @__PURE__ */ jsx(ProgressBar, { value: percent / 100, label: t("usageOf", { label }), className: "[--progress-color:var(--limit-color)]" }),
+    /* @__PURE__ */ jsx("span", { className: "ellipsis text-micro text-muted", children: reset ? t("resetDone") : resetsAt ? t("remaining", {
       remaining: formatRemaining(resetsAt.getTime() - now.getTime(), t),
       reset: formatResetTime(resetsAt, now, locale)
     }) : t("resetUnknown") })
@@ -319,12 +311,12 @@ function ClaudeLimitsView({ ctx, config }) {
   const { data, loading, error } = usePolling(() => fetchLimits(ctx.apiBaseUrl), config.pollIntervalMs);
   const now = ctx.now;
   if (loading && !data) {
-    return /* @__PURE__ */ jsx("div", { className: "widget-card widget-limits", children: t("loading") });
+    return /* @__PURE__ */ jsx(WidgetCard, { children: t("loading") });
   }
   if (!data || data.windows.length === 0) {
-    return /* @__PURE__ */ jsxs("div", { className: "widget-card widget-limits widget-limits--empty", children: [
-      /* @__PURE__ */ jsx("span", { className: "widget-limits__title", children: t("title") }),
-      /* @__PURE__ */ jsx("span", { className: "widget-limits__sub", children: error ? t("unreachable") : t("noValues") })
+    return /* @__PURE__ */ jsxs(WidgetCard, { className: "items-stretch gap-2.5", children: [
+      /* @__PURE__ */ jsx("span", { className: "text-note font-medium text-muted", children: t("title") }),
+      /* @__PURE__ */ jsx("span", { className: "text-micro leading-normal text-muted untrim", children: error ? t("unreachable") : t("noValues") })
     ] });
   }
   const windows = [...data.windows].sort((a, b) => {
@@ -334,12 +326,12 @@ function ClaudeLimitsView({ ctx, config }) {
   });
   const latest = Math.max(...windows.map((w) => Date.parse(w.observedAt)));
   const staleMs = now.getTime() - latest;
-  return /* @__PURE__ */ jsxs("div", { className: "widget-card widget-limits", children: [
-    /* @__PURE__ */ jsxs("div", { className: "widget-limits__title-row", children: [
-      /* @__PURE__ */ jsx("span", { className: "widget-limits__title", children: t("title") }),
-      staleMs > STALE_AFTER_MS && /* @__PURE__ */ jsx("span", { className: "widget-limits__stale", children: t("staleValue", { ago: formatAgo(staleMs, t) }) })
+  return /* @__PURE__ */ jsxs(WidgetCard, { className: "items-stretch justify-start gap-2.5 tabular-nums", children: [
+    /* @__PURE__ */ jsxs("div", { className: "flex items-baseline justify-between gap-4", children: [
+      /* @__PURE__ */ jsx("span", { className: "text-note font-medium text-muted", children: t("title") }),
+      staleMs > STALE_AFTER_MS && /* @__PURE__ */ jsx(Badge, { tone: "warn", children: t("staleValue", { ago: formatAgo(staleMs, t) }) })
     ] }),
-    /* @__PURE__ */ jsx("div", { className: "widget-limits__rows", children: windows.slice(0, 2).map((window) => /* @__PURE__ */ jsx(LimitRow, { window, now }, window.kind)) })
+    /* @__PURE__ */ jsx("div", { className: "grid flex-1 grid-cols-2 gap-6", children: windows.slice(0, 2).map((window) => /* @__PURE__ */ jsx(LimitRow, { window, now }, window.kind)) })
   ] });
 }
 var limits_widget_default = defineWidget({

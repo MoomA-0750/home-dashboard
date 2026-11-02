@@ -1,7 +1,7 @@
 {
   "id": "wave",
   "name": "wave",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "wave（自作の YouTube Music クライアント）の再生中の曲と操作・キュー・プレイリスト・おすすめを、Media（画面・ウィジェット・音声アシスタントの音楽の操作）へ渡す",
   "apiVersion": 1,
   "provides": [

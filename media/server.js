@@ -246,6 +246,8 @@ var server_default = defineServerExtension({
         action: z.enum(VOICE_ACTIONS),
         app: z.string().optional().describe("\u97F3\u697D\u30A2\u30D7\u30EA\u306E\u540D\u524D\uFF08\u7701\u304F\u3068\u3001\u3044\u307E\u9CF4\u3063\u3066\u3044\u308B\u3082\u306E\uFF09")
       }),
+      risk: "low",
+      describe: ({ action, app }) => `${app ? `${app}\u3067` : ""}\u97F3\u697D\u3092${{ play: "\u518D\u751F\u3059\u308B", pause: "\u6B62\u3081\u308B", next: "\u6B21\u306E\u66F2\u306B\u3059\u308B", previous: "\u524D\u306E\u66F2\u306B\u3059\u308B" }[action]}`,
       handler: async ({ action, app }) => {
         const provider = await pickProvider(providers(), app);
         await provider.implementation.control(action);

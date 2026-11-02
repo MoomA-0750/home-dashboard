@@ -2,7 +2,7 @@
 var m = globalThis.__homeDashboard?.modules?.["@home-dashboard/widget-sdk"];
 if (!m) throw new Error("\u672C\u4F53\u306E @home-dashboard/widget-sdk \u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093\uFF08\u30C0\u30C3\u30B7\u30E5\u30DC\u30FC\u30C9\u306E\u4E2D\u3067\u8AAD\u307F\u8FBC\u3093\u3067\u304F\u3060\u3055\u3044\uFF09");
 var widget_sdk_default = m.default ?? m;
-var { Avatar, AvatarStack, BackButton, Badge, Button, ButtonLink, ButtonRow, ChatBubble, ChatComposer, ChatFrom, ChatHeader, ChatIconButton, ChatLayout, ChatLog, ChatMeta, ChatPending, ChatRow, Check, CodeBlock, DetailFrame, Dialog, FeatureProvidersContext, Field, Group, Icon, LOCALES, List, ListItem, LocaleContext, Message, Note, Notice, PillMenu, ScreenFrame, ScreenNotice, ScreenSection, SectionTitle, StatGrid, StatTile, ToggleSwitch, WidgetCard, WidgetHint, WidgetRegistry, defineMessages, defineWebExtension, defineWidget, extensionApiUrl, formatClock, formatPastDay, getLocale, intlLocale, setCurrentLocale, textFor, useFeatureProviders, useLocale, usePolledResource, usePolling, weatherConditionText, weatherIcon, widgetRegistry } = m;
+var { Avatar, AvatarStack, BackButton, Badge, Button, ButtonLink, ButtonRow, ChatAttachments, ChatBubble, ChatComposer, ChatFile, ChatFileChips, ChatFrom, ChatHeader, ChatIconButton, ChatImage, ChatLayout, ChatLog, ChatMeta, ChatPending, ChatRow, Check, Chip, CodeBlock, DEFAULT_DISPLAY, DetailFrame, Dialog, DisplayContext, FeatureProvidersContext, Field, Group, Icon, IconButton, LOCALES, List, ListIcon, ListItem, ListNoChevron, LocaleContext, Message, NarrowOnly, Note, Notice, PillMenu, PollingActiveContext, ProgressBar, ScreenFrame, ScreenNotice, ScreenSection, SectionTitle, SideLayout, Slider, StatGrid, StatTile, StatusDot, ToggleSwitch, WidgetCard, WidgetHint, WidgetRegistry, buttonClass, convertReading, convertTemperature, cx, defineMessages, defineWebExtension, defineWidget, extensionApiUrl, formatClock, formatDate, formatPastDay, formatTemperature, formatTime, getDisplay, getLocale, inputClass, intlLocale, motionMs, normalizeDisplay, openSettings, reducedMotion, scrollBehavior, setCurrentDisplay, setCurrentLocale, showSnackbar, startOfWeek, temperatureUnit, textFor, useClosing, useDateFormat, useDisplay, useFeatureProviders, useLocale, usePolledResource, usePolling, usePresence, useSettingsLinks, useSnackbars, useTemperature, useTimeFormat, weatherConditionText, weatherIcon, widgetRegistry } = m;
 
 // host-module:react
 var m2 = globalThis.__homeDashboard?.modules?.["react"];
@@ -142,7 +142,7 @@ function HostSettings({ ctx, isAdmin }) {
     void load();
   }, [load]);
   if (!isAdmin) {
-    return /* @__PURE__ */ jsxs("section", { className: "homelab-settings", children: [
+    return /* @__PURE__ */ jsxs("section", { className: "mt-5 flex flex-col gap-3", children: [
       /* @__PURE__ */ jsx(SectionTitle, { children: t("hosts") }),
       /* @__PURE__ */ jsx(Note, { children: t("adminOnly") })
     ] });
@@ -160,7 +160,7 @@ function HostSettings({ ctx, isAdmin }) {
       }
     );
   }
-  return /* @__PURE__ */ jsxs("section", { className: "homelab-settings", children: [
+  return /* @__PURE__ */ jsxs("section", { className: "mt-5 flex flex-col gap-3", children: [
     /* @__PURE__ */ jsx(SectionTitle, { children: t("hosts") }),
     /* @__PURE__ */ jsx(Note, { children: t("intro") }),
     error && /* @__PURE__ */ jsx(Message, { tone: "error", children: error }),
@@ -259,11 +259,11 @@ function HostEditor({ base, draft: initial, onDone }) {
       onChange: (e) => set({ [key]: e.target.value })
     }
   ) });
-  return /* @__PURE__ */ jsxs("section", { className: "homelab-settings", children: [
+  return /* @__PURE__ */ jsxs("section", { className: "mt-5 flex flex-col gap-3", children: [
     /* @__PURE__ */ jsx(BackButton, { label: t("hosts"), onClick: onDone }),
     /* @__PURE__ */ jsx(SectionTitle, { children: isNew ? t("addHost") : draft.name }),
-    /* @__PURE__ */ jsxs("form", { className: "ui-group", onSubmit: save, children: [
-      /* @__PURE__ */ jsxs("fieldset", { className: "homelab-settings__fields", disabled: busy, children: [
+    /* @__PURE__ */ jsx(Group, { children: /* @__PURE__ */ jsxs("form", { onSubmit: save, children: [
+      /* @__PURE__ */ jsxs("fieldset", { disabled: busy, children: [
         /* @__PURE__ */ jsx(Field, { label: t("type"), children: /* @__PURE__ */ jsx(
           "select",
           {
@@ -284,19 +284,19 @@ function HostEditor({ base, draft: initial, onDone }) {
         /* @__PURE__ */ jsx(Note, { children: textFor(TYPE_NOTES[draft.type], locale) }),
         field(t("name"), "name", { placeholder: t("namePlaceholder") }),
         draft.type === "tcp" && /* @__PURE__ */ jsxs(Fragment2, { children: [
-          field(t("address"), "host", { placeholder: "192.168.0.4" }),
+          field(t("address"), "host", { placeholder: "192.168.1.10" }),
           field(t("port"), "port", { placeholder: "22" })
         ] }),
         draft.type === "ssh" && /* @__PURE__ */ jsxs(Fragment2, { children: [
-          field(t("address"), "host", { placeholder: "192.168.0.4" }),
+          field(t("address"), "host", { placeholder: "192.168.1.10" }),
           field(t("port"), "port", { placeholder: "22" }),
           field(t("username"), "username", { placeholder: "monitor" }),
           field(t("hostKeyFingerprint"), "fingerprint", { placeholder: "SHA256:\u2026" }),
           /* @__PURE__ */ jsx(SshKeyHint, { base })
         ] }),
-        draft.type === "node-exporter" && field("URL", "url", { placeholder: "http://192.168.0.10:9100/metrics" }),
+        draft.type === "node-exporter" && field("URL", "url", { placeholder: "http://192.168.1.10:9100/metrics" }),
         draft.type === "proxmox" && /* @__PURE__ */ jsxs(Fragment2, { children: [
-          field("URL", "url", { placeholder: "https://192.168.0.4:8006" }),
+          field("URL", "url", { placeholder: "https://192.168.1.10:8006" }),
           field(t("tokenId"), "tokenId", { placeholder: "root@pam!dashboard" }),
           field(t("tokenSecret"), "tokenSecret", {
             secret: true,
@@ -311,7 +311,7 @@ function HostEditor({ base, draft: initial, onDone }) {
         ] })
       ] }),
       message && /* @__PURE__ */ jsx(Message, { tone: message.ok ? "ok" : "error", children: message.text }),
-      observedFingerprint && /* @__PURE__ */ jsxs("div", { className: "homelab-settings__fingerprint", children: [
+      observedFingerprint && /* @__PURE__ */ jsxs("div", { className: "my-3 flex flex-col gap-2", children: [
         /* @__PURE__ */ jsx(CodeBlock, { children: observedFingerprint }),
         /* @__PURE__ */ jsx(ButtonRow, { children: /* @__PURE__ */ jsx(
           Button,
@@ -325,7 +325,7 @@ function HostEditor({ base, draft: initial, onDone }) {
           }
         ) })
       ] })
-    ] }),
+    ] }) }),
     !isNew && /* @__PURE__ */ jsx(ButtonRow, { children: /* @__PURE__ */ jsx(Button, { variant: "danger", disabled: busy, onClick: () => void remove(), children: deleting ? t("confirmDelete") : t("deleteHost") }) })
   ] });
 }
@@ -337,7 +337,7 @@ function SshKeyHint({ base }) {
     fetch(`${base}/ssh-key`).then((res) => res.ok ? res.json() : null).then((body) => body && setLine(body.authorizedKeysLine)).catch(() => void 0);
   }, [base]);
   if (!line) return null;
-  return /* @__PURE__ */ jsxs("div", { className: "homelab-settings__key", children: [
+  return /* @__PURE__ */ jsxs("div", { className: "my-3 flex flex-col gap-2", children: [
     /* @__PURE__ */ jsx(Field, { label: t("authorizedKeysLine"), children: /* @__PURE__ */ jsx(CodeBlock, { children: line }) }),
     /* @__PURE__ */ jsx(ButtonRow, { children: /* @__PURE__ */ jsx(
       Button,
@@ -419,7 +419,13 @@ function formatBytes(bytes) {
   return `${gib >= 100 ? gib.toFixed(0) : gib.toFixed(1)}GB`;
 }
 var ratio = (used, total) => used === null || !total ? null : Math.min(1, Math.max(0, used / total));
-var levelOf = (value) => value === null ? "" : value >= 0.95 ? " homelab-usage--hot" : value >= 0.8 ? " homelab-usage--warm" : "";
+var levelOf = (value) => value === null ? "ok" : value >= 0.95 ? "hot" : value >= 0.8 ? "warm" : "ok";
+var BAR_COLOR = {
+  ok: "",
+  warm: "[--progress-color:var(--accent-warn)]",
+  hot: "[--progress-color:var(--danger-strong)]"
+};
+var VALUE_COLOR = { ok: "", warm: "text-warn", hot: "text-danger-strong" };
 var percent = (value) => value === null ? "\u2014" : `${Math.round(value * 100)}%`;
 function usages(r, t) {
   return [
@@ -438,71 +444,65 @@ function usages(r, t) {
 }
 function UsageBars({ resources }) {
   const t = messages2.useT();
-  return /* @__PURE__ */ jsx("div", { className: "homelab-node__usage", children: usages(resources, t).map((u) => /* @__PURE__ */ jsxs("div", { className: `homelab-usage${levelOf(u.value)}`, title: u.detail, children: [
-    /* @__PURE__ */ jsx("span", { className: "homelab-usage__label", children: u.label }),
-    /* @__PURE__ */ jsx("span", { className: "homelab-usage__bar", "aria-hidden": "true", children: /* @__PURE__ */ jsx("span", { className: "homelab-usage__fill", style: { width: `${(u.value ?? 0) * 100}%` } }) }),
-    /* @__PURE__ */ jsx("span", { className: "homelab-usage__value", children: percent(u.value) })
+  return /* @__PURE__ */ jsx("div", { className: "flex flex-col gap-1.5", children: usages(resources, t).map((u) => /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2 text-caption", title: u.detail, children: [
+    /* @__PURE__ */ jsx("span", { className: "w-12 shrink-0 text-muted", children: u.label }),
+    /* @__PURE__ */ jsx(ProgressBar, { value: u.value ?? 0, className: cx("flex-1", BAR_COLOR[levelOf(u.value)]) }),
+    /* @__PURE__ */ jsx("span", { className: "w-9 shrink-0 text-right tabular-nums", children: percent(u.value) })
   ] }, u.label)) });
 }
-var Dot = ({ online }) => /* @__PURE__ */ jsx("span", { className: `widget-homelab__dot ${online ? "widget-homelab__dot--ok" : "widget-homelab__dot--warn"}` });
+var Dot = ({ online }) => /* @__PURE__ */ jsx("span", { className: cx("size-2.5 shrink-0 rounded-full", online ? "bg-ok" : "bg-warn") });
+var headClass = "flex items-center gap-2 text-body";
+var nameClass = "ellipsis font-semibold";
+var uptimeClass = "ml-auto shrink-0 text-note font-normal text-muted";
+var valueCellClass = "w-12 shrink-0 text-right";
 function HomelabStatusView({ ctx, config, openDetail }) {
   const t = messages2.useT();
   const { data } = usePolling(() => fetchStatus(ctx.apiBaseUrl), config.pollIntervalMs);
   const hosts = data?.hosts ?? [];
   if (hosts.length === 1 && hosts[0].resources) {
     const host = hosts[0];
-    return /* @__PURE__ */ jsxs("button", { type: "button", className: "widget-card widget-homelab widget-homelab--single", onClick: openDetail, children: [
-      /* @__PURE__ */ jsxs("span", { className: "homelab-node__head", children: [
+    return /* @__PURE__ */ jsxs(WidgetCard, { className: "items-stretch gap-2.5 text-left", onClick: openDetail, children: [
+      /* @__PURE__ */ jsxs("span", { className: headClass, children: [
         /* @__PURE__ */ jsx(Dot, { online: host.online }),
-        /* @__PURE__ */ jsx("span", { className: "homelab-node__name", children: host.name }),
-        /* @__PURE__ */ jsx("span", { className: "homelab-node__uptime", children: t("uptime", { time: formatUptime(host.resources.uptimeSec, t) }) })
+        /* @__PURE__ */ jsx("span", { className: nameClass, children: host.name }),
+        /* @__PURE__ */ jsx("span", { className: uptimeClass, children: t("uptime", { time: formatUptime(host.resources.uptimeSec, t) }) })
       ] }),
       /* @__PURE__ */ jsx(UsageBars, { resources: host.resources }),
-      host.guests && /* @__PURE__ */ jsx("span", { className: "homelab-node__guests", children: t("guests", { running: host.guests.running, total: host.guests.total }) })
+      host.guests && /* @__PURE__ */ jsx("span", { className: "text-caption text-muted", children: t("guests", { running: host.guests.running, total: host.guests.total }) })
     ] });
   }
-  return /* @__PURE__ */ jsx(
-    "button",
-    {
-      type: "button",
-      className: "widget-card widget-homelab widget-homelab--list",
-      onClick: openDetail,
-      "aria-label": t("openDetail"),
-      children: /* @__PURE__ */ jsxs("span", { className: "homelab-list", children: [
-        /* @__PURE__ */ jsxs("span", { className: "homelab-list__head", "aria-hidden": "true", children: [
-          /* @__PURE__ */ jsx("span", {}),
-          /* @__PURE__ */ jsx("span", { children: "CPU" }),
-          /* @__PURE__ */ jsx("span", { children: t("memory") }),
-          /* @__PURE__ */ jsx("span", { children: t("disk") })
-        ] }),
-        hosts.map((host) => /* @__PURE__ */ jsxs("span", { className: "homelab-list__row", children: [
-          /* @__PURE__ */ jsxs("span", { className: "homelab-list__name", children: [
-            /* @__PURE__ */ jsx(Dot, { online: host.online }),
-            /* @__PURE__ */ jsx("span", { children: host.name })
-          ] }),
-          host.resources ? usages(host.resources, t).map((u) => /* @__PURE__ */ jsx("span", { className: `homelab-list__value${levelOf(u.value)}`, children: percent(u.value) }, u.label)) : /* @__PURE__ */ jsx("span", { className: "homelab-list__state", children: host.online ? host.latencyMs !== null ? t("latency", { ms: host.latencyMs }) : t("responding") : t("notResponding") })
-        ] }, host.id))
-      ] })
-    }
-  );
+  return /* @__PURE__ */ jsx(WidgetCard, { className: "items-stretch text-left", onClick: openDetail, label: t("openDetail"), children: /* @__PURE__ */ jsxs("span", { className: "flex flex-col gap-1.5 overflow-hidden text-label", children: [
+    /* @__PURE__ */ jsxs("span", { className: "flex gap-1.5 text-micro text-muted", "aria-hidden": "true", children: [
+      /* @__PURE__ */ jsx("span", { className: "flex-1" }),
+      /* @__PURE__ */ jsx("span", { className: valueCellClass, children: "CPU" }),
+      /* @__PURE__ */ jsx("span", { className: valueCellClass, children: t("memory") }),
+      /* @__PURE__ */ jsx("span", { className: valueCellClass, children: t("disk") })
+    ] }),
+    hosts.map((host) => /* @__PURE__ */ jsxs("span", { className: "flex items-center gap-1.5", children: [
+      /* @__PURE__ */ jsxs("span", { className: "flex min-w-0 flex-1 items-center gap-2", children: [
+        /* @__PURE__ */ jsx(Dot, { online: host.online }),
+        /* @__PURE__ */ jsx("span", { className: nameClass, children: host.name })
+      ] }),
+      host.resources ? usages(host.resources, t).map((u) => /* @__PURE__ */ jsx("span", { className: cx(valueCellClass, "tabular-nums", VALUE_COLOR[levelOf(u.value)]), children: percent(u.value) }, u.label)) : /* @__PURE__ */ jsx("span", { className: "text-right text-caption text-muted", children: host.online ? host.latencyMs !== null ? t("latency", { ms: host.latencyMs }) : t("responding") : t("notResponding") })
+    ] }, host.id))
+  ] }) });
 }
 function HomelabStatusDetail({ ctx, config }) {
   const t = messages2.useT();
   const locale = useLocale();
   const { data } = usePolling(() => fetchStatus(ctx.apiBaseUrl), config.pollIntervalMs);
-  return /* @__PURE__ */ jsxs("div", { className: "widget-detail widget-homelab-detail", children: [
-    /* @__PURE__ */ jsx("h2", { children: t("title") }),
-    data && data.hosts.length === 0 && /* @__PURE__ */ jsx("p", { className: "homelab-detail__facts", children: t("noHosts") }),
+  return /* @__PURE__ */ jsxs(DetailFrame, { title: t("title"), children: [
+    data && data.hosts.length === 0 && /* @__PURE__ */ jsx(Note, { children: t("noHosts") }),
     data?.hosts.map((host) => {
       const r = host.resources;
-      return /* @__PURE__ */ jsxs("section", { className: "homelab-detail__node", children: [
-        /* @__PURE__ */ jsxs("h3", { className: "homelab-node__head", children: [
+      return /* @__PURE__ */ jsxs("section", { className: "mb-5 flex flex-col gap-2.5", children: [
+        /* @__PURE__ */ jsxs("h3", { className: headClass, children: [
           /* @__PURE__ */ jsx(Dot, { online: host.online }),
-          /* @__PURE__ */ jsx("span", { className: "homelab-node__name", children: host.name }),
-          /* @__PURE__ */ jsx("span", { className: "homelab-node__uptime", children: r ? t("uptime", { time: formatUptime(r.uptimeSec, t) }) : "" })
+          /* @__PURE__ */ jsx("span", { className: nameClass, children: host.name }),
+          /* @__PURE__ */ jsx("span", { className: uptimeClass, children: r ? t("uptime", { time: formatUptime(r.uptimeSec, t) }) : "" })
         ] }),
         r && /* @__PURE__ */ jsx(UsageBars, { resources: r }),
-        /* @__PURE__ */ jsx("p", { className: "homelab-detail__facts", children: [
+        /* @__PURE__ */ jsx("p", { className: "text-note text-muted", children: [
           textFor(TYPE_LABELS[host.type], locale),
           host.address,
           host.latencyMs !== null && t("latency", { ms: host.latencyMs }),
@@ -512,10 +512,10 @@ function HomelabStatusDetail({ ctx, config }) {
           r?.diskTotal && t("diskUsage", { used: formatBytes(r.diskUsed ?? 0), total: formatBytes(r.diskTotal) }),
           host.guests && t("guests", { running: host.guests.running, total: host.guests.total })
         ].filter(Boolean).join(t("factSeparator")) }),
-        host.error && /* @__PURE__ */ jsx("p", { className: "homelab-detail__error", children: host.error })
+        host.error && /* @__PURE__ */ jsx("p", { className: "text-note text-warn", children: host.error })
       ] }, host.id);
     }),
-    data && data.hosts.length > 0 && /* @__PURE__ */ jsx("p", { className: "homelab-detail__note", children: t("editHint") })
+    data && data.hosts.length > 0 && /* @__PURE__ */ jsx(Note, { children: t("editHint") })
   ] });
 }
 var widget_default = defineWidget({

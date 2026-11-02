@@ -2,7 +2,7 @@
 var m = globalThis.__homeDashboard?.modules?.["@home-dashboard/widget-sdk"];
 if (!m) throw new Error("\u672C\u4F53\u306E @home-dashboard/widget-sdk \u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093\uFF08\u30C0\u30C3\u30B7\u30E5\u30DC\u30FC\u30C9\u306E\u4E2D\u3067\u8AAD\u307F\u8FBC\u3093\u3067\u304F\u3060\u3055\u3044\uFF09");
 var widget_sdk_default = m.default ?? m;
-var { Avatar, AvatarStack, BackButton, Badge, Button, ButtonLink, ButtonRow, ChatBubble, ChatComposer, ChatFrom, ChatHeader, ChatIconButton, ChatLayout, ChatLog, ChatMeta, ChatPending, ChatRow, Check, CodeBlock, DetailFrame, Dialog, FeatureProvidersContext, Field, Group, Icon, LOCALES, List, ListItem, LocaleContext, Message, Note, Notice, PillMenu, ScreenFrame, ScreenNotice, ScreenSection, SectionTitle, StatGrid, StatTile, ToggleSwitch, WidgetCard, WidgetHint, WidgetRegistry, defineMessages, defineWebExtension, defineWidget, extensionApiUrl, formatClock, formatPastDay, getLocale, intlLocale, setCurrentLocale, textFor, useFeatureProviders, useLocale, usePolledResource, usePolling, weatherConditionText, weatherIcon, widgetRegistry } = m;
+var { Avatar, AvatarStack, BackButton, Badge, Button, ButtonLink, ButtonRow, ChatAttachments, ChatBubble, ChatComposer, ChatFile, ChatFileChips, ChatFrom, ChatHeader, ChatIconButton, ChatImage, ChatLayout, ChatLog, ChatMeta, ChatPending, ChatRow, Check, Chip, CodeBlock, DEFAULT_DISPLAY, DetailFrame, Dialog, DisplayContext, FeatureProvidersContext, Field, Group, Icon, IconButton, LOCALES, List, ListIcon, ListItem, ListNoChevron, LocaleContext, Message, NarrowOnly, Note, Notice, PillMenu, PollingActiveContext, ProgressBar, ScreenFrame, ScreenNotice, ScreenSection, SectionTitle, SideLayout, Slider, StatGrid, StatTile, StatusDot, ToggleSwitch, WidgetCard, WidgetHint, WidgetRegistry, buttonClass, convertReading, convertTemperature, cx, defineMessages, defineWebExtension, defineWidget, extensionApiUrl, formatClock, formatDate, formatPastDay, formatTemperature, formatTime, getDisplay, getLocale, inputClass, intlLocale, motionMs, normalizeDisplay, openSettings, reducedMotion, scrollBehavior, setCurrentDisplay, setCurrentLocale, showSnackbar, startOfWeek, temperatureUnit, textFor, useClosing, useDateFormat, useDisplay, useFeatureProviders, useLocale, usePolledResource, usePolling, usePresence, useSettingsLinks, useSnackbars, useTemperature, useTimeFormat, weatherConditionText, weatherIcon, widgetRegistry } = m;
 
 // extensions/weather/src/i18n.ts
 var messages = defineMessages({
@@ -193,16 +193,14 @@ function WeatherView({ ctx, config, openDetail }) {
   const { data, error, loading } = usePolling(() => fetchWeather(ctx.apiBaseUrl), config.pollIntervalMs);
   const t = messages.useT();
   const locale = useLocale();
-  return /* @__PURE__ */ jsxs("button", { type: "button", className: "widget-card widget-weather", onClick: openDetail, children: [
-    loading && !data && /* @__PURE__ */ jsx("span", { className: "widget-status", children: t("loading") }),
-    Boolean(error) && /* @__PURE__ */ jsx("span", { className: "widget-status widget-status--error", children: t("fetchFailed") }),
+  const temperature = useTemperature();
+  return /* @__PURE__ */ jsxs(WidgetCard, { className: "flex-row items-center justify-start gap-3", onClick: openDetail, children: [
+    loading && !data && /* @__PURE__ */ jsx(WidgetHint, { children: t("loading") }),
+    Boolean(error) && /* @__PURE__ */ jsx(WidgetHint, { tone: "error", children: t("fetchFailed") }),
     data && /* @__PURE__ */ jsxs(Fragment, { children: [
-      /* @__PURE__ */ jsx(Icon, { name: weatherIcon(data.current.code, data.current.isDay), className: "widget-weather__icon" }),
-      /* @__PURE__ */ jsxs("span", { className: "widget-weather__temp", children: [
-        Math.round(data.current.temperatureC),
-        "\xB0C"
-      ] }),
-      /* @__PURE__ */ jsx("span", { className: "widget-weather__condition", children: conditionText(data.current.code, data.current.condition, locale) })
+      /* @__PURE__ */ jsx(Icon, { name: weatherIcon(data.current.code, data.current.isDay), className: "size-8" }),
+      /* @__PURE__ */ jsx("span", { className: "text-heading font-semibold", children: temperature(data.current.temperatureC, { unit: true }) }),
+      /* @__PURE__ */ jsx("span", { className: "text-muted", children: conditionText(data.current.code, data.current.condition, locale) })
     ] })
   ] });
 }
@@ -210,33 +208,30 @@ function WeatherDetail({ ctx, config }) {
   const { data } = usePolling(() => fetchWeather(ctx.apiBaseUrl), config.pollIntervalMs);
   const t = messages.useT();
   const locale = useLocale();
-  if (!data) return /* @__PURE__ */ jsx("div", { className: "widget-detail", children: t("loading") });
+  const temperature = useTemperature();
+  if (!data) return /* @__PURE__ */ jsx(DetailFrame, { children: t("loading") });
   const maxProb = Math.max(1, ...data.hourly.map((h) => h.precipitationProbability));
-  return /* @__PURE__ */ jsxs("div", { className: "widget-detail widget-weather-detail", children: [
-    /* @__PURE__ */ jsx("h2", { children: t("weatherIn", { place: data.location.name }) }),
-    /* @__PURE__ */ jsxs("div", { className: "widget-weather-detail__current", children: [
-      /* @__PURE__ */ jsx(Icon, { name: weatherIcon(data.current.code, data.current.isDay), className: "widget-weather__icon" }),
-      /* @__PURE__ */ jsxs("span", { className: "widget-weather__temp", children: [
-        Math.round(data.current.temperatureC),
-        "\xB0C"
-      ] }),
+  return /* @__PURE__ */ jsxs(DetailFrame, { title: t("weatherIn", { place: data.location.name }), children: [
+    /* @__PURE__ */ jsxs("div", { className: "mb-4 flex items-center gap-3", children: [
+      /* @__PURE__ */ jsx(Icon, { name: weatherIcon(data.current.code, data.current.isDay), className: "size-8" }),
+      /* @__PURE__ */ jsx("span", { className: "text-heading font-semibold", children: temperature(data.current.temperatureC, { unit: true }) }),
       /* @__PURE__ */ jsx("span", { children: conditionText(data.current.code, data.current.condition, locale) })
     ] }),
-    /* @__PURE__ */ jsx("h3", { children: t("rainNextHours", { n: data.hourly.length }) }),
-    /* @__PURE__ */ jsx("div", { className: "widget-weather-detail__chart", children: data.hourly.map((h) => /* @__PURE__ */ jsxs(
+    /* @__PURE__ */ jsx(SectionTitle, { children: t("rainNextHours", { n: data.hourly.length }) }),
+    /* @__PURE__ */ jsx("div", { className: "flex h-32 items-end gap-1.5", children: data.hourly.map((h) => /* @__PURE__ */ jsxs(
       "div",
       {
-        className: "widget-weather-detail__bar-wrap",
+        className: "flex h-full flex-col items-center justify-end gap-1",
         title: `${h.time}: ${h.precipitationProbability}%`,
         children: [
           /* @__PURE__ */ jsx(
             "div",
             {
-              className: "widget-weather-detail__bar",
+              className: "weather-rain-bar min-h-0.5 w-3 rounded-t-full",
               style: { height: `${h.precipitationProbability / maxProb * 100}%` }
             }
           ),
-          /* @__PURE__ */ jsx("span", { className: "widget-weather-detail__bar-label", children: new Date(h.time).getHours() })
+          /* @__PURE__ */ jsx("span", { className: "text-micro text-muted", children: new Date(h.time).getHours() })
         ]
       },
       h.time
@@ -246,6 +241,8 @@ function WeatherDetail({ ctx, config }) {
 var widget_default = defineWidget({
   id: "weather",
   name: { ja: "\u5929\u6C17", en: "Weather" },
+  // ホームの時刻の横の今の天気（header-weather）と同じものなので、レールには置かない
+  inHeader: true,
   description: {
     ja: "\u63A5\u7D9A\u8A2D\u5B9A\u306E\u5730\u70B9\u306E\u3001\u4ECA\u306E\u5929\u6C17\u3068\u964D\u6C34\u78BA\u7387\u3092\u8868\u793A\u3057\u307E\u3059",
     en: "Shows the current weather and chance of rain for the location in the connection settings"
@@ -355,7 +352,7 @@ function PlacesPanel({
       {
         title: r.name,
         detail: r.detail || `${r.lat.toFixed(2)}, ${r.lon.toFixed(2)}`,
-        trailing: /* @__PURE__ */ jsx("span", { className: "weather-places__add", children: t("add") }),
+        trailing: /* @__PURE__ */ jsx("span", { className: "text-label text-muted", children: t("add") }),
         onClick: busy === null ? () => void add(r) : void 0
       },
       `${r.lat},${r.lon}`
@@ -389,7 +386,7 @@ function storePlace(id) {
   } catch {
   }
 }
-var deg = (c) => `${Math.round(c)}\xB0`;
+var deg = (c) => formatTemperature(c);
 function dayName(date, index, t, locale) {
   if (index === 0) return t("today");
   if (index === 1) return t("tomorrow");
@@ -430,10 +427,21 @@ function tempColor(c) {
   }
   return `hsl(${Math.round(hue)} 85% 62%)`;
 }
-function Meter({ value, max, gradient }) {
-  return /* @__PURE__ */ jsx("span", { className: "weather-meter", style: { background: gradient }, "aria-hidden": "true", children: /* @__PURE__ */ jsx("span", { className: "weather-dot", style: { left: `${Math.min(100, Math.max(0, value / max * 100))}%` } }) });
+var SCALES = { uv: "weather-uv-scale", aqi: "weather-aqi-scale" };
+function Dot({ left }) {
+  return /* @__PURE__ */ jsx(
+    "span",
+    {
+      className: "absolute top-1/2 size-2.5 -translate-1/2 rounded-full border-2 border-black/45 bg-white",
+      style: { left: `${Math.min(100, Math.max(0, left))}%` }
+    }
+  );
+}
+function Meter({ value, max, scale }) {
+  return /* @__PURE__ */ jsx("span", { className: cx("relative block h-1.5 rounded-full", SCALES[scale]), "aria-hidden": "true", children: /* @__PURE__ */ jsx(Dot, { left: value / max * 100 }) });
 }
 function WeatherScreen({ ctx }) {
+  useDisplay();
   const [placeId, setPlaceId] = useState(storedPlace);
   const [places, setPlaces] = useState([]);
   const [managing, setManaging] = useState(false);
@@ -442,14 +450,14 @@ function WeatherScreen({ ctx }) {
   const clock = (iso) => formatClock(new Date(iso), locale);
   useEffect(() => {
     fetchPlaces(ctx).then(setPlaces, () => void 0);
-  }, [ctx]);
+  }, [ctx.apiBaseUrl]);
   const selected = places.find((p) => p.id === placeId) ?? places.find((p) => p.home);
   const shownId = selected?.id ?? "home";
   const { data, error, refresh } = usePolledResource(async () => {
     const res = await fetch(extensionApiUrl(ctx, "weather", `/forecast?place=${encodeURIComponent(shownId)}`));
     if (!res.ok) throw new Error(messages.t("loadFailed", { status: res.status }, getLocale()));
     return { placeId: shownId, forecast: await res.json() };
-  }, 10 * 60 * 1e3);
+  }, 10 * 60 * 1e3, true, { cacheKey: "weather:screen" });
   useEffect(() => {
     void refresh();
   }, [shownId, refresh]);
@@ -491,7 +499,7 @@ function WeatherScreen({ ctx }) {
   );
   const shown = data?.placeId === shownId ? data.forecast : null;
   if (!shown)
-    return /* @__PURE__ */ jsxs(ScreenFrame, { title: "Weather", actions, children: [
+    return /* @__PURE__ */ jsxs(ScreenFrame, { title: { ja: "\u5929\u6C17", en: "Weather" }, actions, children: [
       panel,
       /* @__PURE__ */ jsx(ScreenNotice, { tone: error ? "error" : void 0, children: error ? String(error.message ?? error) : t("loadingScreen") })
     ] });
@@ -504,61 +512,71 @@ function WeatherScreen({ ctx }) {
   const sunrise = today && Date.now() < Date.parse(today.sunrise);
   const sunset = today && !sunrise && Date.now() < Date.parse(today.sunset);
   const feels = current.apparentC - current.temperatureC;
-  return /* @__PURE__ */ jsxs(ScreenFrame, { title: "Weather", actions, children: [
+  return /* @__PURE__ */ jsxs(ScreenFrame, { title: { ja: "\u5929\u6C17", en: "Weather" }, actions, children: [
     panel,
     error ? /* @__PURE__ */ jsx(ScreenNotice, { tone: "error", children: t("staleError") }) : null,
-    /* @__PURE__ */ jsxs("div", { className: "weather-top", children: [
-      /* @__PURE__ */ jsx(ScreenSection, { className: "weather-section", children: /* @__PURE__ */ jsxs(Group, { className: "weather-now", children: [
-        /* @__PURE__ */ jsx(Icon, { name: weatherIcon(current.code, current.isDay), className: "weather-now__icon" }),
-        /* @__PURE__ */ jsx("span", { className: "ui-stat__value", children: deg(current.temperatureC) }),
-        /* @__PURE__ */ jsxs("span", { className: "weather-now__text", children: [
-          /* @__PURE__ */ jsx("strong", { children: conditionText(current.code, current.condition, locale) }),
+    /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-1 gap-x-8 wide:grid-cols-3", children: [
+      /* @__PURE__ */ jsx(ScreenSection, { className: "mb-3.5 min-w-0 wide:flex wide:flex-col", children: /* @__PURE__ */ jsxs(Group, { className: "flex min-w-0 items-center gap-4 wide:flex-1", children: [
+        /* @__PURE__ */ jsx(Icon, { name: weatherIcon(current.code, current.isDay), className: "size-12" }),
+        /* @__PURE__ */ jsx("span", { className: "text-stat leading-none font-semibold", children: deg(current.temperatureC) }),
+        /* @__PURE__ */ jsxs("span", { className: "flex min-w-0 flex-col gap-1.5 text-label leading-tight text-muted", children: [
+          /* @__PURE__ */ jsx("strong", { className: "text-title leading-tight text-text", children: conditionText(current.code, current.condition, locale) }),
           today && /* @__PURE__ */ jsx("span", { children: t("highLow", { max: deg(today.maxC), min: deg(today.minC) }) }),
           /* @__PURE__ */ jsx("span", { children: t("feelsLike", { t: deg(current.apparentC) }) })
         ] })
       ] }) }),
-      /* @__PURE__ */ jsx(ScreenSection, { className: "weather-section", children: /* @__PURE__ */ jsx(Group, { children: /* @__PURE__ */ jsx("ol", { className: "weather-hourly", children: hourly.map((hour, i) => /* @__PURE__ */ jsxs("li", { className: "weather-hourly__hour", children: [
-        /* @__PURE__ */ jsx("span", { className: "weather-hourly__time", children: i === 0 ? t("now") : t("hour", { h: new Date(hour.time).getHours() }) }),
-        /* @__PURE__ */ jsx(Icon, { name: weatherIcon(hour.code, hour.isDay), className: "weather-hourly__icon" }),
-        /* @__PURE__ */ jsx("span", { className: "weather-rain", children: hour.precipitationProbability >= 20 ? `${hour.precipitationProbability}%` : "" }),
-        /* @__PURE__ */ jsx("span", { className: "weather-hourly__temp", children: deg(hour.temperatureC) })
+      /* @__PURE__ */ jsx(ScreenSection, { className: "mb-3.5 min-w-0 wide:col-span-2 wide:flex wide:flex-col", children: /* @__PURE__ */ jsx(Group, { className: "flex min-w-0 items-center wide:flex-1", children: /* @__PURE__ */ jsx("ol", { className: "weather-scroll-row m-0 flex w-full list-none snap-x snap-proximity gap-1 py-1.5", children: hourly.map((hour, i) => /* @__PURE__ */ jsxs("li", { className: "flex shrink-0 grow basis-14 snap-start flex-col items-center gap-1 leading-tight tabular-nums", children: [
+        /* @__PURE__ */ jsx("span", { className: "text-note text-muted", children: i === 0 ? t("now") : t("hour", { h: new Date(hour.time).getHours() }) }),
+        /* @__PURE__ */ jsx(Icon, { name: weatherIcon(hour.code, hour.isDay), className: "my-0.5 size-6.5" }),
+        /* @__PURE__ */ jsx("span", { className: "weather-rain h-4 text-caption", children: hour.precipitationProbability >= 20 ? `${hour.precipitationProbability}%` : "" }),
+        /* @__PURE__ */ jsx("span", { className: "font-semibold", children: deg(hour.temperatureC) })
       ] }, hour.time)) }) }) })
     ] }),
-    /* @__PURE__ */ jsxs("div", { className: "screen__columns", children: [
-      /* @__PURE__ */ jsx(ScreenSection, { className: "weather-section", children: /* @__PURE__ */ jsx(List, { label: t("daysForecast", { n: daily.length }), children: daily.map((day, i) => /* @__PURE__ */ jsx(
+    /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-1 items-start gap-x-8 wide:grid-cols-2", children: [
+      /* @__PURE__ */ jsx(ScreenSection, { className: "mb-3.5 min-w-0", children: /* @__PURE__ */ jsx(List, { boxed: true, label: t("daysForecast", { n: daily.length }), children: daily.map((day, i) => /* @__PURE__ */ jsx(
         ListItem,
         {
-          leading: /* @__PURE__ */ jsx(Icon, { name: weatherIcon(day.code, true), className: "weather-daily__icon" }),
+          leading: /* @__PURE__ */ jsx(Icon, { name: weatherIcon(day.code, true), className: "size-6" }),
           title: dayName(day.date, i, t, locale),
           detail: [
             conditionText(day.code, day.condition, locale),
             day.precipitationProbability >= 20 ? t("rainChance", { p: day.precipitationProbability }) : null
           ].filter(Boolean).join(" \xB7 "),
-          trailing: /* @__PURE__ */ jsxs("span", { className: "weather-range", "aria-label": t("rangeAria", { min: deg(day.minC), max: deg(day.maxC) }), children: [
-            /* @__PURE__ */ jsx("span", { className: "weather-range__min", children: deg(day.minC) }),
-            /* @__PURE__ */ jsxs("span", { className: "weather-range__bar", children: [
-              /* @__PURE__ */ jsx(
-                "span",
-                {
-                  className: "weather-range__fill",
-                  style: {
-                    left: `${(day.minC - low) / span * 100}%`,
-                    width: `${Math.max(4, (day.maxC - day.minC) / span * 100)}%`,
-                    background: `linear-gradient(90deg, ${tempColor(day.minC)}, ${tempColor(day.maxC)})`
-                  }
-                }
-              ),
-              i === 0 && /* @__PURE__ */ jsx("span", { className: "weather-dot", style: { left: `${(current.temperatureC - low) / span * 100}%` } })
-            ] }),
-            /* @__PURE__ */ jsx("span", { children: deg(day.maxC) })
-          ] })
+          trailing: (
+            // 最低〜最高の帯（スマホの幅では帯を短くして、天気の説明を切らない）
+            /* @__PURE__ */ jsxs(
+              "span",
+              {
+                className: "flex flex-none items-center gap-2.5 tabular-nums phone:gap-1.5",
+                "aria-label": t("rangeAria", { min: deg(day.minC), max: deg(day.maxC) }),
+                children: [
+                  /* @__PURE__ */ jsx("span", { className: "w-9 text-right text-muted phone:w-7", children: deg(day.minC) }),
+                  /* @__PURE__ */ jsxs("span", { className: "relative block h-1.5 w-36 rounded-full bg-line phone:w-14", children: [
+                    /* @__PURE__ */ jsx(
+                      "span",
+                      {
+                        className: "absolute inset-y-0 rounded-full",
+                        style: {
+                          left: `${(day.minC - low) / span * 100}%`,
+                          width: `${Math.max(4, (day.maxC - day.minC) / span * 100)}%`,
+                          background: `linear-gradient(90deg, ${tempColor(day.minC)}, ${tempColor(day.maxC)})`
+                        }
+                      }
+                    ),
+                    i === 0 && /* @__PURE__ */ jsx(Dot, { left: (current.temperatureC - low) / span * 100 })
+                  ] }),
+                  /* @__PURE__ */ jsx("span", { className: "w-9 phone:w-7", children: deg(day.maxC) })
+                ]
+              }
+            )
+          )
         },
         day.date
       )) }) }),
-      /* @__PURE__ */ jsx(ScreenSection, { className: "weather-section", children: /* @__PURE__ */ jsxs(StatGrid, { children: [
+      /* @__PURE__ */ jsx(ScreenSection, { className: "mb-3.5 min-w-0", children: /* @__PURE__ */ jsxs(StatGrid, { children: [
         /* @__PURE__ */ jsxs(StatTile, { icon: "uv", label: t("uvIndex"), value: Math.round(current.uvIndex), note: t("todayMax", { n: Math.round(today?.uvIndexMax ?? 0) }), children: [
           /* @__PURE__ */ jsx("span", { children: uvLevel(current.uvIndex, t) }),
-          /* @__PURE__ */ jsx(Meter, { value: current.uvIndex, max: 11, gradient: "linear-gradient(90deg, #4ade80, #facc15, #fb923c, #f87171, #c084fc)" })
+          /* @__PURE__ */ jsx(Meter, { value: current.uvIndex, max: 11, scale: "uv" })
         ] }),
         today && /* @__PURE__ */ jsx(
           StatTile,
@@ -569,8 +587,8 @@ function WeatherScreen({ ctx }) {
             note: sunrise || !sunset ? t("sunsetAt", { t: clock(today.sunset) }) : t("sunriseAt", { t: clock(today.sunrise) })
           }
         ),
-        /* @__PURE__ */ jsx(StatTile, { icon: "wind", label: t("wind"), value: current.windSpeed.toFixed(1), unit: "m/s", note: t("gust", { n: current.windGust.toFixed(1) }), children: /* @__PURE__ */ jsxs("span", { className: "weather-wind", children: [
-          /* @__PURE__ */ jsx("span", { className: "weather-wind__arrow", style: { transform: `rotate(${current.windDirection + 180}deg)` }, children: /* @__PURE__ */ jsx(Icon, { name: "arrow-up" }) }),
+        /* @__PURE__ */ jsx(StatTile, { icon: "wind", label: t("wind"), value: current.windSpeed.toFixed(1), unit: "m/s", note: t("gust", { n: current.windGust.toFixed(1) }), children: /* @__PURE__ */ jsxs("span", { className: "flex items-center gap-1.5", children: [
+          /* @__PURE__ */ jsx("span", { className: "inline-flex", style: { transform: `rotate(${current.windDirection + 180}deg)` }, children: /* @__PURE__ */ jsx(Icon, { name: "arrow-up" }) }),
           t("windFrom", { dir: direction })
         ] }) }),
         /* @__PURE__ */ jsx(
@@ -613,14 +631,7 @@ function WeatherScreen({ ctx }) {
             note: airQuality.pm25 !== null ? `PM2.5 ${airQuality.pm25.toFixed(1)} \xB5g/m\xB3` : void 0,
             children: [
               /* @__PURE__ */ jsx("span", { children: aqiLevel(airQuality.usAqi, t) }),
-              /* @__PURE__ */ jsx(
-                Meter,
-                {
-                  value: airQuality.usAqi,
-                  max: 300,
-                  gradient: "linear-gradient(90deg, #4ade80, #facc15 17%, #fb923c 33%, #f87171 50%, #c084fc 67%, #9f1239)"
-                }
-              )
+              /* @__PURE__ */ jsx(Meter, { value: airQuality.usAqi, max: 300, scale: "aqi" })
             ]
           }
         )
@@ -629,10 +640,36 @@ function WeatherScreen({ ctx }) {
   ] });
 }
 
+// extensions/weather/src/HeaderWeather.tsx
+var POLL_INTERVAL_MS = 10 * 60 * 1e3;
+function HeaderWeather({ ctx }) {
+  const locale = useLocale();
+  const temperature = useTemperature();
+  const { data } = usePolling(async () => {
+    const res = await fetch(extensionApiUrl(ctx, "weather", "/current"));
+    if (!res.ok) throw new Error(`weather API error: ${res.status}`);
+    return res.json();
+  }, POLL_INTERVAL_MS);
+  if (!data) return null;
+  return /* @__PURE__ */ jsxs(Fragment, { children: [
+    /* @__PURE__ */ jsx(
+      Icon,
+      {
+        name: weatherIcon(data.current.code, data.current.isDay),
+        label: weatherConditionText(data.current.code, data.current.condition, locale),
+        className: "block size-cap overflow-visible"
+      }
+    ),
+    /* @__PURE__ */ jsx("span", { children: temperature(data.current.temperatureC, { unit: true }) })
+  ] });
+}
+
 // extensions/weather/src/web.tsx
 var web_default = defineWebExtension({
   widgets: [widget_default],
-  screens: [{ id: "weather", label: "Weather", ariaLabel: { ja: "\u5929\u6C17", en: "Weather" }, icon: "weather-partly-cloudy-day", order: 30, Component: WeatherScreen }]
+  screens: [{ id: "weather", label: { ja: "\u5929\u6C17", en: "Weather" }, icon: "weather-partly-cloudy-day", order: 30, Component: WeatherScreen }],
+  // ホームの時刻の横の今の天気（本体の口。本体は入っているもののうち最初の1つを出す）
+  provides: { "header-weather": { Component: HeaderWeather } }
 });
 export {
   web_default as default

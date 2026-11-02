@@ -20,6 +20,24 @@ function defineServerMessages(dicts) {
 function defineServerExtension(extension) {
   return extension;
 }
+function cachedLoader(ttlMs) {
+  const values = /* @__PURE__ */ new Map();
+  const pending = /* @__PURE__ */ new Map();
+  function load(key, task) {
+    const hit = values.get(key);
+    if (hit && hit.expiresAt > Date.now()) return Promise.resolve(hit.value);
+    const running = pending.get(key);
+    if (running) return running;
+    const promise = task().then((value) => {
+      values.set(key, { value, expiresAt: Date.now() + ttlMs });
+      return value;
+    }).finally(() => pending.delete(key));
+    pending.set(key, promise);
+    return promise;
+  }
+  load.clear = () => values.clear();
+  return load;
+}
 
 // extensions/weather/src/forecast.ts
 var CONDITIONS = {
@@ -378,6 +396,19 @@ var server_default = defineServerExtension({
       lon: Number(api.settings.lon)
     });
     api.route("GET", "/current", () => getWeather(place()));
+    const current = cachedLoader(10 * 6e4);
+    const readings = async () => {
+      const at = place();
+      const weather = await current(`${at.lat},${at.lon}`, () => getWeather(at));
+      return [
+        { id: "daytime", name: `\u65E5\u304C\u51FA\u3066\u3044\u308B\uFF08${at.name}\uFF09`, kind: "onoff", value: weather.current.isDay },
+        { id: "outside-temperature", name: `\u5916\u306E\u6C17\u6E29\uFF08${at.name}\uFF09`, kind: "number", value: weather.current.temperatureC, unit: "\u2103" }
+      ];
+    };
+    api.provideStates({
+      list: readings,
+      read: async (ids) => (await readings()).filter((reading) => ids.includes(reading.id))
+    });
     const places = new PlaceStore(api.dataDir);
     const HOME = "home";
     api.route("GET", "/forecast", async ({ query, locale }) => {

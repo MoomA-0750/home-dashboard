@@ -2,7 +2,7 @@
 var m = globalThis.__homeDashboard?.modules?.["@home-dashboard/widget-sdk"];
 if (!m) throw new Error("\u672C\u4F53\u306E @home-dashboard/widget-sdk \u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093\uFF08\u30C0\u30C3\u30B7\u30E5\u30DC\u30FC\u30C9\u306E\u4E2D\u3067\u8AAD\u307F\u8FBC\u3093\u3067\u304F\u3060\u3055\u3044\uFF09");
 var widget_sdk_default = m.default ?? m;
-var { Avatar, AvatarStack, BackButton, Badge, Button, ButtonLink, ButtonRow, ChatBubble, ChatComposer, ChatFrom, ChatHeader, ChatIconButton, ChatLayout, ChatLog, ChatMeta, ChatPending, ChatRow, Check, CodeBlock, DetailFrame, Dialog, FeatureProvidersContext, Field, Group, Icon, LOCALES, List, ListItem, LocaleContext, Message, Note, Notice, PillMenu, ScreenFrame, ScreenNotice, ScreenSection, SectionTitle, StatGrid, StatTile, ToggleSwitch, WidgetCard, WidgetHint, WidgetRegistry, defineMessages, defineWebExtension, defineWidget, extensionApiUrl, formatClock, formatPastDay, getLocale, intlLocale, setCurrentLocale, textFor, useFeatureProviders, useLocale, usePolledResource, usePolling, weatherConditionText, weatherIcon, widgetRegistry } = m;
+var { Avatar, AvatarStack, BackButton, Badge, Button, ButtonLink, ButtonRow, ChatAttachments, ChatBubble, ChatComposer, ChatFile, ChatFileChips, ChatFrom, ChatHeader, ChatIconButton, ChatImage, ChatLayout, ChatLog, ChatMeta, ChatPending, ChatRow, Check, Chip, CodeBlock, DEFAULT_DISPLAY, DetailFrame, Dialog, DisplayContext, FeatureProvidersContext, Field, Group, Icon, IconButton, LOCALES, List, ListIcon, ListItem, ListNoChevron, LocaleContext, Message, NarrowOnly, Note, Notice, PillMenu, PollingActiveContext, ProgressBar, ScreenFrame, ScreenNotice, ScreenSection, SectionTitle, SideLayout, Slider, StatGrid, StatTile, StatusDot, ToggleSwitch, WidgetCard, WidgetHint, WidgetRegistry, buttonClass, convertReading, convertTemperature, cx, defineMessages, defineWebExtension, defineWidget, extensionApiUrl, formatClock, formatDate, formatPastDay, formatTemperature, formatTime, getDisplay, getLocale, inputClass, intlLocale, motionMs, normalizeDisplay, openSettings, reducedMotion, scrollBehavior, setCurrentDisplay, setCurrentLocale, showSnackbar, startOfWeek, temperatureUnit, textFor, useClosing, useDateFormat, useDisplay, useFeatureProviders, useLocale, usePolledResource, usePolling, usePresence, useSettingsLinks, useSnackbars, useTemperature, useTimeFormat, weatherConditionText, weatherIcon, widgetRegistry } = m;
 
 // host-module:react/jsx-runtime
 var m2 = globalThis.__homeDashboard?.modules?.["react/jsx-runtime"];
@@ -70,19 +70,22 @@ function relativeDate(iso, t) {
   if (days < 30) return t("daysAgo", { n: days });
   return t("monthsAgo", { n: Math.floor(days / 30) });
 }
+function DirtyMark({ dirty }) {
+  return /* @__PURE__ */ jsx("span", { className: dirty ? "text-warn" : "text-muted", children: dirty ? "\u25CF" : "\u25CB" });
+}
 function RepoRow({ repo }) {
   const changes = changeCount(repo);
-  return /* @__PURE__ */ jsxs("li", { className: "widget-git__item", children: [
-    /* @__PURE__ */ jsx("span", { className: `widget-git__mark ${repo.dirty ? "widget-git__mark--dirty" : "widget-git__mark--clean"}`, children: repo.dirty ? "\u25CF" : "\u25CB" }),
-    /* @__PURE__ */ jsx("span", { className: "widget-git__name", children: repo.name }),
-    /* @__PURE__ */ jsx("span", { className: "widget-git__branch", children: repo.branch }),
-    /* @__PURE__ */ jsxs("span", { className: "widget-git__counts", children: [
-      changes > 0 && /* @__PURE__ */ jsx("span", { className: "widget-git__badge widget-git__badge--dirty", children: changes }),
-      repo.ahead > 0 && /* @__PURE__ */ jsxs("span", { className: "widget-git__badge", children: [
+  return /* @__PURE__ */ jsxs("li", { className: "flex items-center gap-1.5 text-note", children: [
+    /* @__PURE__ */ jsx(DirtyMark, { dirty: repo.dirty }),
+    /* @__PURE__ */ jsx("span", { className: "ellipsis min-w-0 flex-1", children: repo.name }),
+    /* @__PURE__ */ jsx("span", { className: "text-micro text-muted", children: repo.branch }),
+    /* @__PURE__ */ jsxs("span", { className: "flex gap-1", children: [
+      changes > 0 && /* @__PURE__ */ jsx(Badge, { tone: "warn", children: changes }),
+      repo.ahead > 0 && /* @__PURE__ */ jsxs(Badge, { children: [
         "\u2191",
         repo.ahead
       ] }),
-      repo.behind > 0 && /* @__PURE__ */ jsxs("span", { className: "widget-git__badge", children: [
+      repo.behind > 0 && /* @__PURE__ */ jsxs(Badge, { children: [
         "\u2193",
         repo.behind
       ] })
@@ -92,61 +95,54 @@ function RepoRow({ repo }) {
 function GitReposView({ ctx, config, openDetail }) {
   const t = messages.useT();
   const { data, loading } = usePolling(() => fetchRepos(ctx.apiBaseUrl), config.pollIntervalMs);
-  if (loading && !data) return /* @__PURE__ */ jsx("div", { className: "widget-card widget-git", children: t("checking") });
+  if (loading && !data) return /* @__PURE__ */ jsx(WidgetCard, { children: t("checking") });
   if (data && !data.configured) {
-    return /* @__PURE__ */ jsxs("div", { className: "widget-card widget-git widget-git--unconfigured", children: [
+    return /* @__PURE__ */ jsxs(WidgetCard, { children: [
       t("noRepos"),
-      /* @__PURE__ */ jsx("span", { className: "widget-hint", children: data.reason })
+      /* @__PURE__ */ jsx(WidgetHint, { children: data.reason })
     ] });
   }
   const sorted = sortByAttention(data?.repos ?? []);
   const visible = sorted.slice(0, config.compactLimit);
   const hidden = sorted.length - visible.length;
-  return /* @__PURE__ */ jsxs("button", { type: "button", className: "widget-card widget-git", onClick: openDetail, children: [
-    /* @__PURE__ */ jsxs("span", { className: "widget-git__header", children: [
-      /* @__PURE__ */ jsx("span", { className: "widget-git__title", children: "git" }),
-      /* @__PURE__ */ jsx("span", { className: "widget-git__summary", children: t("summary", { dirty: data?.dirtyCount ?? 0, unpushed: data?.unpushedCount ?? 0 }) })
+  return /* @__PURE__ */ jsxs(WidgetCard, { className: "items-stretch justify-start gap-1.5", onClick: openDetail, children: [
+    /* @__PURE__ */ jsxs("span", { className: "flex items-baseline justify-between gap-2", children: [
+      /* @__PURE__ */ jsx("span", { className: "text-note text-muted", children: "git" }),
+      /* @__PURE__ */ jsx("span", { className: "text-caption text-muted tabular-nums", children: t("summary", { dirty: data?.dirtyCount ?? 0, unpushed: data?.unpushedCount ?? 0 }) })
     ] }),
-    /* @__PURE__ */ jsx("ul", { className: "widget-git__list", children: visible.map((repo) => /* @__PURE__ */ jsx(RepoRow, { repo }, repo.path)) }),
-    hidden > 0 && /* @__PURE__ */ jsx("span", { className: "widget-git__more", children: t("more", { n: hidden }) })
+    /* @__PURE__ */ jsx("ul", { className: "flex flex-col gap-1", children: visible.map((repo) => /* @__PURE__ */ jsx(RepoRow, { repo }, repo.path)) }),
+    hidden > 0 && /* @__PURE__ */ jsx("span", { className: "text-micro text-muted", children: t("more", { n: hidden }) })
   ] });
 }
 function GitReposDetail({ ctx, config }) {
   const t = messages.useT();
   const { data } = usePolling(() => fetchRepos(ctx.apiBaseUrl), config.pollIntervalMs);
-  if (!data?.configured) return /* @__PURE__ */ jsx("div", { className: "widget-detail", children: t("loading") });
-  return /* @__PURE__ */ jsxs("div", { className: "widget-detail widget-git-detail", children: [
-    /* @__PURE__ */ jsx("h2", { children: t("title") }),
-    /* @__PURE__ */ jsx("p", { className: "widget-note", children: data.root }),
-    /* @__PURE__ */ jsx("ul", { className: "widget-git-detail__list", children: sortByAttention(data.repos).map((repo) => /* @__PURE__ */ jsxs("li", { className: "widget-git-detail__item", children: [
-      /* @__PURE__ */ jsxs("div", { className: "widget-git-detail__head", children: [
-        /* @__PURE__ */ jsx(
-          "span",
-          {
-            className: `widget-git__mark ${repo.dirty ? "widget-git__mark--dirty" : "widget-git__mark--clean"}`,
-            children: repo.dirty ? "\u25CF" : "\u25CB"
-          }
-        ),
-        /* @__PURE__ */ jsx("span", { className: "widget-git-detail__name", children: repo.name }),
-        /* @__PURE__ */ jsx("span", { className: "widget-git__branch", children: repo.branch }),
-        repo.upstream ? /* @__PURE__ */ jsxs("span", { className: "widget-git__counts", children: [
-          repo.ahead > 0 && /* @__PURE__ */ jsxs("span", { className: "widget-git__badge", children: [
+  if (!data?.configured) return /* @__PURE__ */ jsx(DetailFrame, { children: t("loading") });
+  return /* @__PURE__ */ jsxs(DetailFrame, { title: t("title"), children: [
+    /* @__PURE__ */ jsx(Note, { children: data.root }),
+    /* @__PURE__ */ jsx("ul", { className: "mt-3 flex flex-col gap-3", children: sortByAttention(data.repos).map((repo) => /* @__PURE__ */ jsxs("li", { className: "flex flex-col gap-1.5", children: [
+      /* @__PURE__ */ jsxs("div", { className: "flex items-baseline gap-2", children: [
+        /* @__PURE__ */ jsx(DirtyMark, { dirty: repo.dirty }),
+        /* @__PURE__ */ jsx("span", { className: "font-semibold", children: repo.name }),
+        /* @__PURE__ */ jsx("span", { className: "text-micro text-muted", children: repo.branch }),
+        repo.upstream ? /* @__PURE__ */ jsxs("span", { className: "flex gap-1", children: [
+          repo.ahead > 0 && /* @__PURE__ */ jsxs(Badge, { children: [
             "\u2191",
             repo.ahead
           ] }),
-          repo.behind > 0 && /* @__PURE__ */ jsxs("span", { className: "widget-git__badge", children: [
+          repo.behind > 0 && /* @__PURE__ */ jsxs(Badge, { children: [
             "\u2193",
             repo.behind
           ] })
-        ] }) : /* @__PURE__ */ jsx("span", { className: "widget-git__badge widget-git__badge--dim", children: t("noUpstream") })
+        ] }) : /* @__PURE__ */ jsx(Badge, { tone: "dim", children: t("noUpstream") })
       ] }),
-      repo.error ? /* @__PURE__ */ jsx("div", { className: "widget-git-detail__error", children: repo.error }) : /* @__PURE__ */ jsxs("div", { className: "widget-git-detail__body", children: [
-        repo.dirty && /* @__PURE__ */ jsx("span", { className: "widget-git-detail__changes", children: t("changes", { staged: repo.staged, unstaged: repo.unstaged, untracked: repo.untracked }) }),
-        repo.lastCommit && /* @__PURE__ */ jsxs("span", { className: "widget-git-detail__commit", children: [
+      repo.error ? /* @__PURE__ */ jsx("div", { className: "pl-5 text-note text-warn", children: repo.error }) : /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-1 pl-5 text-note text-muted", children: [
+        repo.dirty && /* @__PURE__ */ jsx("span", { children: t("changes", { staged: repo.staged, unstaged: repo.unstaged, untracked: repo.untracked }) }),
+        repo.lastCommit && /* @__PURE__ */ jsxs("span", { children: [
           /* @__PURE__ */ jsx("code", { children: repo.lastCommit.hash }),
           " ",
           repo.lastCommit.subject,
-          /* @__PURE__ */ jsx("span", { className: "widget-git-detail__date", children: relativeDate(repo.lastCommit.date, t) })
+          /* @__PURE__ */ jsx("span", { className: "ml-2", children: relativeDate(repo.lastCommit.date, t) })
         ] })
       ] })
     ] }, repo.path)) })

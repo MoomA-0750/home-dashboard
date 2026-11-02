@@ -32,7 +32,8 @@ var messages = defineServerMessages({
     topNote: "\u3053\u30534\u9031\u9593\u307B\u3069\u3067\u3088\u304F\u8074\u3044\u305F\u66F2",
     recentTitle: "\u6700\u8FD1\u8074\u3044\u305F\u66F2",
     needClient: "\u5148\u306B\u63A5\u7D9A\u8A2D\u5B9A\u3067 Client ID \u3068 Client Secret \u3092\u5165\u308C\u3066\u304F\u3060\u3055\u3044",
-    authorized: "\u8A8D\u53EF\u306B\u6210\u529F\u3057\u307E\u3057\u305F\u3002\u30C8\u30FC\u30AF\u30F3\u3092\u4FDD\u5B58\u3057\u305F\u306E\u3067\u3001\u3053\u306E\u30DA\u30FC\u30B8\u306F\u9589\u3058\u3066\u304B\u307E\u3044\u307E\u305B\u3093\u3002"
+    authorized: "\u8A8D\u53EF\u306B\u6210\u529F\u3057\u307E\u3057\u305F\u3002\u30C8\u30FC\u30AF\u30F3\u3092\u4FDD\u5B58\u3057\u305F\u306E\u3067\u3001\u3053\u306E\u30DA\u30FC\u30B8\u306F\u9589\u3058\u3066\u304B\u307E\u3044\u307E\u305B\u3093\u3002",
+    badState: "\u3053\u306E\u8A8D\u53EF\u306F\u3001\u3053\u306E\u753B\u9762\u304B\u3089\u59CB\u3081\u305F\u3082\u306E\u3067\u306F\u306A\u3044\u304B\u3001\u671F\u9650\u304C\u5207\u308C\u3066\u3044\u307E\u3059\u3002\u8A2D\u5B9A\u304B\u3089\u3082\u3046\u4E00\u5EA6\u59CB\u3081\u3066\u304F\u3060\u3055\u3044\u3002"
   },
   en: {
     reauthorize: "Authorize with Spotify again (/auth/spotify/login): {detail}",
@@ -43,7 +44,8 @@ var messages = defineServerMessages({
     topNote: "Songs you've played most in about the last 4 weeks",
     recentTitle: "Recently played",
     needClient: "Enter the Client ID and Client Secret in the connection settings first",
-    authorized: "Authorization succeeded. The token has been saved, so you can close this page."
+    authorized: "Authorization succeeded. The token has been saved, so you can close this page.",
+    badState: "This authorization wasn't started here or has expired. Start it again from the settings."
   }
 });
 function localizedError(statusCode, key, params) {
@@ -52,6 +54,7 @@ function localizedError(statusCode, key, params) {
 }
 
 // extensions/spotify/src/spotify.ts
+import { randomBytes } from "node:crypto";
 var SCOPES = [
   "user-read-playback-state",
   "user-modify-playback-state",
@@ -131,13 +134,26 @@ async function controlSpotify(action, state) {
   if (res.status === 404) throw new HttpError(409, "no active spotify device");
   if (!res.ok && res.status !== 204) throw new HttpError(502, `spotify control error: ${res.status}`);
 }
-function authorizeUrl() {
+var STATE_TTL_MS = 10 * 60 * 1e3;
+var pendingStates = /* @__PURE__ */ new Map();
+function authorizeUrl(accountId) {
+  const now = Date.now();
+  for (const [key, value] of pendingStates) if (value.expiresAt < now) pendingStates.delete(key);
+  const state = randomBytes(24).toString("base64url");
+  pendingStates.set(state, { accountId, expiresAt: now + STATE_TTL_MS });
   const url = new URL("https://accounts.spotify.com/authorize");
   url.searchParams.set("client_id", setting("clientId"));
   url.searchParams.set("response_type", "code");
   url.searchParams.set("redirect_uri", setting("redirectUri"));
   url.searchParams.set("scope", SCOPES);
+  url.searchParams.set("state", state);
   return url.toString();
+}
+function takeAuthorizeState(state, accountId) {
+  if (!state) return false;
+  const pending = pendingStates.get(state);
+  pendingStates.delete(state);
+  return Boolean(pending && pending.accountId === accountId && pending.expiresAt >= Date.now());
 }
 async function exchangeCode(code) {
   const res = await fetch("https://accounts.spotify.com/api/token", {
@@ -353,15 +369,26 @@ var server_default = defineServerExtension({
     resetSpotifyTokens();
     api.onSettingsChange(resetSpotifyTokens);
     api.provide("music", provider);
-    api.route("GET", "/auth/login", ({ locale }) => {
-      if (!api.settings.clientId) throw new HttpError(409, messages.t(locale, "needClient"));
-      return api.redirect(authorizeUrl());
-    });
-    api.route("GET", "/auth/callback", async ({ query, locale }) => {
-      if (!query.code) return api.text("missing code", 400);
-      await api.updateSettings({ refreshToken: await exchangeCode(query.code) });
-      return api.text(messages.t(locale, "authorized"));
-    });
+    api.route(
+      "GET",
+      "/auth/login",
+      ({ locale, account }) => {
+        if (!api.settings.clientId) throw new HttpError(409, messages.t(locale, "needClient"));
+        return api.redirect(authorizeUrl(account.id));
+      },
+      { adminOnly: true }
+    );
+    api.route(
+      "GET",
+      "/auth/callback",
+      async ({ query, locale, account }) => {
+        if (!query.code) return api.text("missing code", 400);
+        if (!takeAuthorizeState(query.state, account.id)) return api.text(messages.t(locale, "badState"), 400);
+        await api.updateSettings({ refreshToken: await exchangeCode(query.code) });
+        return api.text(messages.t(locale, "authorized"));
+      },
+      { adminOnly: true }
+    );
   }
 });
 export {

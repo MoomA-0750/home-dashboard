@@ -2,7 +2,7 @@
 var m = globalThis.__homeDashboard?.modules?.["@home-dashboard/widget-sdk"];
 if (!m) throw new Error("\u672C\u4F53\u306E @home-dashboard/widget-sdk \u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093\uFF08\u30C0\u30C3\u30B7\u30E5\u30DC\u30FC\u30C9\u306E\u4E2D\u3067\u8AAD\u307F\u8FBC\u3093\u3067\u304F\u3060\u3055\u3044\uFF09");
 var widget_sdk_default = m.default ?? m;
-var { Avatar, AvatarStack, BackButton, Badge, Button, ButtonLink, ButtonRow, ChatBubble, ChatComposer, ChatFrom, ChatHeader, ChatIconButton, ChatLayout, ChatLog, ChatMeta, ChatPending, ChatRow, Check, CodeBlock, DetailFrame, Dialog, FeatureProvidersContext, Field, Group, Icon, LOCALES, List, ListItem, LocaleContext, Message, Note, Notice, PillMenu, ScreenFrame, ScreenNotice, ScreenSection, SectionTitle, StatGrid, StatTile, ToggleSwitch, WidgetCard, WidgetHint, WidgetRegistry, defineMessages, defineWebExtension, defineWidget, extensionApiUrl, formatClock, formatPastDay, getLocale, intlLocale, setCurrentLocale, textFor, useFeatureProviders, useLocale, usePolledResource, usePolling, weatherConditionText, weatherIcon, widgetRegistry } = m;
+var { Avatar, AvatarStack, BackButton, Badge, Button, ButtonLink, ButtonRow, ChatAttachments, ChatBubble, ChatComposer, ChatFile, ChatFileChips, ChatFrom, ChatHeader, ChatIconButton, ChatImage, ChatLayout, ChatLog, ChatMeta, ChatPending, ChatRow, Check, Chip, CodeBlock, DEFAULT_DISPLAY, DetailFrame, Dialog, DisplayContext, FeatureProvidersContext, Field, Group, Icon, IconButton, LOCALES, List, ListIcon, ListItem, ListNoChevron, LocaleContext, Message, NarrowOnly, Note, Notice, PillMenu, PollingActiveContext, ProgressBar, ScreenFrame, ScreenNotice, ScreenSection, SectionTitle, SideLayout, Slider, StatGrid, StatTile, StatusDot, ToggleSwitch, WidgetCard, WidgetHint, WidgetRegistry, buttonClass, convertReading, convertTemperature, cx, defineMessages, defineWebExtension, defineWidget, extensionApiUrl, formatClock, formatDate, formatPastDay, formatTemperature, formatTime, getDisplay, getLocale, inputClass, intlLocale, motionMs, normalizeDisplay, openSettings, reducedMotion, scrollBehavior, setCurrentDisplay, setCurrentLocale, showSnackbar, startOfWeek, temperatureUnit, textFor, useClosing, useDateFormat, useDisplay, useFeatureProviders, useLocale, usePolledResource, usePolling, usePresence, useSettingsLinks, useSnackbars, useTemperature, useTimeFormat, weatherConditionText, weatherIcon, widgetRegistry } = m;
 
 // host-module:react
 var m2 = globalThis.__homeDashboard?.modules?.["react"];
@@ -44,9 +44,7 @@ var messages = defineMessages({
     loadingHistory: "\u3084\u308A\u53D6\u308A\u3092\u8AAD\u307F\u8FBC\u3093\u3067\u3044\u307E\u3059\u2026",
     noMessages: "\u3084\u308A\u53D6\u308A\u306F\u3042\u308A\u307E\u305B\u3093",
     composerLabel: "iMessage \u306E\u30E1\u30C3\u30BB\u30FC\u30B8",
-    attach: "\u753B\u50CF\u306A\u3069\u3092\u6DFB\u3048\u308B",
-    filesToSend: "\u9001\u308B\u30D5\u30A1\u30A4\u30EB",
-    removeFile: "{name} \u3092\u5916\u3059"
+    attach: "\u753B\u50CF\u306A\u3069\u3092\u6DFB\u3048\u308B"
   },
   en: {
     requestFailed: "Something went wrong ({status})",
@@ -80,9 +78,7 @@ var messages = defineMessages({
     loadingHistory: "Loading messages\u2026",
     noMessages: "No messages",
     composerLabel: "iMessage message",
-    attach: "Attach images and more",
-    filesToSend: "Files to send",
-    removeFile: "Remove {name}"
+    attach: "Attach images and more"
   }
 });
 
@@ -125,11 +121,11 @@ var { Fragment: Fragment2, jsx, jsxs } = m3;
 var POLL_MS = 15e3;
 var MAX_FILE_BYTES = 9.5 * 1024 * 1024;
 var MAX_FILES = 10;
-var formatTime = (iso, locale) => formatClock(new Date(iso), locale);
-var formatDay = (iso, locale) => formatPastDay(new Date(iso), locale) ?? formatTime(iso, locale);
+var formatTime2 = (iso, locale) => formatClock(new Date(iso), locale);
+var formatDay = (iso, locale) => formatPastDay(new Date(iso), locale) ?? formatTime2(iso, locale);
 var formatDayTime = (iso, locale) => {
   const day = formatPastDay(new Date(iso), locale);
-  return day ? `${day} ${formatTime(iso, locale)}` : formatTime(iso, locale);
+  return day ? `${day} ${formatTime2(iso, locale)}` : formatTime2(iso, locale);
 };
 var SEND_NOTICE = {
   sent: null,
@@ -137,6 +133,13 @@ var SEND_NOTICE = {
   unknown: "sendUnknown",
   dry_run: "sendDryRun"
 };
+function ChatFaces({ ctx, chat }) {
+  const photos = chat.faces.filter((f) => f !== null);
+  if (chat.isGroup && photos.length > 1) {
+    return /* @__PURE__ */ jsx(AvatarStack, { children: photos.slice(0, 3).map((id) => /* @__PURE__ */ jsx(Face, { ctx, id, name: chat.name, size: "large" }, id)) });
+  }
+  return /* @__PURE__ */ jsx(Face, { ctx, id: photos[0] ?? null, name: chat.name, size: "large" });
+}
 function Face({ ctx, id, name, size }) {
   return /* @__PURE__ */ jsx(Avatar, { src: id ? fileUrl(ctx, "avatars", id) : null, name, size });
 }
@@ -144,36 +147,73 @@ function Attachment({ ctx, attachment }) {
   const t = messages.useT();
   if (attachment.id && attachment.kind === "image") {
     const src = fileUrl(ctx, "attachments", attachment.id);
-    return /* @__PURE__ */ jsx("a", { className: `imsg-image${attachment.sticker ? " imsg-image--sticker" : ""}`, href: src, target: "_blank", rel: "noreferrer", children: /* @__PURE__ */ jsx("img", { src, alt: attachment.preview ? t("imagePreview") : t("image"), loading: "lazy" }) });
+    const alt = attachment.preview ? t("imagePreview") : t("image");
+    if (!attachment.sticker) return /* @__PURE__ */ jsx(ChatImage, { src, alt });
+    return /* @__PURE__ */ jsx("a", { className: "block", href: src, target: "_blank", rel: "noreferrer", children: /* @__PURE__ */ jsx("img", { className: "block max-h-30 max-w-30", src, alt, loading: "lazy" }) });
   }
   if (attachment.id && attachment.kind === "audio") {
-    return /* @__PURE__ */ jsx("audio", { className: "imsg-audio", controls: true, preload: "none", src: fileUrl(ctx, "attachments", attachment.id) });
+    return /* @__PURE__ */ jsx("audio", { className: "w-75 max-w-full", controls: true, preload: "none", src: fileUrl(ctx, "attachments", attachment.id) });
   }
-  return /* @__PURE__ */ jsxs("span", { className: "imsg-file", children: [
-    /* @__PURE__ */ jsx(Icon, { name: attachment.kind === "image" ? "image" : attachment.kind === "video" ? "play" : attachment.kind === "audio" ? "mic" : "attach" }),
-    t("viewOnDevice", { kind: t(attachment.kind) })
-  ] });
+  return /* @__PURE__ */ jsx(
+    ChatFile,
+    {
+      icon: attachment.kind === "image" ? "image" : attachment.kind === "video" ? "play" : attachment.kind === "audio" ? "mic" : "attach",
+      name: t("viewOnDevice", { kind: t(attachment.kind) })
+    }
+  );
+}
+function safeLink(url) {
+  if (!url) return null;
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:" || parsed.protocol === "http:" ? { href: parsed.href, hostname: parsed.hostname } : null;
+  } catch {
+    return null;
+  }
 }
 function Bubble({ ctx, message, mine }) {
   const text = message.text.trim();
+  const link = safeLink(message.link?.url);
   const hasBody = text || message.link || message.replyTo;
-  return /* @__PURE__ */ jsxs("div", { className: `imsg-message${mine ? " imsg-message--mine" : ""}`, children: [
-    message.attachments.map((attachment, index) => /* @__PURE__ */ jsx(Attachment, { ctx, attachment }, attachment.id ?? index)),
-    hasBody && /* @__PURE__ */ jsxs(ChatBubble, { mine, children: [
-      message.replyTo && /* @__PURE__ */ jsxs("span", { className: "imsg-quote", children: [
-        message.replyTo.sender ? `${message.replyTo.sender}: ` : "",
-        message.replyTo.text,
-        message.replyTo.trimmed && "\u2026"
-      ] }),
-      text,
-      message.trimmed && "\u2026",
-      message.link && /* @__PURE__ */ jsxs("a", { className: "imsg-link", href: message.link.url, target: "_blank", rel: "noreferrer", children: [
-        /* @__PURE__ */ jsx("span", { className: "imsg-link__site", children: message.link.siteName || new URL(message.link.url).hostname }),
-        message.link.title && /* @__PURE__ */ jsx("span", { className: "imsg-link__title", children: message.link.title })
-      ] })
-    ] }),
-    message.reactions.length > 0 && /* @__PURE__ */ jsx("span", { className: "imsg-reactions", title: message.reactions.flatMap((r) => r.senders).join("\u30FB"), children: message.reactions.map((r) => `${r.emoji}${r.count > 1 ? r.count : ""}`).join(" ") })
-  ] });
+  return (
+    // 1通の中身（画像・録音・吹き出し・リアクション）を縦に並べる。相手のものは ChatFrom の中なので幅いっぱい
+    /* @__PURE__ */ jsxs(
+      "div",
+      {
+        className: cx(
+          "flex min-w-0 flex-col gap-1 [&>*]:max-w-full",
+          mine ? "max-w-4/5 items-end self-end" : "max-w-full items-start"
+        ),
+        children: [
+          message.attachments.map((attachment, index) => /* @__PURE__ */ jsx(Attachment, { ctx, attachment }, attachment.id ?? index)),
+          hasBody && /* @__PURE__ */ jsxs(ChatBubble, { mine, children: [
+            message.replyTo && // 返信先の引用。吹き出しの中の上に、薄く1〜2行
+            /* @__PURE__ */ jsxs("span", { className: "untrim mb-1 line-clamp-2 border-l-2 border-line pl-2.5 text-note leading-normal text-muted", children: [
+              message.replyTo.sender ? `${message.replyTo.sender}: ` : "",
+              message.replyTo.text,
+              message.replyTo.trimmed && "\u2026"
+            ] }),
+            text,
+            message.trimmed && "\u2026",
+            link && /* @__PURE__ */ jsxs(
+              "a",
+              {
+                className: "mt-1.5 flex flex-col gap-1 rounded-inner bg-tint/10 px-2.5 py-1.5 leading-tight text-current no-underline",
+                href: link.href,
+                target: "_blank",
+                rel: "noreferrer",
+                children: [
+                  /* @__PURE__ */ jsx("span", { className: "untrim text-caption text-muted", children: message.link.siteName || link.hostname }),
+                  message.link.title && /* @__PURE__ */ jsx("span", { className: "untrim text-label font-semibold", children: message.link.title })
+                ]
+              }
+            )
+          ] }),
+          message.reactions.length > 0 && /* @__PURE__ */ jsx("span", { className: "untrim text-note leading-tight", title: message.reactions.flatMap((r) => r.senders).join("\u30FB"), children: message.reactions.map((r) => `${r.emoji}${r.count > 1 ? r.count : ""}`).join(" ") })
+        ]
+      }
+    )
+  );
 }
 function endsGroup(messages2, index) {
   const current = messages2[index];
@@ -184,7 +224,7 @@ function endsGroup(messages2, index) {
   return Date.parse(next.createdAt) - Date.parse(current.createdAt) > 5 * 6e4;
 }
 function NotReady({ title, switcher, children }) {
-  return /* @__PURE__ */ jsx(ScreenFrame, { title: "Chat", actions: switcher, children: /* @__PURE__ */ jsxs(ScreenNotice, { tone: "error", children: [
+  return /* @__PURE__ */ jsx(ScreenFrame, { title: { ja: "\u30C1\u30E3\u30C3\u30C8", en: "Chat" }, actions: switcher, children: /* @__PURE__ */ jsxs(ScreenNotice, { tone: "error", children: [
     title,
     " ",
     children
@@ -290,14 +330,14 @@ function MessagesScreen({ ctx, switcher }) {
         title: c.name,
         badge: [when, unread > 0 ? t("unread", { n: unread > 99 ? "99+" : unread }) : ""].filter(Boolean).join(t("nameSeparator")) || void 0,
         detail: c.preview ? `${c.preview.fromMe ? t("me") : ""}${c.preview.text}` : "\xA0",
-        leading: /* @__PURE__ */ jsx(Face, { ctx, id: c.faces.find((f) => f !== null) ?? null, name: c.name, size: "large" }),
+        leading: /* @__PURE__ */ jsx(ChatFaces, { ctx, chat: c }),
         selected: c.id === chat?.id,
         onClick: () => openChat(c)
       },
       c.id
     );
   }) });
-  return /* @__PURE__ */ jsx(ScreenFrame, { title: "Chat", actions: switcher, fill: true, children: /* @__PURE__ */ jsxs(ChatLayout, { list, listOpen, onCloseList: () => setListOpen(false), children: [
+  return /* @__PURE__ */ jsx(ScreenFrame, { title: { ja: "\u30C1\u30E3\u30C3\u30C8", en: "Chat" }, actions: switcher, fill: true, children: /* @__PURE__ */ jsxs(ChatLayout, { list, listOpen, onCloseList: () => setListOpen(false), children: [
     /* @__PURE__ */ jsx(
       ChatHeader,
       {
@@ -318,7 +358,7 @@ function MessagesScreen({ ctx, switcher }) {
           const startsGroup = !previous || previous.isFromMe !== message.isFromMe || previous.sender !== message.sender;
           const last = endsGroup(messages2, index);
           return /* @__PURE__ */ jsxs(ChatRow, { mine, gap: last, children: [
-            !mine && chat.isGroup && startsGroup && message.sender && /* @__PURE__ */ jsx("span", { className: "ui-chat__meta ui-chat__meta--indent", children: message.sender }),
+            !mine && chat.isGroup && startsGroup && message.sender && /* @__PURE__ */ jsx("div", { className: "pl-10", children: /* @__PURE__ */ jsx(ChatMeta, { children: message.sender }) }),
             mine ? /* @__PURE__ */ jsx(Bubble, { ctx, message, mine: true }) : /* @__PURE__ */ jsx(ChatFrom, { avatar: last ? /* @__PURE__ */ jsx(Face, { ctx, id: message.avatarId, name: message.sender ?? chat.name }) : null, children: /* @__PURE__ */ jsx(Bubble, { ctx, message, mine: false }) }),
             last && message.createdAt && /* @__PURE__ */ jsx(ChatMeta, { children: formatDayTime(message.createdAt, locale) })
           ] }, message.id);
@@ -362,20 +402,7 @@ function MessagesScreen({ ctx, switcher }) {
         ),
         above: /* @__PURE__ */ jsxs(Fragment2, { children: [
           notice && /* @__PURE__ */ jsx(Message, { tone: notice.tone === "error" ? "error" : "ok", children: notice.text }),
-          files.length > 0 && /* @__PURE__ */ jsx("div", { className: "ui-button-row", "aria-label": t("filesToSend"), children: files.map((file, index) => /* @__PURE__ */ jsxs(
-            "button",
-            {
-              type: "button",
-              className: "ui-button imsg-file-chip",
-              "aria-label": t("removeFile", { name: file.name }),
-              onClick: () => setFiles(files.filter((_, i) => i !== index)),
-              children: [
-                /* @__PURE__ */ jsx("span", { className: "imsg-file-chip__name", children: file.name }),
-                /* @__PURE__ */ jsx(Icon, { name: "dismiss" })
-              ]
-            },
-            `${file.name}-${index}`
-          )) })
+          /* @__PURE__ */ jsx(ChatFileChips, { files, onRemove: (index) => setFiles(files.filter((_, i) => i !== index)) })
         ] })
       }
     )

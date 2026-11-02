@@ -2,7 +2,7 @@
 var m = globalThis.__homeDashboard?.modules?.["@home-dashboard/widget-sdk"];
 if (!m) throw new Error("\u672C\u4F53\u306E @home-dashboard/widget-sdk \u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093\uFF08\u30C0\u30C3\u30B7\u30E5\u30DC\u30FC\u30C9\u306E\u4E2D\u3067\u8AAD\u307F\u8FBC\u3093\u3067\u304F\u3060\u3055\u3044\uFF09");
 var widget_sdk_default = m.default ?? m;
-var { Avatar, AvatarStack, BackButton, Badge, Button, ButtonLink, ButtonRow, ChatBubble, ChatComposer, ChatFrom, ChatHeader, ChatIconButton, ChatLayout, ChatLog, ChatMeta, ChatPending, ChatRow, Check, CodeBlock, DetailFrame, Dialog, FeatureProvidersContext, Field, Group, Icon, LOCALES, List, ListItem, LocaleContext, Message, Note, Notice, PillMenu, ScreenFrame, ScreenNotice, ScreenSection, SectionTitle, StatGrid, StatTile, ToggleSwitch, WidgetCard, WidgetHint, WidgetRegistry, defineMessages, defineWebExtension, defineWidget, extensionApiUrl, formatClock, formatPastDay, getLocale, intlLocale, setCurrentLocale, textFor, useFeatureProviders, useLocale, usePolledResource, usePolling, weatherConditionText, weatherIcon, widgetRegistry } = m;
+var { Avatar, AvatarStack, BackButton, Badge, Button, ButtonLink, ButtonRow, ChatAttachments, ChatBubble, ChatComposer, ChatFile, ChatFileChips, ChatFrom, ChatHeader, ChatIconButton, ChatImage, ChatLayout, ChatLog, ChatMeta, ChatPending, ChatRow, Check, Chip, CodeBlock, DEFAULT_DISPLAY, DetailFrame, Dialog, DisplayContext, FeatureProvidersContext, Field, Group, Icon, IconButton, LOCALES, List, ListIcon, ListItem, ListNoChevron, LocaleContext, Message, NarrowOnly, Note, Notice, PillMenu, PollingActiveContext, ProgressBar, ScreenFrame, ScreenNotice, ScreenSection, SectionTitle, SideLayout, Slider, StatGrid, StatTile, StatusDot, ToggleSwitch, WidgetCard, WidgetHint, WidgetRegistry, buttonClass, convertReading, convertTemperature, cx, defineMessages, defineWebExtension, defineWidget, extensionApiUrl, formatClock, formatDate, formatPastDay, formatTemperature, formatTime, getDisplay, getLocale, inputClass, intlLocale, motionMs, normalizeDisplay, openSettings, reducedMotion, scrollBehavior, setCurrentDisplay, setCurrentLocale, showSnackbar, startOfWeek, temperatureUnit, textFor, useClosing, useDateFormat, useDisplay, useFeatureProviders, useLocale, usePolledResource, usePolling, usePresence, useSettingsLinks, useSnackbars, useTemperature, useTimeFormat, weatherConditionText, weatherIcon, widgetRegistry } = m;
 
 // host-module:react
 var m2 = globalThis.__homeDashboard?.modules?.["react"];
@@ -88,12 +88,16 @@ var messages = defineMessages({
     mail: "\u30E1\u30FC\u30EB",
     serviceSeparator: "\u30FB",
     notInUse: "\u4F7F\u3063\u3066\u3044\u307E\u305B\u3093",
-    intro: "Google\u30FBiCloud \u306A\u3069\u306E\u30A2\u30AB\u30A6\u30F3\u30C8\u3092\u8DB3\u3059\u3068\u3001\u30AB\u30EC\u30F3\u30C0\u30FC\u3068\u30E1\u30FC\u30EB\u304C Calendar\u30FBMail \u306E\u753B\u9762\u3068\u30A6\u30A3\u30B8\u30A7\u30C3\u30C8\u306B\u51FA\u307E\u3059\u3002\u81EA\u5206\u306E\u30A2\u30AB\u30A6\u30F3\u30C8\u306F\u81EA\u5206\u306B\u3060\u3051\u898B\u3048\u307E\u3059\u3002\u300C\u5BB6\u3067\u5171\u6709\u3059\u308B\u300D\u306B\u3057\u305F\u3082\u306E\u306F\u3001\u5BB6\u65CF\u3068\u97F3\u58F0\u30A2\u30B7\u30B9\u30BF\u30F3\u30C8\u306B\u3082\u898B\u3048\u307E\u3059\u3002",
+    intro: "Google\u30FBiCloud \u306A\u3069\u306E\u30A2\u30AB\u30A6\u30F3\u30C8\u3092\u8DB3\u3059\u3068\u3001\u30AB\u30EC\u30F3\u30C0\u30FC\u3068\u30E1\u30FC\u30EB\u304C\u300C\u30AB\u30EC\u30F3\u30C0\u30FC\u300D\u300C\u30E1\u30FC\u30EB\u300D\u306E\u753B\u9762\u3068\u30A6\u30A3\u30B8\u30A7\u30C3\u30C8\u306B\u51FA\u307E\u3059\u3002\u81EA\u5206\u306E\u30A2\u30AB\u30A6\u30F3\u30C8\u306F\u81EA\u5206\u306B\u3060\u3051\u898B\u3048\u307E\u3059\u3002\u300C\u5BB6\u3067\u5171\u6709\u3059\u308B\u300D\u306B\u3057\u305F\u3082\u306E\u306F\u3001\u5BB6\u65CF\u3068\u97F3\u58F0\u30A2\u30B7\u30B9\u30BF\u30F3\u30C8\u306B\u3082\u898B\u3048\u307E\u3059\u3002",
     myAccounts: "\u81EA\u5206\u306E\u30A2\u30AB\u30A6\u30F3\u30C8",
     none: "\u307E\u3060\u3042\u308A\u307E\u305B\u3093\u3002",
     sharedBadge: "\u5BB6\u3067\u5171\u6709",
     other: "\u305D\u306E\u307B\u304B",
-    oauthUnavailable: "{providers}\u306F\u3001\u7BA1\u7406\u8005\u304C\u300C\u62E1\u5F35\u6A5F\u80FD \u2192 \u30AB\u30EC\u30F3\u30C0\u30FC\u30FB\u30E1\u30FC\u30EB\u300D\u3067\u30ED\u30B0\u30A4\u30F3\u306E\u8A2D\u5B9A\u3092\u3059\u308B\u3068\u8DB3\u305B\u307E\u3059\u3002",
+    oauthUnavailable: "{providers}\u306F\u3001\u30ED\u30B0\u30A4\u30F3\u306E\u8A2D\u5B9A\u304C\u307E\u3060\u3067\u3059\u3002\u62BC\u3059\u3068\u8A2D\u5B9A\uFF08\u62E1\u5F35\u6A5F\u80FD \u2192 \u30AB\u30EC\u30F3\u30C0\u30FC\u30FB\u30E1\u30FC\u30EB\uFF09\u3092\u958B\u304D\u307E\u3059\u3002",
+    oauthUnavailableMember: "{providers}\u306F\u3001\u30ED\u30B0\u30A4\u30F3\u306E\u8A2D\u5B9A\u304C\u307E\u3060\u3067\u3059\u3002\u7BA1\u7406\u8005\u304C\u300C\u62E1\u5F35\u6A5F\u80FD \u2192 \u30AB\u30EC\u30F3\u30C0\u30FC\u30FB\u30E1\u30FC\u30EB\u300D\u3067\u8A2D\u5B9A\u3059\u308B\u3068\u8DB3\u305B\u307E\u3059\u3002",
+    needsSetup: "{provider}\uFF08\u30ED\u30B0\u30A4\u30F3\u306E\u8A2D\u5B9A\u304C\u307E\u3060\u3002\u62BC\u3059\u3068\u8A2D\u5B9A\u3092\u958B\u304F\uFF09",
+    needsSetupMember: "{provider}\uFF08\u30ED\u30B0\u30A4\u30F3\u306E\u8A2D\u5B9A\u304C\u307E\u3060\u3002\u7BA1\u7406\u8005\u304C\u8A2D\u5B9A\u3059\u308B\u3068\u8DB3\u305B\u308B\uFF09",
+    askAdmin: "{provider}\u306E\u30ED\u30B0\u30A4\u30F3\u306E\u8A2D\u5B9A\u306F\u7BA1\u7406\u8005\u304C\u3057\u307E\u3059\u3002\u7BA1\u7406\u8005\u306B\u300C\u62E1\u5F35\u6A5F\u80FD \u2192 \u30AB\u30EC\u30F3\u30C0\u30FC\u30FB\u30E1\u30FC\u30EB\u300D\u3067\u306E\u8A2D\u5B9A\u3092\u983C\u3093\u3067\u304F\u3060\u3055\u3044\u3002",
     providerSeparator: "\u30FB",
     sharedAccounts: "\u5BB6\u3067\u5171\u6709\u3055\u308C\u3066\u3044\u308B\u30A2\u30AB\u30A6\u30F3\u30C8",
     ownerOnly: "\u5909\u3048\u3089\u308C\u308B\u306E\u306F\u767B\u9332\u3057\u305F\u4EBA",
@@ -123,9 +127,9 @@ var messages = defineMessages({
     checking: "\u3064\u306A\u304C\u308B\u304B\u78BA\u304B\u3081\u3066\u3044\u307E\u3059\u2026",
     add: "\u8DB3\u3059",
     useCalendar: "\u30AB\u30EC\u30F3\u30C0\u30FC\u3092\u4F7F\u3046",
-    useCalendarDetail: "Calendar \u753B\u9762\u30FB\u4E88\u5B9A\u306E\u30A6\u30A3\u30B8\u30A7\u30C3\u30C8\u306B\u51FA\u3059",
+    useCalendarDetail: "\u30AB\u30EC\u30F3\u30C0\u30FC\u306E\u753B\u9762\u30FB\u4E88\u5B9A\u306E\u30A6\u30A3\u30B8\u30A7\u30C3\u30C8\u306B\u51FA\u3059",
     useMail: "\u30E1\u30FC\u30EB\u3092\u4F7F\u3046",
-    useMailDetail: "Mail \u753B\u9762\u30FB\u30E1\u30FC\u30EB\u306E\u30A6\u30A3\u30B8\u30A7\u30C3\u30C8\u306B\u51FA\u3059",
+    useMailDetail: "\u30E1\u30FC\u30EB\u306E\u753B\u9762\u30FB\u30E1\u30FC\u30EB\u306E\u30A6\u30A3\u30B8\u30A7\u30C3\u30C8\u306B\u51FA\u3059",
     share: "\u5BB6\u3067\u5171\u6709\u3059\u308B",
     shareDetail: "\u5BB6\u65CF\u3068\u97F3\u58F0\u30A2\u30B7\u30B9\u30BF\u30F3\u30C8\u306B\u3082\u898B\u305B\u308B\uFF08\u97F3\u58F0\u30A2\u30B7\u30B9\u30BF\u30F3\u30C8\u306F\u4E88\u5B9A\u3092\u8DB3\u3057\u305F\u308A\u3001\u78BA\u304B\u3081\u3066\u304B\u3089\u30E1\u30FC\u30EB\u3092\u9001\u3063\u305F\u308A\u3067\u304D\u308B\uFF09",
     uses: "\u4F7F\u3046\u3082\u306E",
@@ -150,7 +154,11 @@ var messages = defineMessages({
     none: "None yet.",
     sharedBadge: "Shared",
     other: "Other",
-    oauthUnavailable: "{providers} can be added once an admin sets up sign-in in Extensions \u2192 Calendar & Mail.",
+    oauthUnavailable: "Sign-in for {providers} isn't set up yet. Tap it to open the setup (Extensions \u2192 Calendar & Mail).",
+    oauthUnavailableMember: "Sign-in for {providers} isn't set up yet. It can be added once an admin sets it up in Extensions \u2192 Calendar & Mail.",
+    needsSetup: "{provider} (sign-in not set up; tap to open the setup)",
+    needsSetupMember: "{provider} (sign-in not set up; an admin can set it up)",
+    askAdmin: "An admin sets up sign-in for {provider}. Ask an admin to set it up in Extensions \u2192 Calendar & Mail.",
     providerSeparator: " and ",
     sharedAccounts: "Shared household accounts",
     ownerOnly: "Only the person who added it can change it",
@@ -196,7 +204,7 @@ var messages = defineMessages({
     oauthRemoveNote: "Removing it here keeps the access granted on the {provider} side. To revoke it, also remove it under third-party access in your {provider} account."
   }
 });
-function AccountsPage({ ctx }) {
+function AccountsPage({ ctx, account }) {
   const t = messages.useT();
   const tc = commonMessages.useT();
   const locale = useLocale();
@@ -212,7 +220,7 @@ function AccountsPage({ ctx }) {
     } catch (err) {
       setMessage({ ok: false, text: err instanceof Error ? err.message : String(err) });
     }
-  }, [ctx]);
+  }, [ctx.apiBaseUrl]);
   useEffect(() => {
     void load();
     const params = new URLSearchParams(window.location.search);
@@ -241,10 +249,22 @@ function AccountsPage({ ctx }) {
         onRemoved: () => done(t("removed", { label: opened.label }))
       }
     );
+  const isAdmin = account.role === "admin";
+  const oauthButton = (provider, label) => providers[provider] ? /* @__PURE__ */ jsx(Button, { icon: "add", onClick: () => void startOAuth(ctx, provider).catch((err) => setMessage({ ok: false, text: err.message })), children: label }) : /* @__PURE__ */ jsx(
+    Button,
+    {
+      icon: "warning",
+      className: "[&_.fluent-icon]:text-warn",
+      "aria-label": t(isAdmin ? "needsSetup" : "needsSetupMember", { provider: label }),
+      title: t(isAdmin ? "needsSetup" : "needsSetupMember", { provider: label }),
+      onClick: () => isAdmin ? openSettings({ page: "extensions", extension: "accounts" }) : setMessage({ ok: false, text: t("askAdmin", { provider: label }) }),
+      children: label
+    }
+  );
   const mine = accounts?.filter((a) => a.mine) ?? [];
   const others = accounts?.filter((a) => !a.mine) ?? [];
   const services = (a) => [a.services.calendar && t("calendar"), a.services.mail && t("mail")].filter(Boolean).join(t("serviceSeparator")) || t("notInUse");
-  return /* @__PURE__ */ jsxs("div", { className: "accounts-page", children: [
+  return /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-1", children: [
     /* @__PURE__ */ jsx(Note, { children: t("intro") }),
     message && /* @__PURE__ */ jsx(Message, { tone: message.ok ? "ok" : "error", children: message.text }),
     /* @__PURE__ */ jsx(SectionTitle, { children: t("myAccounts") }),
@@ -262,12 +282,12 @@ function AccountsPage({ ctx }) {
       a.id
     )) }),
     /* @__PURE__ */ jsxs(ButtonRow, { children: [
-      /* @__PURE__ */ jsx(Button, { icon: "add", disabled: !providers.google, onClick: () => void startOAuth(ctx, "google").catch((err) => setMessage({ ok: false, text: err.message })), children: "Google" }),
+      oauthButton("google", "Google"),
       /* @__PURE__ */ jsx(Button, { icon: "add", onClick: () => setView({ kind: "add", type: "icloud" }), children: "iCloud" }),
-      /* @__PURE__ */ jsx(Button, { icon: "add", disabled: !providers.microsoft, onClick: () => void startOAuth(ctx, "microsoft").catch((err) => setMessage({ ok: false, text: err.message })), children: "Microsoft" }),
+      oauthButton("microsoft", "Microsoft"),
       /* @__PURE__ */ jsx(Button, { icon: "add", onClick: () => setView({ kind: "add", type: "other" }), children: t("other") })
     ] }),
-    (!providers.google || !providers.microsoft) && /* @__PURE__ */ jsx(Note, { children: t("oauthUnavailable", {
+    (!providers.google || !providers.microsoft) && /* @__PURE__ */ jsx(Note, { children: t(isAdmin ? "oauthUnavailable" : "oauthUnavailableMember", {
       providers: [!providers.google && "Google", !providers.microsoft && "Microsoft"].filter(Boolean).join(t("providerSeparator"))
     }) }),
     others.length > 0 && /* @__PURE__ */ jsxs(Fragment2, { children: [
@@ -317,12 +337,12 @@ function AddForm({
       setBusy(false);
     }
   };
-  return /* @__PURE__ */ jsxs("form", { className: "accounts-page", onSubmit: (e) => void submit(e), children: [
+  return /* @__PURE__ */ jsxs("form", { className: "flex flex-col gap-1", onSubmit: (e) => void submit(e), children: [
     /* @__PURE__ */ jsx(BackButton, { label: t("internetAccounts"), onClick: onBack }),
     /* @__PURE__ */ jsx(SectionTitle, { children: kind === "icloud" ? t("addICloud") : t("addAccount") }),
     kind === "icloud" && /* @__PURE__ */ jsx(Note, { children: t("iCloudNote") }),
     /* @__PURE__ */ jsxs(Group, { children: [
-      /* @__PURE__ */ jsxs("fieldset", { className: "accounts-page__fields", disabled: busy, children: [
+      /* @__PURE__ */ jsxs("fieldset", { className: "m-0 border-0 p-0", disabled: busy, children: [
         type === "other" && /* @__PURE__ */ jsx(Field, { label: t("kind"), children: /* @__PURE__ */ jsxs("select", { value: kind, onChange: (e) => setKind(e.target.value), children: [
           /* @__PURE__ */ jsx("option", { value: "imap", children: t("kindImap") }),
           /* @__PURE__ */ jsx("option", { value: "caldav", children: t("kindCaldav") }),
@@ -400,7 +420,7 @@ function AccountDetail({
       checked: account.shared
     }
   ];
-  return /* @__PURE__ */ jsxs("div", { className: "accounts-page", children: [
+  return /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-1", children: [
     /* @__PURE__ */ jsx(BackButton, { label: t("internetAccounts"), onClick: onBack }),
     /* @__PURE__ */ jsx(SectionTitle, { children: account.label }),
     /* @__PURE__ */ jsxs(Note, { children: [
@@ -483,6 +503,7 @@ async function request2(ctx, path, init) {
   return body;
 }
 var fetchCalendars = (ctx) => request2(ctx, "/calendars");
+var setCalendarEnabled = (ctx, id, enabled) => request2(ctx, `/calendars/${encodeURIComponent(id)}/enabled`, { method: "PUT", json: { enabled } });
 var fetchEvents = (ctx, from, to) => request2(
   ctx,
   `/events?${new URLSearchParams({ from: from.toISOString(), to: to.toISOString() })}`
@@ -491,7 +512,6 @@ var createEvent = (ctx, input) => request2(ctx, "/events", { method: "POST", jso
 var updateEvent = (ctx, id, input) => request2(ctx, `/events/${encodeURIComponent(id)}`, { method: "PUT", json: input });
 var deleteEvent = (ctx, id) => request2(ctx, `/events/${encodeURIComponent(id)}`, { method: "DELETE" });
 var pad = (n) => String(n).padStart(2, "0");
-var WEEKDAYS = ["\u65E5", "\u6708", "\u706B", "\u6C34", "\u6728", "\u91D1", "\u571F"];
 var messages2 = defineMessages({
   ja: { today: "\u4ECA\u65E5 {day}", tomorrow: "\u660E\u65E5 {day}", allDay: "\u7D42\u65E5", range: "{start}\u301C{end}" },
   en: { today: "Today \xB7 {day}", tomorrow: "Tomorrow \xB7 {day}", allDay: "All day", range: "{start} \u2013 {end}" }
@@ -506,11 +526,11 @@ function dateKey(date) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 function timeText(date) {
-  return `${date.getHours()}:${pad(date.getMinutes())}`;
+  return formatClock(date);
 }
 function dayLabel(date, today = startOfDay(/* @__PURE__ */ new Date()), locale = getLocale()) {
   const diff = Math.round((startOfDay(date).getTime() - today.getTime()) / 864e5);
-  const base = locale === "ja" ? `${date.getMonth() + 1}/${date.getDate()}(${WEEKDAYS[date.getDay()]})` : date.toLocaleDateString(intlLocale(locale), { weekday: "short", month: "short", day: "numeric" });
+  const base = formatDate(date, "monthDayWeekday", locale);
   if (diff === 0) return messages2.t("today", { day: base }, locale);
   if (diff === 1) return messages2.t("tomorrow", { day: base }, locale);
   return base;
@@ -532,6 +552,11 @@ function eventTimeText(event, day, locale = getLocale()) {
   const startText = start < dayStart ? "" : formatClock(start, locale);
   const endText = end > addDays(dayStart, 1) ? "" : formatClock(end, locale);
   return messages2.t("range", { start: startText, end: endText }, locale).trim();
+}
+
+// extensions/accounts/src/calendar/CalendarDot.tsx
+function CalendarDot({ color }) {
+  return /* @__PURE__ */ jsx("span", { className: "size-2.5 shrink-0 rounded-full bg-muted", style: { background: color ?? void 0 } });
 }
 
 // extensions/accounts/src/calendar/EventEditor.tsx
@@ -668,14 +693,14 @@ function EventEditor({
     e.preventDefault();
     void run(() => onSave(inputOf(draft)));
   };
-  return /* @__PURE__ */ jsxs("form", { className: "calendar-editor", onSubmit: submit, children: [
+  return /* @__PURE__ */ jsxs("form", { className: "mb-6", onSubmit: submit, children: [
     /* @__PURE__ */ jsx(SectionTitle, { children: event ? readOnly ? t("viewTitle") : t("editTitle") : t("addTitle") }),
     /* @__PURE__ */ jsxs(Group, { children: [
-      /* @__PURE__ */ jsxs("fieldset", { className: "calendar-editor__fields", disabled: busy || readOnly, children: [
+      /* @__PURE__ */ jsxs("fieldset", { className: "m-0 border-0 p-0", disabled: busy || readOnly, children: [
         /* @__PURE__ */ jsx(Field, { label: t("name"), children: /* @__PURE__ */ jsx("input", { value: draft.title, maxLength: 200, autoFocus: !event, onChange: (e) => set({ title: e.target.value }) }) }),
         /* @__PURE__ */ jsx(Field, { label: t("calendar"), hint: event ? t("calendarHint") : void 0, children: /* @__PURE__ */ jsx("select", { value: draft.calendarId, onChange: (e) => set({ calendarId: e.target.value }), children: writable.map((c) => /* @__PURE__ */ jsx("option", { value: c.id, children: t("calendarOption", { name: c.name, source: c.source }) }, c.id)) }) }),
         /* @__PURE__ */ jsx(Check, { checked: draft.allDay, onChange: (allDay) => set({ allDay }), children: t("allDay") }),
-        /* @__PURE__ */ jsxs("div", { className: "calendar-editor__when", children: [
+        /* @__PURE__ */ jsxs("div", { className: "flex flex-wrap gap-x-3 *:min-w-0 *:flex-1 *:basis-36", children: [
           /* @__PURE__ */ jsx(Field, { label: t("start"), children: /* @__PURE__ */ jsx("input", { type: "date", value: draft.startDate, onChange: (e) => set({ startDate: e.target.value, endDate: e.target.value > draft.endDate ? e.target.value : draft.endDate }) }) }),
           !draft.allDay && /* @__PURE__ */ jsx(Field, { label: t("time"), children: /* @__PURE__ */ jsx("input", { type: "time", value: draft.startTime, onChange: (e) => set({ startTime: e.target.value }) }) }),
           /* @__PURE__ */ jsx(Field, { label: draft.allDay ? t("endAllDay") : t("end"), children: /* @__PURE__ */ jsx("input", { type: "date", value: draft.endDate, onChange: (e) => set({ endDate: e.target.value }) }) }),
@@ -703,66 +728,290 @@ function EventEditor({
   ] });
 }
 
-// extensions/accounts/src/calendar/CalendarScreen.tsx
-var SPAN_DAYS = 14;
+// extensions/accounts/src/calendar/MonthGrid.tsx
 var messages4 = defineMessages({
+  ja: { previousMonth: "\u524D\u306E\u6708", nextMonth: "\u6B21\u306E\u6708", hasEvents: "\u4E88\u5B9A\u3042\u308A" },
+  en: { previousMonth: "Previous month", nextMonth: "Next month", hasEvents: "has events" }
+});
+var GRID_DAYS = 42;
+function gridStart(month, display) {
+  return startOfWeek(new Date(month.getFullYear(), month.getMonth(), 1), display);
+}
+function sameDay(a, b) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+function MonthGrid({
+  month,
+  selected,
+  marked,
+  onSelect,
+  onMonth,
+  compact = false
+}) {
+  const t = messages4.useT();
+  const locale = useLocale();
+  const display = useDisplay();
+  const today = startOfDay(/* @__PURE__ */ new Date());
+  const start = gridStart(month, display);
+  const days = Array.from({ length: GRID_DAYS }, (_, i) => addDays(start, i));
+  const weekdays = days.slice(0, 7).map((day) => formatDate(day, "weekday", locale, display));
+  const shift = (delta) => onMonth?.(new Date(month.getFullYear(), month.getMonth() + delta, 1));
+  return /* @__PURE__ */ jsxs("div", { className: cx("flex w-full min-w-0 flex-col", compact ? "gap-1" : "gap-2"), children: [
+    /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between gap-2", children: [
+      /* @__PURE__ */ jsx("span", { className: cx("font-semibold", compact ? "text-label" : "text-title"), children: formatDate(month, "monthYear", locale, display) }),
+      onMonth && /* @__PURE__ */ jsxs("span", { className: "flex gap-1", children: [
+        /* @__PURE__ */ jsx(IconButton, { icon: "chevron-left", label: t("previousMonth"), onClick: () => shift(-1) }),
+        /* @__PURE__ */ jsx(IconButton, { icon: "chevron-right", label: t("nextMonth"), onClick: () => shift(1) })
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxs(
+      "div",
+      {
+        className: cx("grid grid-cols-7", compact ? "auto-rows-fr gap-x-0.5 gap-y-0.5" : "gap-0.5"),
+        role: "grid",
+        "aria-label": formatDate(month, "monthYear", locale, display),
+        children: [
+          weekdays.map((name, i) => /* @__PURE__ */ jsx(
+            "span",
+            {
+              className: cx("text-center text-muted", compact ? "text-micro" : "pb-1 text-caption font-medium"),
+              role: "columnheader",
+              children: name
+            },
+            `w${i}`
+          )),
+          days.map((day) => {
+            const outside = day.getMonth() !== month.getMonth();
+            const isToday = sameDay(day, today);
+            const isSelected = selected ? sameDay(day, selected) : false;
+            const hasEvents = marked?.(day) ?? false;
+            const className = cx(
+              "relative flex flex-col items-center justify-center gap-0.5 rounded-inner tabular-nums",
+              compact ? "py-0.5 text-note" : "tap-lg",
+              onSelect && "press cursor-pointer",
+              onSelect && !isSelected && "hover:bg-tint/8",
+              outside && "text-muted opacity-55",
+              isSelected && "fill-bright"
+            );
+            const numberClass = cx(
+              !isSelected && day.getDay() === 0 && "text-danger",
+              !isSelected && day.getDay() === 6 && "text-accent-soft",
+              isToday && "inline-flex items-center justify-center rounded-full font-bold ring-2 ring-accent ring-inset",
+              isToday && (compact ? "size-5" : "size-7.5")
+            );
+            const label = `${formatDate(day, "monthDayWeekday", locale, display)}${hasEvents ? ` \xB7 ${t("hasEvents")}` : ""}`;
+            const content = /* @__PURE__ */ jsxs(Fragment2, { children: [
+              /* @__PURE__ */ jsx("span", { className: numberClass, children: day.getDate() }),
+              hasEvents && /* @__PURE__ */ jsx("span", { className: "size-1.5 rounded-full bg-current opacity-80", "aria-hidden": "true" })
+            ] });
+            return onSelect ? /* @__PURE__ */ jsx(
+              "button",
+              {
+                type: "button",
+                role: "gridcell",
+                className,
+                "aria-label": label,
+                "aria-selected": isSelected,
+                "aria-current": isToday ? "date" : void 0,
+                onClick: () => onSelect(day),
+                children: content
+              },
+              day.getTime()
+            ) : /* @__PURE__ */ jsx("span", { role: "gridcell", className, "aria-label": label, "aria-current": isToday ? "date" : void 0, children: content }, day.getTime());
+          })
+        ]
+      }
+    )
+  ] });
+}
+
+// extensions/accounts/src/swr.ts
+var values = /* @__PURE__ */ new Map();
+var loading = /* @__PURE__ */ new Map();
+var MAX_ENTRIES = 300;
+function peekCached(key) {
+  return values.get(key)?.value;
+}
+function fetchCached(key, load, maxAgeMs = 0) {
+  const hit = values.get(key);
+  if (hit && Date.now() - hit.at < maxAgeMs) return Promise.resolve(hit.value);
+  const running = loading.get(key);
+  if (running) return running;
+  const task = load().then(
+    (value) => {
+      values.delete(key);
+      values.set(key, { value, at: Date.now() });
+      while (values.size > MAX_ENTRIES) values.delete(values.keys().next().value);
+      return value;
+    }
+  );
+  loading.set(key, task);
+  void task.finally(() => loading.delete(key)).catch(() => void 0);
+  return task;
+}
+function forgetCached(prefix) {
+  for (const key of [...values.keys()]) if (key.startsWith(prefix)) values.delete(key);
+}
+function useCached(key, load, refreshMs) {
+  const [state, setState] = useState(() => ({
+    key,
+    data: key ? peekCached(key) : void 0,
+    error: null
+  }));
+  const loadRef = useRef(load);
+  loadRef.current = load;
+  let current = state;
+  if (state.key !== key) {
+    current = { key, data: key ? peekCached(key) : void 0, error: null };
+    setState(current);
+  }
+  const reload = useCallback(async () => {
+    if (!key) return;
+    try {
+      const data = await fetchCached(key, () => loadRef.current());
+      setState((s) => s.key === key ? { key, data, error: null } : s);
+    } catch (err) {
+      const error = err instanceof Error ? err.message : String(err);
+      setState((s) => s.key === key ? { ...s, error } : s);
+    }
+  }, [key]);
+  useEffect(() => {
+    void reload();
+    if (!refreshMs) return;
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible") void reload();
+    }, refreshMs);
+    return () => clearInterval(timer);
+  }, [reload, refreshMs]);
+  return { data: current.data, error: current.error, reload };
+}
+
+// extensions/accounts/src/calendar/CalendarScreen.tsx
+var messages5 = defineMessages({
   ja: {
-    previous: "\u524D\u3078",
     today: "\u4ECA\u65E5",
-    next: "\u6B21\u3078",
     addEvent: "\u4E88\u5B9A\u3092\u8DB3\u3059",
-    noCalendars: "\u30AB\u30EC\u30F3\u30C0\u30FC\u304C\u3042\u308A\u307E\u305B\u3093\u3002\u8A2D\u5B9A\u306E\u300C\u30A2\u30AB\u30A6\u30F3\u30C8 \u2192 \u30A4\u30F3\u30BF\u30FC\u30CD\u30C3\u30C8\u30A2\u30AB\u30A6\u30F3\u30C8\u300D\u3067 Google\u30FBiCloud \u306A\u3069\u3092\u8DB3\u3059\u3068\u3001\u3053\u3053\u306B\u4E88\u5B9A\u304C\u51FA\u307E\u3059\u3002",
-    noEvents: "\u4E88\u5B9A\u306F\u3042\u308A\u307E\u305B\u3093"
+    noCalendars: "\u30AB\u30EC\u30F3\u30C0\u30FC\u306E\u30A2\u30AB\u30A6\u30F3\u30C8\u304C\u672A\u8A2D\u5B9A\u3067\u3059\uFF08\u62BC\u3059\u3068\u8A2D\u5B9A\u3078\uFF09",
+    noEvents: "\u4E88\u5B9A\u306F\u3042\u308A\u307E\u305B\u3093",
+    calendars: "\u30AB\u30EC\u30F3\u30C0\u30FC",
+    noCalendarList: "\u30AB\u30EC\u30F3\u30C0\u30FC\u306F\u307E\u3060\u3042\u308A\u307E\u305B\u3093",
+    toggle: "{name}\u3092\u51FA\u3059",
+    onlyOwner: "\u5165\uFF0F\u5207\u306F\u30A2\u30AB\u30A6\u30F3\u30C8\u3092\u8DB3\u3057\u305F\u4EBA\u304C\u5909\u3048\u307E\u3059"
   },
   en: {
-    previous: "Previous",
     today: "Today",
-    next: "Next",
     addEvent: "Add event",
-    noCalendars: "No calendars. Add Google, iCloud, or other accounts in Settings \u2192 Accounts \u2192 Internet Accounts to see events here.",
-    noEvents: "No events"
+    noCalendars: "No calendar account yet (tap to set up)",
+    noEvents: "No events",
+    calendars: "Calendars",
+    noCalendarList: "No calendars yet",
+    toggle: "Show {name}",
+    onlyOwner: "Only the person who added the account can change this"
   }
 });
+var eventsKey = (anchor) => `calendar:events:${anchor}`;
 function CalendarScreen({ ctx }) {
-  const t = messages4.useT();
+  const t = messages5.useT();
   const tc = commonMessages.useT();
   const locale = useLocale();
-  const [anchor, setAnchor] = useState(() => startOfDay(/* @__PURE__ */ new Date()));
-  const [calendars, setCalendars] = useState([]);
-  const [events, setEvents] = useState(null);
-  const [errors, setErrors] = useState([]);
+  const display = useDisplay();
+  const [month, setMonth] = useState(() => startOfDay(/* @__PURE__ */ new Date()));
+  const [selected, setSelected] = useState(() => startOfDay(/* @__PURE__ */ new Date()));
+  const anchor = gridStart(month, display);
+  const anchorTime = anchor.getTime();
+  const eventsFor = (start) => fetchEvents(ctx, new Date(start), addDays(new Date(start), GRID_DAYS));
+  const calendarList = useCached("calendar:calendars", () => fetchCalendars(ctx), 5 * 60 * 1e3);
+  const eventList = useCached(eventsKey(anchorTime), () => eventsFor(anchorTime), 5 * 60 * 1e3);
+  const [toggled, setToggled] = useState(/* @__PURE__ */ new Map());
   const [failure, setFailure] = useState(null);
+  const calendars = useMemo(
+    () => (calendarList.data?.calendars ?? []).map((c) => toggled.has(c.id) ? { ...c, enabled: toggled.get(c.id) } : c),
+    [calendarList.data, toggled]
+  );
+  const events = eventList.data?.events ?? null;
+  const errors = useMemo(() => {
+    const seen = /* @__PURE__ */ new Set();
+    return [...calendarList.data?.errors ?? [], ...eventList.data?.errors ?? []].filter(
+      (e) => !seen.has(e.source) && seen.add(e.source)
+    );
+  }, [calendarList.data, eventList.data]);
+  const loadError = eventList.error ?? calendarList.error;
   const [editing, setEditing] = useState(null);
-  const load = useCallback(async () => {
-    try {
-      const [cal, ev] = await Promise.all([fetchCalendars(ctx), fetchEvents(ctx, anchor, addDays(anchor, SPAN_DAYS))]);
-      setCalendars(cal.calendars);
-      setEvents(ev.events);
-      const seen = /* @__PURE__ */ new Set();
-      setErrors([...cal.errors, ...ev.errors].filter((e) => !seen.has(e.source) && seen.add(e.source)));
-      setFailure(null);
-    } catch (err) {
-      setFailure(err instanceof Error ? err.message : String(err));
-    }
-  }, [ctx, anchor]);
+  const load = async () => {
+    forgetCached("calendar:events:");
+    forgetCached("calendar:calendars");
+    await Promise.all([eventList.reload(), calendarList.reload()]);
+  };
   useEffect(() => {
-    void load();
-    const timer = setInterval(() => void load(), 5 * 60 * 1e3);
-    return () => clearInterval(timer);
-  }, [load]);
+    if (!eventList.data) return;
+    const timer = setTimeout(async () => {
+      for (const delta of [1, -1]) {
+        const next = gridStart(new Date(month.getFullYear(), month.getMonth() + delta, 1), display).getTime();
+        await fetchCached(eventsKey(next), () => eventsFor(next), 5 * 60 * 1e3).catch(() => void 0);
+      }
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [eventList.data]);
   const colors = useMemo(() => new Map(calendars.map((c) => [c.id, c.color])), [calendars]);
   const names = useMemo(() => new Map(calendars.map((c) => [c.id, c.name])), [calendars]);
   const today = startOfDay(/* @__PURE__ */ new Date());
-  const days = Array.from({ length: SPAN_DAYS }, (_, i) => addDays(anchor, i));
-  const canWrite = calendars.some((c) => c.writable);
-  const actions = /* @__PURE__ */ jsxs(ButtonRow, { children: [
-    /* @__PURE__ */ jsx(Button, { icon: "chevron-left", onClick: () => setAnchor(addDays(anchor, -SPAN_DAYS)), children: t("previous") }),
-    /* @__PURE__ */ jsx(Button, { onClick: () => setAnchor(today), children: t("today") }),
-    /* @__PURE__ */ jsx(Button, { onClick: () => setAnchor(addDays(anchor, SPAN_DAYS)), children: t("next") }),
-    canWrite && /* @__PURE__ */ jsx(Button, { variant: "primary", icon: "add", onClick: () => setEditing({ event: null, day: anchor < today ? today : anchor }), children: t("addEvent") })
+  const enabledCalendars = calendars.filter((c) => c.enabled !== false);
+  const canWrite = enabledCalendars.some((c) => c.writable);
+  const bySource = useMemo(() => {
+    const groups = /* @__PURE__ */ new Map();
+    for (const c of calendars) groups.set(c.source, [...groups.get(c.source) ?? [], c]);
+    return [...groups];
+  }, [calendars]);
+  const toggle = async (calendar, enabled) => {
+    setToggled((m4) => new Map(m4).set(calendar.id, enabled));
+    try {
+      await setCalendarEnabled(ctx, calendar.id, enabled);
+      await load();
+    } catch (err) {
+      setFailure(err instanceof Error ? err.message : String(err));
+    }
+    setToggled((m4) => {
+      const next = new Map(m4);
+      next.delete(calendar.id);
+      return next;
+    });
+  };
+  const side = /* @__PURE__ */ jsxs(Fragment2, { children: [
+    bySource.length === 0 && /* @__PURE__ */ jsx(ScreenNotice, { children: t("noCalendarList") }),
+    bySource.map(([source, list]) => /* @__PURE__ */ jsxs("section", { children: [
+      /* @__PURE__ */ jsx(SectionTitle, { children: source }),
+      /* @__PURE__ */ jsx(List, { boxed: true, label: source, children: list.map((c) => /* @__PURE__ */ jsx(
+        ListItem,
+        {
+          leading: /* @__PURE__ */ jsx(CalendarDot, { color: c.color }),
+          title: c.name,
+          off: c.enabled === false,
+          trailing: /* @__PURE__ */ jsx(
+            ToggleSwitch,
+            {
+              checked: c.enabled !== false,
+              disabled: !c.toggleable,
+              label: t("toggle", { name: c.name }),
+              onChange: (on) => void toggle(c, on)
+            }
+          )
+        },
+        c.id
+      )) }),
+      list.some((c) => !c.toggleable) && /* @__PURE__ */ jsx(Note, { children: t("onlyOwner") })
+    ] }, source))
   ] });
-  return /* @__PURE__ */ jsxs(ScreenFrame, { title: "Calendar", actions, children: [
-    failure && /* @__PURE__ */ jsx(ScreenNotice, { tone: "error", children: failure }),
+  const onSelected = events?.filter((e) => eventOnDay(e, selected)) ?? [];
+  const select = (day) => {
+    setSelected(day);
+    if (day.getMonth() !== month.getMonth() || day.getFullYear() !== month.getFullYear()) setMonth(day);
+  };
+  const actions = /* @__PURE__ */ jsxs(ButtonRow, { children: [
+    /* @__PURE__ */ jsx(Button, { onClick: () => select(today), children: t("today") }),
+    canWrite && /* @__PURE__ */ jsx(Button, { variant: "primary", icon: "add", onClick: () => setEditing({ event: null, day: selected }), children: t("addEvent") })
+  ] });
+  return /* @__PURE__ */ jsxs(ScreenFrame, { title: { ja: "\u30AB\u30EC\u30F3\u30C0\u30FC", en: "Calendar" }, actions, children: [
+    (failure ?? (events === null ? loadError : null)) && /* @__PURE__ */ jsx(ScreenNotice, { tone: "error", children: failure ?? loadError }),
     errors.map((e) => /* @__PURE__ */ jsxs(ScreenNotice, { tone: "error", children: [
       e.source,
       ": ",
@@ -772,7 +1021,7 @@ function CalendarScreen({ ctx }) {
       EventEditor,
       {
         event: editing.event,
-        calendars,
+        calendars: enabledCalendars,
         day: editing.day,
         onClose: () => setEditing(null),
         onSave: async (input) => {
@@ -789,31 +1038,47 @@ function CalendarScreen({ ctx }) {
       },
       editing.event?.id ?? "new"
     ),
-    events === null && !failure && /* @__PURE__ */ jsx(ScreenNotice, { children: tc("loading") }),
-    events !== null && calendars.length === 0 && errors.length === 0 && /* @__PURE__ */ jsx(ScreenNotice, { children: t("noCalendars") }),
-    events !== null && days.map((day) => {
-      const onDay = events.filter((e) => eventOnDay(e, day));
-      if (onDay.length === 0 && day.getTime() !== today.getTime()) return null;
-      return /* @__PURE__ */ jsx(ScreenSection, { title: dayLabel(day, today, locale), className: "calendar-day", children: onDay.length === 0 ? /* @__PURE__ */ jsx(ScreenNotice, { children: t("noEvents") }) : /* @__PURE__ */ jsx(List, { label: dayLabel(day, today, locale), children: onDay.map((event) => /* @__PURE__ */ jsx(
+    /* @__PURE__ */ jsxs(SideLayout, { side, sideLabel: t("calendars"), narrow: "below", children: [
+      events !== null && calendars.length === 0 && errors.length === 0 && /* @__PURE__ */ jsx("div", { className: "mb-3", children: /* @__PURE__ */ jsx(
+        Button,
+        {
+          icon: "warning",
+          className: "max-w-full text-left whitespace-normal [&_.fluent-icon]:shrink-0 [&_.fluent-icon]:text-warn",
+          onClick: () => openSettings({ page: "account" }),
+          children: t("noCalendars")
+        }
+      ) }),
+      /* @__PURE__ */ jsx(Group, { className: "mb-4", children: /* @__PURE__ */ jsx(
+        MonthGrid,
+        {
+          month,
+          selected,
+          marked: (day) => events?.some((e) => eventOnDay(e, day)) ?? false,
+          onSelect: select,
+          onMonth: (next) => setMonth(next)
+        }
+      ) }),
+      /* @__PURE__ */ jsx(ScreenSection, { title: dayLabel(selected, today, locale), children: events === null && !loadError ? /* @__PURE__ */ jsx(ScreenNotice, { children: tc("loading") }) : onSelected.length === 0 ? /* @__PURE__ */ jsx(ScreenNotice, { children: t("noEvents") }) : /* @__PURE__ */ jsx(List, { boxed: true, label: dayLabel(selected, today, locale), children: onSelected.map((event) => /* @__PURE__ */ jsx(
         ListItem,
         {
-          leading: /* @__PURE__ */ jsx("span", { className: "calendar-dot", style: { background: colors.get(event.calendarId) ?? void 0 } }),
+          leading: /* @__PURE__ */ jsx(CalendarDot, { color: colors.get(event.calendarId) }),
           title: event.title,
-          detail: [eventTimeText(event, day, locale), event.location, names.get(event.calendarId)].filter(Boolean).join(" \xB7 "),
-          onClick: () => setEditing({ event, day })
+          detail: [eventTimeText(event, selected, locale), event.location, names.get(event.calendarId)].filter(Boolean).join(" \xB7 "),
+          onClick: () => setEditing({ event, day: selected })
         },
         `${event.id}:${event.start}`
-      )) }) }, day.getTime());
-    })
+      )) }) })
+    ] })
   ] });
 }
 
 // extensions/accounts/src/calendar/widget.tsx
-var messages5 = defineMessages({
+var messages6 = defineMessages({
   ja: {
     cardLabel: "\u4E88\u5B9A\uFF081\u9031\u9593\u5206\u3092\u958B\u304F\uFF09",
     loadFailed: "\u8AAD\u3081\u307E\u305B\u3093\u3067\u3057\u305F",
     noCalendars: "\u8A2D\u5B9A\u306E\u300C\u30A2\u30AB\u30A6\u30F3\u30C8 \u2192 \u30A4\u30F3\u30BF\u30FC\u30CD\u30C3\u30C8\u30A2\u30AB\u30A6\u30F3\u30C8\u300D\u3067\u30AB\u30EC\u30F3\u30C0\u30FC\u3092\u8DB3\u3059\u3068\u3001\u4E88\u5B9A\u304C\u51FA\u307E\u3059",
+    noCalendarsShort: "\u30A2\u30AB\u30A6\u30F3\u30C8\u304C\u672A\u8A2D\u5B9A\uFF08\u8A2D\u5B9A \u2192 \u30A2\u30AB\u30A6\u30F3\u30C8\uFF09",
     emptyTwoDays: "\u4ECA\u65E5\u3068\u660E\u65E5\u306E\u4E88\u5B9A\u306F\u3042\u308A\u307E\u305B\u3093",
     detailTitle: "\u3053\u308C\u304B\u3089\u306E\u4E88\u5B9A",
     emptyWeek: "1\u9031\u9593\u306E\u4E88\u5B9A\u306F\u3042\u308A\u307E\u305B\u3093"
@@ -822,6 +1087,7 @@ var messages5 = defineMessages({
     cardLabel: "Events (open the week)",
     loadFailed: "Couldn't load",
     noCalendars: "Add a calendar in Settings \u2192 Accounts \u2192 Internet Accounts to see your events",
+    noCalendarsShort: "No account yet (Settings \u2192 Accounts)",
     emptyTwoDays: "No events today or tomorrow",
     detailTitle: "Upcoming events",
     emptyWeek: "No events this week"
@@ -843,52 +1109,59 @@ function useAgenda(ctx, days, intervalMs) {
   }, intervalMs);
 }
 function AgendaView({ ctx, config, size, openDetail }) {
-  const t = messages5.useT();
+  const t = messages6.useT();
   const locale = useLocale();
   const { data, error } = useAgenda(ctx, 2, config.pollIntervalMs);
   const colors = useMemo(() => new Map(data?.calendars.map((c) => [c.id, c.color]) ?? []), [data]);
   const room = Math.max(3, size.h * 4 - 1);
   const groups = data ? upcoming(data.events, 2) : [];
   let left = room;
-  return /* @__PURE__ */ jsxs(WidgetCard, { className: "calendar-widget", onClick: openDetail, label: t("cardLabel"), children: [
+  return /* @__PURE__ */ jsxs(WidgetCard, { className: "justify-start gap-2.5", onClick: openDetail, label: t("cardLabel"), children: [
     Boolean(error) && !data && /* @__PURE__ */ jsx(WidgetHint, { tone: "error", children: t("loadFailed") }),
-    data && data.calendars.length === 0 && /* @__PURE__ */ jsx(WidgetHint, { children: t("noCalendars") }),
-    data && data.calendars.length > 0 && groups.length === 0 && /* @__PURE__ */ jsx("span", { className: "calendar-widget__empty", children: t("emptyTwoDays") }),
+    data && data.calendars.length === 0 && /* @__PURE__ */ jsxs(Fragment2, { children: [
+      /* @__PURE__ */ jsx(MonthGrid, { month: /* @__PURE__ */ new Date(), compact: true }),
+      /* @__PURE__ */ jsx(WidgetHint, { children: t("noCalendarsShort") })
+    ] }),
+    data && data.calendars.length > 0 && groups.length === 0 && /* @__PURE__ */ jsx("span", { className: "text-muted", children: t("emptyTwoDays") }),
     groups.map(({ day, events }) => {
       if (left <= 0) return null;
       const shown = events.slice(0, left - 1);
       left -= shown.length + 1;
-      return /* @__PURE__ */ jsxs("div", { className: "calendar-widget__day", children: [
-        /* @__PURE__ */ jsx("span", { className: "calendar-widget__label", children: dayLabel(day, void 0, locale) }),
-        shown.map((event) => /* @__PURE__ */ jsxs("span", { className: "calendar-widget__event", children: [
-          /* @__PURE__ */ jsx("span", { className: "calendar-dot", style: { background: colors.get(event.calendarId) ?? void 0 } }),
-          /* @__PURE__ */ jsx("span", { className: "calendar-widget__time", children: eventTimeText(event, day, locale) }),
-          /* @__PURE__ */ jsx("span", { className: "calendar-widget__title", children: event.title })
+      return /* @__PURE__ */ jsxs("div", { className: "flex w-full min-w-0 flex-col gap-1", children: [
+        /* @__PURE__ */ jsx("span", { className: "text-note font-medium text-muted", children: dayLabel(day, void 0, locale) }),
+        shown.map((event) => /* @__PURE__ */ jsxs("span", { className: "flex min-w-0 items-center gap-2.5 text-body", children: [
+          /* @__PURE__ */ jsx(CalendarDot, { color: colors.get(event.calendarId) }),
+          /* @__PURE__ */ jsx("span", { className: "min-w-18 shrink-0 text-muted tabular-nums", children: eventTimeText(event, day, locale) }),
+          /* @__PURE__ */ jsx("span", { className: "ellipsis", children: event.title })
         ] }, `${event.id}:${event.start}`))
       ] }, day.getTime());
     })
   ] });
 }
 function AgendaDetail({ ctx, config }) {
-  const t = messages5.useT();
+  const t = messages6.useT();
   const locale = useLocale();
   const { data } = useAgenda(ctx, 7, config.pollIntervalMs);
   const colors = new Map(data?.calendars.map((c) => [c.id, c.color]) ?? []);
   const names = new Map(data?.calendars.map((c) => [c.id, c.name]) ?? []);
   const groups = data ? upcoming(data.events, 7) : [];
-  return /* @__PURE__ */ jsxs(DetailFrame, { title: t("detailTitle"), className: "calendar-detail", children: [
+  return /* @__PURE__ */ jsxs(DetailFrame, { title: t("detailTitle"), children: [
     data?.errors.map((e) => /* @__PURE__ */ jsxs(Note, { children: [
       e.source,
       ": ",
       e.message
     ] }, e.source)),
-    data && groups.length === 0 && /* @__PURE__ */ jsx(Note, { children: t("emptyWeek") }),
+    data && data.calendars.length === 0 && /* @__PURE__ */ jsxs(Fragment2, { children: [
+      /* @__PURE__ */ jsx(MonthGrid, { month: /* @__PURE__ */ new Date() }),
+      /* @__PURE__ */ jsx(Note, { children: t("noCalendars") })
+    ] }),
+    data && data.calendars.length > 0 && groups.length === 0 && /* @__PURE__ */ jsx(Note, { children: t("emptyWeek") }),
     groups.map(({ day, events }) => /* @__PURE__ */ jsxs("section", { children: [
-      /* @__PURE__ */ jsx("h3", { className: "calendar-detail__day", children: dayLabel(day, void 0, locale) }),
+      /* @__PURE__ */ jsx(SectionTitle, { children: dayLabel(day, void 0, locale) }),
       /* @__PURE__ */ jsx(List, { children: events.map((event) => /* @__PURE__ */ jsx(
         ListItem,
         {
-          leading: /* @__PURE__ */ jsx("span", { className: "calendar-dot", style: { background: colors.get(event.calendarId) ?? void 0 } }),
+          leading: /* @__PURE__ */ jsx(CalendarDot, { color: colors.get(event.calendarId) }),
           title: event.title,
           detail: [eventTimeText(event, day, locale), event.location, names.get(event.calendarId)].filter(Boolean).join(" \xB7 ")
         },
@@ -927,13 +1200,19 @@ var fetchMailboxes = (ctx) => request3(ctx, "/mailboxes");
 var fetchMessages = (ctx, options) => {
   const params = new URLSearchParams({ limit: String(options.limit ?? 30) });
   if (options.mailbox) params.set("mailbox", options.mailbox);
+  if (options.folder && options.folder !== "inbox") params.set("folder", options.folder);
   if (options.unread) params.set("unread", "true");
   return request3(ctx, `/messages?${params}`);
 };
+var fetchFolders = (ctx, mailbox) => request3(
+  ctx,
+  `/folders${mailbox ? `?${new URLSearchParams({ mailbox })}` : ""}`
+);
 var fetchMessage = async (ctx, id) => (await request3(ctx, `/messages/${encodeURIComponent(id)}`)).message;
 var setRead = (ctx, id, read) => request3(ctx, `/messages/${encodeURIComponent(id)}/read`, { method: "PUT", json: { read } });
+var moveMessage = (ctx, id, folder, from) => request3(ctx, `/messages/${encodeURIComponent(id)}/move`, { method: "POST", json: { folder, from } });
 var sendMail = (ctx, draft) => request3(ctx, "/send", { method: "POST", json: draft });
-var messages6 = defineMessages({
+var messages7 = defineMessages({
   ja: { noSender: "\uFF08\u5DEE\u51FA\u4EBA\u306A\u3057\uFF09" },
   en: { noSender: "(No sender)" }
 });
@@ -943,18 +1222,284 @@ function mailDate(iso, locale = getLocale()) {
   const now = /* @__PURE__ */ new Date();
   if (date.toDateString() === now.toDateString()) return formatClock(date, locale);
   const sameYear = date.getFullYear() === now.getFullYear();
-  if (locale !== "ja")
-    return date.toLocaleDateString(intlLocale(locale), sameYear ? { month: "short", day: "numeric" } : { year: "numeric", month: "short", day: "numeric" });
-  if (sameYear) return `${date.getMonth() + 1}/${date.getDate()}`;
-  return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
+  return formatDate(date, sameYear ? "monthDay" : "full", locale);
 }
-var senderName = (message, locale) => message.from?.name || message.from?.address || messages6.t("noSender", void 0, locale);
+var senderName = (message, locale) => message.from?.name || message.from?.address || messages7.t("noSender", void 0, locale);
+
+// extensions/accounts/src/mail/types.ts
+var MAIL_FOLDERS = ["inbox", "sent", "drafts", "junk", "trash"];
+
+// extensions/accounts/src/mail/MailFolders.tsx
+var STAGGER_IN_MS = 35;
+var STAGGER_OUT_MS = 22;
+var STAGGER_TOTAL_MS = 240;
+function FolderIcon({ icon }) {
+  return /* @__PURE__ */ jsx("span", { className: "grid size-8 shrink-0 place-items-center rounded-nav bg-accent-soft/18 text-title", children: /* @__PURE__ */ jsx(Icon, { name: icon }) });
+}
+function staggers(count) {
+  if (reducedMotion()) return { inMs: 0, outMs: 0 };
+  const steps = Math.max(count - 1, 1);
+  return { inMs: Math.min(STAGGER_IN_MS, STAGGER_TOTAL_MS / steps), outMs: Math.min(STAGGER_OUT_MS, STAGGER_TOTAL_MS / steps) };
+}
+var messages8 = defineMessages({
+  ja: {
+    folders: "\u30D5\u30A9\u30EB\u30C0\u30FC",
+    mailboxFolders: "\u30E1\u30FC\u30EB\u30DC\u30C3\u30AF\u30B9",
+    folder_inbox: "\u53D7\u4FE1\u7BB1",
+    folder_sent: "\u9001\u4FE1\u6E08\u307F",
+    folder_drafts: "\u4E0B\u66F8\u304D",
+    folder_junk: "\u8FF7\u60D1\u30E1\u30FC\u30EB",
+    folder_trash: "\u30B4\u30DF\u7BB1",
+    expand: "{name}\u3092\u958B\u304F",
+    collapse: "{name}\u3092\u9589\u3058\u308B"
+  },
+  en: {
+    folders: "Folders",
+    mailboxFolders: "Mailboxes",
+    folder_inbox: "Inbox",
+    folder_sent: "Sent",
+    folder_drafts: "Drafts",
+    folder_junk: "Junk",
+    folder_trash: "Trash",
+    expand: "Expand {name}",
+    collapse: "Collapse {name}"
+  }
+});
+var folderMessages = messages8;
+var FOLDER_ICONS = {
+  inbox: "inbox",
+  sent: "send",
+  drafts: "drafts",
+  junk: "junk",
+  trash: "delete"
+};
+function buildTree(folders) {
+  const root = { name: "", folder: null, children: [], id: "" };
+  for (const folder of folders) {
+    let node = root;
+    folder.path.forEach((name, depth) => {
+      let child = node.children.find((c) => c.name === name);
+      if (!child) {
+        child = { name, folder: null, children: [], id: `${folder.mailboxId}/${folder.path.slice(0, depth + 1).join("/")}` };
+        node.children.push(child);
+      }
+      node = child;
+    });
+    node.folder = folder;
+  }
+  return root.children;
+}
+var STORAGE_KEY = "home-dashboard:mail-open-folders";
+function readOpen() {
+  try {
+    const value = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]");
+    return new Set(Array.isArray(value) ? value.filter((v) => typeof v === "string") : []);
+  } catch {
+    return /* @__PURE__ */ new Set();
+  }
+}
+function MailFolders({
+  folders,
+  groupName,
+  current,
+  unreadInbox,
+  onChoose
+}) {
+  const t = messages8.useT();
+  const [open, setOpen] = useState(readOpen);
+  const [closing, setClosing] = useState(/* @__PURE__ */ new Set());
+  const [opened, setOpened] = useState(/* @__PURE__ */ new Set());
+  const timers = useRef(/* @__PURE__ */ new Map());
+  useEffect(() => () => timers.current.forEach(clearTimeout), []);
+  const rootRef = useRef(null);
+  const beforeOpen = useRef(null);
+  const lifted = useRef(/* @__PURE__ */ new Map());
+  const settle = useRef(null);
+  const followingRows = (id) => {
+    const root = rootRef.current;
+    const node = root?.querySelector(`[data-node-id="${CSS.escape(id)}"]`);
+    if (!root || !node) return [];
+    return Array.from(root.querySelectorAll("[data-tree-row]")).filter(
+      (el) => !node.contains(el) && Boolean(node.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING)
+    );
+  };
+  useLayoutEffect(() => {
+    const opening = beforeOpen.current;
+    if (opening) {
+      beforeOpen.current = null;
+      for (const [el, top] of opening.rows) {
+        const delta = top - el.getBoundingClientRect().top;
+        if (!delta || opening.durationMs === 0) continue;
+        el.style.transition = "none";
+        el.style.transform = `translateY(${delta}px)`;
+        void el.getBoundingClientRect();
+        el.style.transition = `transform ${opening.durationMs}ms var(--ease-out)`;
+        el.style.transform = "";
+        setTimeout(() => el.style.transition = "", opening.durationMs);
+      }
+    }
+    const rows = settle.current;
+    if (rows) {
+      settle.current = null;
+      for (const el of rows) {
+        el.style.transition = "none";
+        el.style.transform = "";
+        void el.getBoundingClientRect();
+        el.style.transition = "";
+      }
+    }
+  });
+  const persist = (next) => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify([...next]));
+    } catch {
+    }
+  };
+  const toggle = (id, childCount) => {
+    const timer = timers.current.get(id);
+    if (closing.has(id)) {
+      clearTimeout(timer);
+      timers.current.delete(id);
+      for (const el of lifted.current.get(id) ?? []) {
+        el.style.transition = `transform ${motionMs("base")}ms var(--ease-out)`;
+        el.style.transform = "";
+      }
+      lifted.current.delete(id);
+      setClosing((c) => new Set([...c].filter((x) => x !== id)));
+      return;
+    }
+    if (!open.has(id)) {
+      beforeOpen.current = {
+        rows: new Map(followingRows(id).map((el) => [el, el.getBoundingClientRect().top])),
+        durationMs: motionMs("slow")
+      };
+      setOpened((o) => new Set(o).add(id));
+      const { inMs } = staggers(childCount);
+      clearTimeout(timer);
+      timers.current.set(
+        id,
+        setTimeout(() => {
+          timers.current.delete(id);
+          setOpened((o) => new Set([...o].filter((x) => x !== id)));
+        }, motionMs("slow") + inMs * Math.max(childCount - 1, 0))
+      );
+      const next = new Set(open).add(id);
+      setOpen(next);
+      persist(next);
+      return;
+    }
+    setClosing((c) => new Set(c).add(id));
+    const { outMs } = staggers(childCount);
+    const total = motionMs("base") + outMs * Math.max(childCount - 1, 0);
+    const node = rootRef.current?.querySelector(`[data-node-id="${CSS.escape(id)}"]`);
+    const children = node?.querySelector(":scope > [data-tree-children]");
+    if (children) {
+      const height = children.getBoundingClientRect().height + parseFloat(getComputedStyle(children).marginTop);
+      const rows = followingRows(id);
+      for (const el of rows) {
+        el.style.transition = `transform ${motionMs("base")}ms var(--ease-in) ${outMs * Math.max(childCount - 1, 0)}ms`;
+        el.style.transform = `translateY(${-height}px)`;
+      }
+      lifted.current.set(id, rows);
+    }
+    timers.current.set(
+      id,
+      setTimeout(() => {
+        timers.current.delete(id);
+        settle.current = [...settle.current ?? [], ...lifted.current.get(id) ?? []];
+        lifted.current.delete(id);
+        setClosing((c) => new Set([...c].filter((x) => x !== id)));
+        setOpened((o) => new Set([...o].filter((x) => x !== id)));
+        setOpen((current2) => {
+          const next = new Set(current2);
+          next.delete(id);
+          persist(next);
+          return next;
+        });
+      }, total)
+    );
+  };
+  const groups = /* @__PURE__ */ new Map();
+  for (const f of folders) groups.set(f.mailboxId, [...groups.get(f.mailboxId) ?? [], f]);
+  const renderNodes = (nodes) => /* @__PURE__ */ jsx(List, { children: nodes.map((node, index) => {
+    const isOpen = open.has(node.id) && !closing.has(node.id);
+    const shown = open.has(node.id);
+    const count = node.children.length;
+    const { inMs, outMs } = staggers(count);
+    const folder = node.folder;
+    const selected = folder !== null && current.key === folder.id && current.mailboxId === folder.mailboxId;
+    return /* @__PURE__ */ jsxs("li", { "data-node-id": node.id, style: { "--i": index }, children: [
+      /* @__PURE__ */ jsx("ul", { "data-tree-row": true, children: /* @__PURE__ */ jsx(
+        ListItem,
+        {
+          leading: /* @__PURE__ */ jsx(FolderIcon, { icon: "mail" }),
+          title: node.name,
+          selected,
+          chevron: false,
+          onClick: () => folder ? onChoose({ key: folder.id, mailboxId: folder.mailboxId }) : toggle(node.id, count),
+          trailing: node.children.length > 0 ? (
+            // 開け閉めの矢印は、開くと下を向く。行の高さを変えないよう小さくし、外の余白を詰める
+            /* @__PURE__ */ jsx(
+              IconButton,
+              {
+                icon: "chevron-right",
+                label: t(isOpen ? "collapse" : "expand", { name: node.name }),
+                "aria-expanded": isOpen,
+                className: cx(
+                  "-my-1.5 -mr-1.5 size-8 text-muted hover:bg-tint/8",
+                  "[&_.fluent-icon]:transition-transform [&_.fluent-icon]:duration-(--motion-fast) [&_.fluent-icon]:ease-standard",
+                  isOpen && "[&_.fluent-icon]:rotate-90"
+                ),
+                onClick: (event) => {
+                  event.stopPropagation();
+                  toggle(node.id, count);
+                }
+              }
+            )
+          ) : void 0
+        }
+      ) }),
+      shown && count > 0 && /* @__PURE__ */ jsx(
+        "div",
+        {
+          "data-tree-children": true,
+          className: cx(
+            "mt-1.5 pl-5 [&>ul]:mb-0",
+            opened.has(node.id) && "mail-tree-entering",
+            closing.has(node.id) && "mail-tree-closing"
+          ),
+          style: { "--n": count, "--stagger-in": `${inMs}ms`, "--stagger-out": `${outMs}ms` },
+          children: renderNodes(node.children)
+        }
+      )
+    ] }, node.id);
+  }) });
+  return /* @__PURE__ */ jsxs("div", { ref: rootRef, children: [
+    /* @__PURE__ */ jsx(List, { label: t("folders"), children: MAIL_FOLDERS.map((f) => /* @__PURE__ */ jsx(
+      ListItem,
+      {
+        leading: /* @__PURE__ */ jsx(FolderIcon, { icon: FOLDER_ICONS[f] }),
+        title: t(`folder_${f}`),
+        badge: f === "inbox" && unreadInbox > 0 ? String(unreadInbox) : void 0,
+        selected: current.key === f,
+        chevron: false,
+        onClick: () => onChoose({ key: f, mailboxId: null })
+      },
+      f
+    )) }),
+    [...groups].map(([mailboxId, list]) => /* @__PURE__ */ jsxs("section", { className: "[&>ul]:mb-0", children: [
+      /* @__PURE__ */ jsx("div", { "data-tree-row": true, children: /* @__PURE__ */ jsx(SectionTitle, { children: groupName ? groupName(mailboxId) : t("mailboxFolders") }) }),
+      renderNodes(buildTree(list))
+    ] }, mailboxId))
+  ] });
+}
 
 // extensions/accounts/src/mail/MailScreen.tsx
 var screenMessages = defineMessages({
   ja: {
     allInboxes: "\u3059\u3079\u3066\u306E\u53D7\u4FE1\u7BB1",
     chooseInbox: "\u53D7\u4FE1\u7BB1\u3092\u9078\u3076",
+    chooseFolder: "\u30D5\u30A9\u30EB\u30C0\u30FC\u3092\u9078\u3076",
     unreadCount: "\u672A\u8AAD {n}",
     showAll: "\u3059\u3079\u3066\u51FA\u3059",
     unreadOnly: "\u672A\u8AAD\u3060\u3051",
@@ -967,11 +1512,27 @@ var screenMessages = defineMessages({
     address: "\uFF08{address}\uFF09",
     to: " \xB7 \u5B9B\u5148: {people}",
     cc: " \xB7 CC: {people}",
+    toPeople: "\u5B9B\u5148: {people}",
     peopleSeparator: "\u3001",
     noBody: "\uFF08\u672C\u6587\u306A\u3057\uFF09",
     reply: "\u8FD4\u4FE1",
-    markUnread: "\u672A\u8AAD\u306B\u623B\u3059",
+    markUnread: "\u672A\u8AAD\u306B\u3059\u308B",
+    markRead: "\u65E2\u8AAD\u306B\u3059\u308B",
+    move: "\u79FB\u52D5",
+    moveTo: "\u79FB\u3059\u5148\u3092\u9078\u3076",
+    junk: "\u8FF7\u60D1\u30E1\u30FC\u30EB",
+    notJunk: "\u8FF7\u60D1\u30E1\u30FC\u30EB\u3067\u306F\u306A\u3044",
+    delete: "\u524A\u9664",
+    restore: "\u53D7\u4FE1\u7BB1\u306B\u623B\u3059",
+    select: "\u9078\u3076",
+    selectDone: "\u3084\u3081\u308B",
+    selectAll: "\u3059\u3079\u3066\u9078\u3076",
+    selected: "{n}\u901A\u3092\u9078\u629E",
+    choose: "{subject}\u3092\u9078\u3076",
     sent: "\u9001\u308A\u307E\u3057\u305F: {subject}",
+    moved: "{n}\u901A\u3092\u300C{folder}\u300D\u3078\u79FB\u3057\u307E\u3057\u305F",
+    markedRead: "{n}\u901A\u3092\u65E2\u8AAD\u306B\u3057\u307E\u3057\u305F",
+    markedUnread: "{n}\u901A\u3092\u672A\u8AAD\u306B\u3057\u307E\u3057\u305F",
     from: "\u5DEE\u51FA\u4EBA",
     toLabel: "\u5B9B\u5148",
     toHint: "\u3044\u304F\u3064\u304B\u306A\u3089\u3001\u30AB\u30F3\u30DE\u3067\u533A\u5207\u308B",
@@ -985,6 +1546,7 @@ var screenMessages = defineMessages({
   en: {
     allInboxes: "All inboxes",
     chooseInbox: "Choose inbox",
+    chooseFolder: "Choose folder",
     unreadCount: "{n} unread",
     showAll: "Show all",
     unreadOnly: "Unread only",
@@ -997,11 +1559,27 @@ var screenMessages = defineMessages({
     address: " ({address})",
     to: " \xB7 To: {people}",
     cc: " \xB7 CC: {people}",
+    toPeople: "To: {people}",
     peopleSeparator: ", ",
     noBody: "(No message body)",
     reply: "Reply",
     markUnread: "Mark as unread",
+    markRead: "Mark as read",
+    move: "Move",
+    moveTo: "Choose where to move",
+    junk: "Junk",
+    notJunk: "Not junk",
+    delete: "Delete",
+    restore: "Move to Inbox",
+    select: "Select",
+    selectDone: "Done",
+    selectAll: "Select all",
+    selected: "{n} selected",
+    choose: "Select {subject}",
     sent: "Sent: {subject}",
+    moved: "Moved {n} to \u201C{folder}\u201D",
+    markedRead: "Marked {n} as read",
+    markedUnread: "Marked {n} as unread",
     from: "From",
     toLabel: "To",
     toHint: "Separate multiple addresses with commas",
@@ -1013,148 +1591,331 @@ var screenMessages = defineMessages({
     send: "Send"
   }
 });
+var LIST_LIMIT = 40;
+var REFRESH_MS = 2 * 60 * 1e3;
+var PREFETCH_MAX_AGE_MS = 5 * 60 * 1e3;
+var PREFETCH_BODIES = 6;
+var listKey = (target, folder, unread) => `mail:list:${target ?? "*"}:${folder}:${unread}`;
+var messageKey = (id) => `mail:message:${id}`;
+var NO_CHANGES = { gone: /* @__PURE__ */ new Set(), read: /* @__PURE__ */ new Map() };
 function MailScreen({ ctx }) {
   const t = screenMessages.useT();
+  const tf = folderMessages.useT();
   const tc = commonMessages.useT();
   const locale = useLocale();
-  const [mailboxes, setMailboxes] = useState([]);
   const [mailbox, setMailbox] = useState(null);
+  const [folder, setFolder] = useState({ key: "inbox", mailboxId: null });
   const [unreadOnly, setUnreadOnly] = useState(false);
-  const [messages8, setMessages] = useState(null);
-  const [errors, setErrors] = useState([]);
-  const [failure, setFailure] = useState(null);
   const [pane, setPane] = useState(null);
-  const [notice, setNotice] = useState(null);
-  const load = useCallback(async () => {
-    try {
-      const [boxes, list] = await Promise.all([
-        fetchMailboxes(ctx),
-        fetchMessages(ctx, { mailbox: mailbox ?? void 0, unread: unreadOnly, limit: 40 })
-      ]);
-      setMailboxes(boxes.mailboxes);
-      setMessages(list.messages);
-      const seen = /* @__PURE__ */ new Set();
-      setErrors([...boxes.errors, ...list.errors].filter((e) => !seen.has(e.source) && seen.add(e.source)));
-      setFailure(null);
-    } catch (err) {
-      setFailure(err instanceof Error ? err.message : String(err));
-    }
-  }, [ctx, mailbox, unreadOnly]);
+  const [selecting, setSelecting] = useState(false);
+  const [chosen, setChosen] = useState(/* @__PURE__ */ new Set());
+  const [local, setLocal] = useState(NO_CHANGES);
+  const target = folder.mailboxId ?? mailbox;
+  const boxes = useCached("mail:mailboxes", () => fetchMailboxes(ctx), REFRESH_MS);
+  const folderList = useCached(`mail:folders:${mailbox ?? "*"}`, () => fetchFolders(ctx, mailbox));
+  const readList = (key, unread) => fetchMessages(ctx, { mailbox: target ?? void 0, unread, limit: LIST_LIMIT, folder: key });
+  const list = useCached(listKey(target, folder.key, unreadOnly), () => readList(folder.key, unreadOnly), REFRESH_MS);
+  const mailboxes = boxes.data?.mailboxes ?? [];
+  const folders = folderList.data?.folders ?? [];
+  useEffect(() => setLocal(NO_CHANGES), [list.data]);
   useEffect(() => {
-    void load();
-    const timer = setInterval(() => void load(), 2 * 60 * 1e3);
-    return () => clearInterval(timer);
-  }, [load]);
+    const shown = list.data?.messages;
+    if (!shown) return;
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      const tasks = [
+        ...shown.slice(0, PREFETCH_BODIES).map((m4) => [messageKey(m4.id), () => fetchMessage(ctx, m4.id)]),
+        ...MAIL_FOLDERS.filter((f) => f !== folder.key).map((f) => [
+          listKey(target, f, false),
+          () => readList(f, false)
+        ])
+      ];
+      for (const [key, load] of tasks) {
+        if (cancelled) return;
+        await fetchCached(key, load, PREFETCH_MAX_AGE_MS).catch(() => void 0);
+      }
+    }, 800);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [list.data]);
+  const messages10 = list.data?.messages.filter((m4) => !local.gone.has(m4.id)).map((m4) => local.read.has(m4.id) ? { ...m4, unread: !local.read.get(m4.id) } : m4);
+  const errors = useMemo(() => {
+    const seen = /* @__PURE__ */ new Set();
+    return [...boxes.data?.errors ?? [], ...list.data?.errors ?? []].filter((e) => !seen.has(e.source) && seen.add(e.source));
+  }, [boxes.data, list.data]);
+  const failure = list.error ?? boxes.error;
   const current = mailboxes.find((m4) => m4.id === mailbox) ?? null;
   const unreadTotal = mailboxes.reduce((sum, m4) => sum + m4.unread, 0);
+  const mailboxName = (id) => mailboxes.find((m4) => m4.id === id)?.name ?? "";
+  const folderName = (key) => MAIL_FOLDERS.includes(key) ? tf(`folder_${key}`) : folders.find((f) => f.id === key)?.path.join(" / ") ?? key;
+  const outgoing = folder.key === "sent" || folder.key === "drafts";
+  const people = (list2) => (list2 ?? []).map((a) => a.name || a.address).join(t("peopleSeparator"));
+  const resetView = () => {
+    setPane(null);
+    setChosen(/* @__PURE__ */ new Set());
+    setSelecting(false);
+  };
+  const chooseMailbox = (id) => {
+    setMailbox(id);
+    if (folder.mailboxId !== null) setFolder({ key: "inbox", mailboxId: null });
+    resetView();
+  };
+  const chooseFolder = (next) => {
+    setFolder(next);
+    resetView();
+  };
+  const afterChange = () => {
+    forgetCached("mail:list:");
+    forgetCached("mail:mailboxes");
+    void list.reload();
+    void boxes.reload();
+  };
+  const markRead = async (ids, read, quiet = false) => {
+    setLocal((l) => ({ ...l, read: new Map([...l.read, ...ids.map((id) => [id, read])]) }));
+    try {
+      await Promise.all(ids.map((id) => setRead(ctx, id, read)));
+      ids.forEach((id) => forgetCached(messageKey(id)));
+    } catch (err) {
+      showSnackbar({ text: err instanceof Error ? err.message : String(err), tone: "error" });
+      afterChange();
+      return;
+    }
+    if (!quiet) showSnackbar(t(read ? "markedRead" : "markedUnread", { n: ids.length }));
+    afterChange();
+  };
+  const move = async (ids, to) => {
+    setLocal((l) => ({ ...l, gone: /* @__PURE__ */ new Set([...l.gone, ...ids]) }));
+    if (pane?.kind === "read" && ids.includes(pane.id)) setPane(null);
+    setChosen(/* @__PURE__ */ new Set());
+    try {
+      await Promise.all(ids.map((id) => moveMessage(ctx, id, to, folder.key)));
+      showSnackbar(t("moved", { n: ids.length, folder: folderName(to) }));
+    } catch (err) {
+      showSnackbar({ text: err instanceof Error ? err.message : String(err), tone: "error" });
+    }
+    afterChange();
+  };
+  const moveTargets = (mailboxIds) => {
+    const standard = ["inbox", "junk", "trash"].filter((f) => f !== folder.key).map((f) => ({ id: f, label: tf(`folder_${f}`) }));
+    const one = new Set(mailboxIds).size === 1 ? mailboxIds[0] : null;
+    const own = one ? folders.filter((f) => f.mailboxId === one && f.id !== folder.key).map((f) => ({ id: f.id, label: f.path.join(" / ") })) : [];
+    return [...standard, ...own];
+  };
+  const mailboxOf = (id) => messages10?.find((m4) => m4.id === id)?.mailboxId ?? "";
   const actions = /* @__PURE__ */ jsxs(ButtonRow, { children: [
     /* @__PURE__ */ jsx(
       PillMenu,
       {
         label: current ? current.name : t("allInboxes"),
-        icon: "inbox",
+        icon: "mail",
         ariaLabel: t("chooseInbox"),
         items: [
           { id: "", label: t("allInboxes"), detail: t("unreadCount", { n: unreadTotal }), selected: mailbox === null },
           ...mailboxes.map((m4) => ({ id: m4.id, label: m4.name, detail: t("unreadCount", { n: m4.unread }), selected: m4.id === mailbox }))
         ],
-        onSelect: (id) => {
-          setMailbox(id || null);
-          setPane(null);
-        }
+        onSelect: (id) => chooseMailbox(id || null)
       }
     ),
+    /* @__PURE__ */ jsx(NarrowOnly, { children: /* @__PURE__ */ jsx(
+      PillMenu,
+      {
+        label: folderName(folder.key),
+        icon: MAIL_FOLDERS.includes(folder.key) ? FOLDER_ICONS[folder.key] : "mail",
+        ariaLabel: t("chooseFolder"),
+        items: [
+          ...MAIL_FOLDERS.map((f) => ({ id: f, label: tf(`folder_${f}`), selected: f === folder.key })),
+          ...folders.map((f) => ({
+            id: `${f.mailboxId}
+${f.id}`,
+            label: f.path.join(" / "),
+            detail: mailbox === null ? mailboxName(f.mailboxId) : void 0,
+            selected: folder.key === f.id && folder.mailboxId === f.mailboxId
+          }))
+        ],
+        onSelect: (id) => {
+          const [mailboxId, key] = id.includes("\n") ? id.split("\n") : [null, id];
+          chooseFolder({ key, mailboxId });
+        }
+      }
+    ) }),
     /* @__PURE__ */ jsx(Button, { onClick: () => setUnreadOnly((v) => !v), "aria-pressed": unreadOnly, children: unreadOnly ? t("showAll") : t("unreadOnly") }),
+    messages10 && messages10.length > 0 && /* @__PURE__ */ jsx(
+      Button,
+      {
+        "aria-pressed": selecting,
+        onClick: () => {
+          setSelecting((v) => !v);
+          setChosen(/* @__PURE__ */ new Set());
+        },
+        children: selecting ? t("selectDone") : t("select")
+      }
+    ),
     mailboxes.some((m4) => m4.canSend) && /* @__PURE__ */ jsx(Button, { variant: "primary", icon: "compose", onClick: () => setPane({ kind: "compose", replyTo: null }), children: t("newMail") })
   ] });
-  return /* @__PURE__ */ jsxs(ScreenFrame, { title: "Mail", actions, children: [
-    failure && /* @__PURE__ */ jsx(ScreenNotice, { tone: "error", children: failure }),
+  const chosenIds = [...chosen];
+  const opened = pane?.kind === "read" ? messages10?.find((m4) => m4.id === pane.id) ?? null : null;
+  return /* @__PURE__ */ jsxs(ScreenFrame, { title: { ja: "\u30E1\u30FC\u30EB", en: "Mail" }, actions, children: [
+    failure && !list.data && /* @__PURE__ */ jsx(ScreenNotice, { tone: "error", children: failure }),
     errors.map((e) => /* @__PURE__ */ jsxs(ScreenNotice, { tone: "error", children: [
       e.source,
       ": ",
       e.message
     ] }, e.source)),
-    notice && /* @__PURE__ */ jsx(ScreenNotice, { children: notice }),
-    messages8 !== null && mailboxes.length === 0 && errors.length === 0 && /* @__PURE__ */ jsx(ScreenNotice, { children: t("noInboxes") }),
-    /* @__PURE__ */ jsxs("div", { className: `mail-layout${pane ? " mail-layout--open" : ""}`, children: [
-      /* @__PURE__ */ jsxs("div", { className: "mail-layout__list", children: [
-        messages8 === null && !failure && /* @__PURE__ */ jsx(Note, { children: tc("loading") }),
-        messages8 && messages8.length === 0 && mailboxes.length > 0 && /* @__PURE__ */ jsx(Note, { children: unreadOnly ? t("noUnreadMail") : t("noMail") }),
-        messages8 && messages8.length > 0 && /* @__PURE__ */ jsx(List, { label: t("mail"), children: messages8.map((m4) => /* @__PURE__ */ jsx(
-          ListItem,
+    boxes.data && mailboxes.length === 0 && errors.length === 0 && /* @__PURE__ */ jsx(ScreenNotice, { children: t("noInboxes") }),
+    /* @__PURE__ */ jsx(
+      SideLayout,
+      {
+        sideLabel: tf("folders"),
+        narrow: "hide",
+        side: /* @__PURE__ */ jsx(
+          MailFolders,
           {
-            title: m4.subject,
-            badge: m4.unread ? t("unread") : void 0,
-            detail: `${senderName(m4, locale)} \xB7 ${mailDate(m4.date, locale)}${m4.snippet ? ` \xB7 ${m4.snippet}` : ""}`,
-            off: !m4.unread && unreadOnly,
-            onClick: () => {
-              setNotice(null);
-              setPane({ kind: "read", id: m4.id });
-            }
-          },
-          m4.id
-        )) })
-      ] }),
-      pane && /* @__PURE__ */ jsx("div", { className: "mail-layout__pane", children: pane.kind === "read" ? /* @__PURE__ */ jsx(
-        Reader,
-        {
-          ctx,
-          id: pane.id,
-          canReply: mailboxes.find((b) => b.id === messages8?.find((m4) => m4.id === pane.id)?.mailboxId)?.canSend ?? false,
-          onClose: () => setPane(null),
-          onReply: (message) => setPane({ kind: "compose", replyTo: message }),
-          onChanged: () => void load()
-        },
-        pane.id
-      ) : /* @__PURE__ */ jsx(
-        Composer,
-        {
-          ctx,
-          mailboxes: mailboxes.filter((m4) => m4.canSend),
-          preferred: pane.replyTo?.mailboxId ?? mailbox,
-          replyTo: pane.replyTo,
-          onClose: () => setPane(null),
-          onSent: (text) => {
-            setPane(null);
-            setNotice(text);
-            void load();
+            folders,
+            groupName: mailbox === null ? mailboxName : null,
+            current: folder,
+            unreadInbox: current ? current.unread : unreadTotal,
+            onChoose: chooseFolder
           }
-        }
-      ) })
-    ] })
+        ),
+        children: /* @__PURE__ */ jsxs("div", { className: "flex items-start gap-6", children: [
+          /* @__PURE__ */ jsxs("div", { className: cx("min-w-0 flex-1", pane && "hidden triple:block triple:flex-2"), children: [
+            selecting && // 「選ぶ」のときの操作の帯（一覧の上）
+            /* @__PURE__ */ jsxs("div", { className: "mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2", children: [
+              /* @__PURE__ */ jsx("span", { className: "text-label text-muted", children: t("selected", { n: chosen.size }) }),
+              /* @__PURE__ */ jsxs(ButtonRow, { children: [
+                /* @__PURE__ */ jsx(Button, { onClick: () => setChosen(new Set(messages10?.map((m4) => m4.id))), children: t("selectAll") }),
+                /* @__PURE__ */ jsx(Button, { disabled: chosen.size === 0, onClick: () => void markRead(chosenIds, true), children: t("markRead") }),
+                /* @__PURE__ */ jsx(Button, { disabled: chosen.size === 0, onClick: () => void markRead(chosenIds, false), children: t("markUnread") }),
+                chosen.size > 0 && /* @__PURE__ */ jsx(
+                  PillMenu,
+                  {
+                    label: t("move"),
+                    icon: "inbox",
+                    ariaLabel: t("moveTo"),
+                    items: moveTargets(chosenIds.map(mailboxOf)),
+                    onSelect: (id) => void move(chosenIds, id)
+                  }
+                ),
+                /* @__PURE__ */ jsx(
+                  Button,
+                  {
+                    icon: "delete",
+                    disabled: chosen.size === 0,
+                    onClick: () => void move(chosenIds, folder.key === "trash" ? "inbox" : "trash"),
+                    children: folder.key === "trash" ? t("restore") : t("delete")
+                  }
+                )
+              ] })
+            ] }),
+            !messages10 && !failure && /* @__PURE__ */ jsx(Note, { children: tc("loading") }),
+            messages10 && messages10.length === 0 && mailboxes.length > 0 && /* @__PURE__ */ jsx(Note, { children: unreadOnly ? t("noUnreadMail") : t("noMail") }),
+            messages10 && messages10.length > 0 && /* @__PURE__ */ jsx(List, { boxed: true, label: t("mail"), children: messages10.map((m4) => {
+              const isChosen = chosen.has(m4.id);
+              return /* @__PURE__ */ jsx(
+                ListItem,
+                {
+                  leading: selecting ? (
+                    // 「選ぶ」のときの丸いチェック
+                    /* @__PURE__ */ jsx(
+                      "span",
+                      {
+                        className: cx(
+                          "grid size-5.5 shrink-0 place-items-center rounded-full border-2 text-body",
+                          isChosen ? "fill-bright" : "border-muted"
+                        ),
+                        role: "checkbox",
+                        "aria-checked": isChosen,
+                        "aria-label": t("choose", { subject: m4.subject }),
+                        children: isChosen && /* @__PURE__ */ jsx(Icon, { name: "checkmark" })
+                      }
+                    )
+                  ) : (
+                    // 未読の印。既読は同じ幅の空きにして、件名の頭をそろえる
+                    /* @__PURE__ */ jsx("span", { className: cx("size-2 shrink-0 rounded-full", m4.unread && "bg-accent"), "aria-hidden": "true" })
+                  ),
+                  title: m4.subject,
+                  badge: m4.unread ? t("unread") : void 0,
+                  detail: `${outgoing && m4.to?.length ? t("toPeople", { people: people(m4.to) }) : senderName(m4, locale)} \xB7 ${mailDate(m4.date, locale)}${m4.snippet ? ` \xB7 ${m4.snippet}` : ""}`,
+                  selected: selecting ? isChosen : pane?.kind === "read" && pane.id === m4.id,
+                  chevron: !selecting,
+                  onClick: () => {
+                    if (selecting) {
+                      const next = new Set(chosen);
+                      if (next.has(m4.id)) next.delete(m4.id);
+                      else next.add(m4.id);
+                      setChosen(next);
+                      return;
+                    }
+                    setPane({ kind: "read", id: m4.id });
+                  }
+                },
+                m4.id
+              );
+            }) })
+          ] }),
+          pane && /* @__PURE__ */ jsx("div", { className: "min-w-0 flex-1 triple:flex-3", children: pane.kind === "read" ? /* @__PURE__ */ jsx(
+            Reader,
+            {
+              ctx,
+              id: pane.id,
+              unread: opened?.unread ?? false,
+              folder: folder.key,
+              canReply: mailboxes.find((b) => b.id === opened?.mailboxId)?.canSend ?? false,
+              moveTargets: moveTargets([opened?.mailboxId ?? ""]),
+              onClose: () => setPane(null),
+              onReply: (message) => setPane({ kind: "compose", replyTo: message }),
+              onRead: (read, quiet) => void markRead([pane.id], read, quiet),
+              onMove: (to) => void move([pane.id], to)
+            },
+            pane.id
+          ) : /* @__PURE__ */ jsx(
+            Composer,
+            {
+              ctx,
+              mailboxes: mailboxes.filter((m4) => m4.canSend),
+              preferred: pane.replyTo?.mailboxId ?? mailbox,
+              replyTo: pane.replyTo,
+              onClose: () => setPane(null),
+              onSent: (text) => {
+                setPane(null);
+                showSnackbar(text);
+                afterChange();
+              }
+            }
+          ) })
+        ] })
+      }
+    )
   ] });
 }
 function Reader({
   ctx,
   id,
+  unread,
+  folder,
   canReply,
+  moveTargets,
   onClose,
   onReply,
-  onChanged
+  onRead,
+  onMove
 }) {
   const t = screenMessages.useT();
   const tc = commonMessages.useT();
   const locale = useLocale();
-  const [message, setMessage] = useState(null);
-  const [error, setError] = useState(null);
+  const { data: message, error } = useCached(messageKey(id), () => fetchMessage(ctx, id));
+  const [markedRead, setMarkedRead] = useState(false);
   useEffect(() => {
-    let cancelled = false;
-    fetchMessage(ctx, id).then(async (m4) => {
-      if (cancelled) return;
-      setMessage(m4);
-      if (m4.unread) {
-        await setRead(ctx, id, true).catch(() => void 0);
-        onChanged();
-      }
-    }).catch((err) => !cancelled && setError(err instanceof Error ? err.message : String(err)));
-    return () => {
-      cancelled = true;
-    };
-  }, [ctx, id]);
-  if (error) return /* @__PURE__ */ jsx(Message, { tone: "error", children: error });
+    if (!message || markedRead) return;
+    setMarkedRead(true);
+    if (message.unread && unread) onRead(true, true);
+  }, [message]);
+  if (error && !message) return /* @__PURE__ */ jsx(Message, { tone: "error", children: error });
   if (!message) return /* @__PURE__ */ jsx(Note, { children: tc("loading") });
   const people = (list) => list.map((a) => a.name || a.address).join(t("peopleSeparator"));
-  return /* @__PURE__ */ jsxs("article", { className: "mail-reader", children: [
+  return /* @__PURE__ */ jsxs("article", { children: [
     /* @__PURE__ */ jsx(SectionTitle, { children: message.subject }),
     /* @__PURE__ */ jsxs(Note, { children: [
       senderName(message, locale),
@@ -1165,19 +1926,22 @@ function Reader({
       message.to.length > 0 && t("to", { people: people(message.to) }),
       message.cc.length > 0 && t("cc", { people: people(message.cc) })
     ] }),
-    /* @__PURE__ */ jsx(Group, { children: /* @__PURE__ */ jsx("div", { className: "mail-reader__body", children: message.text || t("noBody") }) }),
+    /* @__PURE__ */ jsx(Group, { children: /* @__PURE__ */ jsx("div", { className: "reader-scroll leading-normal whitespace-pre-wrap untrim wrap-anywhere", children: message.text || t("noBody") }) }),
     /* @__PURE__ */ jsxs(ButtonRow, { children: [
       canReply && /* @__PURE__ */ jsx(Button, { variant: "primary", icon: "reply", onClick: () => onReply(message), children: t("reply") }),
-      /* @__PURE__ */ jsx(
-        Button,
+      /* @__PURE__ */ jsx(Button, { onClick: () => onRead(unread), children: unread ? t("markRead") : t("markUnread") }),
+      moveTargets.length > 0 && /* @__PURE__ */ jsx(
+        PillMenu,
         {
-          onClick: () => void setRead(ctx, id, false).then(() => {
-            onChanged();
-            onClose();
-          }).catch((err) => setError(err instanceof Error ? err.message : String(err))),
-          children: t("markUnread")
+          label: t("move"),
+          icon: "inbox",
+          ariaLabel: t("moveTo"),
+          items: moveTargets,
+          onSelect: (to) => onMove(to)
         }
       ),
+      folder !== "sent" && folder !== "drafts" && folder !== "trash" && /* @__PURE__ */ jsx(Button, { icon: "junk", onClick: () => onMove(folder === "junk" ? "inbox" : "junk"), children: folder === "junk" ? t("notJunk") : t("junk") }),
+      /* @__PURE__ */ jsx(Button, { icon: "delete", onClick: () => onMove(folder === "trash" ? "inbox" : "trash"), children: folder === "trash" ? t("restore") : t("delete") }),
       /* @__PURE__ */ jsx(Button, { onClick: onClose, children: tc("close") })
     ] })
   ] });
@@ -1220,10 +1984,10 @@ ${replyTo.text.split("\n").slice(0, 40).map((line) => `> ${line}`).join("\n")}` 
       setBusy(false);
     }
   };
-  return /* @__PURE__ */ jsxs("form", { className: "mail-composer", onSubmit: (e) => void submit(e), children: [
+  return /* @__PURE__ */ jsxs("form", { onSubmit: (e) => void submit(e), children: [
     /* @__PURE__ */ jsx(SectionTitle, { children: replyTo ? t("reply") : t("newMail") }),
     /* @__PURE__ */ jsxs(Group, { children: [
-      /* @__PURE__ */ jsxs("fieldset", { className: "mail-composer__fields", disabled: busy, children: [
+      /* @__PURE__ */ jsxs("fieldset", { className: "m-0 border-0 p-0", disabled: busy, children: [
         /* @__PURE__ */ jsx(Field, { label: t("from"), children: /* @__PURE__ */ jsx("select", { value: from, onChange: (e) => setFrom(e.target.value), disabled: Boolean(replyTo), children: mailboxes.map((m4) => /* @__PURE__ */ jsxs("option", { value: m4.id, children: [
           m4.name,
           m4.address && m4.address !== m4.name ? t("address", { address: m4.address }) : ""
@@ -1244,7 +2008,7 @@ ${replyTo.text.split("\n").slice(0, 40).map((line) => `> ${line}`).join("\n")}` 
 }
 
 // extensions/accounts/src/mail/widget.tsx
-var messages7 = defineMessages({
+var messages9 = defineMessages({
   ja: {
     loadFailed: "\u8AAD\u3081\u307E\u305B\u3093\u3067\u3057\u305F",
     checking: "\u78BA\u304B\u3081\u3066\u3044\u307E\u3059\u2026",
@@ -1257,7 +2021,7 @@ var messages7 = defineMessages({
     detailTitle: "\u672A\u8AAD\u306E\u30E1\u30FC\u30EB",
     mailboxUnread: "{name}: \u672A\u8AAD {n}\u901A",
     noUnread: "\u672A\u8AAD\u306F\u3042\u308A\u307E\u305B\u3093",
-    openMailScreen: "\u8AAD\u3080\u30FB\u8FD4\u4FE1\u3059\u308B\u306E\u306F\u3001\u30B5\u30A4\u30C9\u30D0\u30FC\u306E Mail \u753B\u9762\u3067\u3002"
+    openMailScreen: "\u8AAD\u3080\u30FB\u8FD4\u4FE1\u3059\u308B\u306E\u306F\u3001\u30B5\u30A4\u30C9\u30D0\u30FC\u306E\u300C\u30E1\u30FC\u30EB\u300D\u306E\u753B\u9762\u3067\u3002"
   },
   en: {
     loadFailed: "Couldn't load",
@@ -1286,36 +2050,36 @@ function useUnread(ctx, limit, intervalMs) {
   }, intervalMs);
 }
 function MailInboxView({ ctx, config, openDetail }) {
-  const t = messages7.useT();
+  const t = messages9.useT();
   const locale = useLocale();
   const { data, error } = useUnread(ctx, config.compactLimit, config.pollIntervalMs);
   if (!data) {
-    return /* @__PURE__ */ jsx(WidgetCard, { className: "widget-mail", children: error ? /* @__PURE__ */ jsx(WidgetHint, { tone: "error", children: t("loadFailed") }) : /* @__PURE__ */ jsx(WidgetHint, { children: t("checking") }) });
+    return /* @__PURE__ */ jsx(WidgetCard, { children: error ? /* @__PURE__ */ jsx(WidgetHint, { tone: "error", children: t("loadFailed") }) : /* @__PURE__ */ jsx(WidgetHint, { children: t("checking") }) });
   }
   if (data.mailboxes.length === 0 && data.errors.length === 0) {
-    return /* @__PURE__ */ jsx(WidgetCard, { className: "widget-mail", children: /* @__PURE__ */ jsx(WidgetHint, { children: t("noAccounts") }) });
+    return /* @__PURE__ */ jsx(WidgetCard, { children: /* @__PURE__ */ jsx(WidgetHint, { children: t("noAccounts") }) });
   }
-  return /* @__PURE__ */ jsxs(WidgetCard, { className: "widget-mail", onClick: openDetail, label: t("cardLabel", { n: data.unread }), children: [
-    /* @__PURE__ */ jsxs("span", { className: "widget-mail__header", children: [
-      /* @__PURE__ */ jsx(Icon, { name: "mail", className: "widget-mail__icon" }),
-      /* @__PURE__ */ jsx("span", { className: "widget-mail__count", children: data.unread }),
-      /* @__PURE__ */ jsx("span", { className: "widget-mail__label", children: t("unread") })
+  return /* @__PURE__ */ jsxs(WidgetCard, { className: "items-stretch justify-start gap-1.5", onClick: openDetail, label: t("cardLabel", { n: data.unread }), children: [
+    /* @__PURE__ */ jsxs("span", { className: "flex items-baseline gap-1.5", children: [
+      /* @__PURE__ */ jsx(Icon, { name: "mail", className: "size-5.5 self-center text-muted" }),
+      /* @__PURE__ */ jsx("span", { className: "text-stat leading-none font-semibold tabular-nums", children: data.unread }),
+      /* @__PURE__ */ jsx("span", { className: "text-caption font-medium text-muted", children: t("unread") })
     ] }),
     data.errors.length > 0 && /* @__PURE__ */ jsx(WidgetHint, { tone: "error", children: t("cantRead", { sources: data.errors.map((e) => e.source).join(t("sourceSeparator")) }) }),
-    /* @__PURE__ */ jsxs("ul", { className: "widget-mail__list", children: [
-      data.messages.slice(0, config.compactLimit).map((m4) => /* @__PURE__ */ jsxs("li", { className: "widget-mail__item", children: [
-        /* @__PURE__ */ jsx("span", { className: "widget-mail__from", children: senderName(m4, locale) }),
-        /* @__PURE__ */ jsx("span", { className: "widget-mail__subject", children: m4.subject })
+    /* @__PURE__ */ jsxs("ul", { className: "flex flex-col gap-1", children: [
+      data.messages.slice(0, config.compactLimit).map((m4) => /* @__PURE__ */ jsxs("li", { className: "flex gap-2 text-note", children: [
+        /* @__PURE__ */ jsx("span", { className: "ellipsis w-24 shrink-0 text-muted", children: senderName(m4, locale) }),
+        /* @__PURE__ */ jsx("span", { className: "ellipsis min-w-0 flex-1", children: m4.subject })
       ] }, m4.id)),
-      data.messages.length === 0 && /* @__PURE__ */ jsx("li", { className: "widget-mail__empty", children: t("noUnreadShort") })
+      data.messages.length === 0 && /* @__PURE__ */ jsx("li", { className: "text-note font-medium text-muted", children: t("noUnreadShort") })
     ] })
   ] });
 }
 function MailInboxDetail({ ctx, config }) {
-  const t = messages7.useT();
+  const t = messages9.useT();
   const locale = useLocale();
   const { data } = useUnread(ctx, 20, config.pollIntervalMs);
-  return /* @__PURE__ */ jsxs(DetailFrame, { title: t("detailTitle"), className: "widget-mail-detail", children: [
+  return /* @__PURE__ */ jsxs(DetailFrame, { title: t("detailTitle"), children: [
     data?.mailboxes.map((m4) => /* @__PURE__ */ jsx(Note, { children: t("mailboxUnread", { name: m4.name, n: m4.unread }) }, m4.id)),
     data?.errors.map((e) => /* @__PURE__ */ jsxs(Note, { children: [
       e.source,
@@ -1345,8 +2109,8 @@ var mailWidget = defineWidget({
 var web_default = defineWebExtension({
   widgets: [agendaWidget, mailWidget],
   screens: [
-    { id: "calendar", label: "Calendar", ariaLabel: { ja: "\u30AB\u30EC\u30F3\u30C0\u30FC", en: "Calendar" }, icon: "calendar", order: 20, Component: CalendarScreen },
-    { id: "mail", label: "Mail", ariaLabel: { ja: "\u30E1\u30FC\u30EB", en: "Mail" }, icon: "mail", order: 25, Component: MailScreen }
+    { id: "calendar", label: { ja: "\u30AB\u30EC\u30F3\u30C0\u30FC", en: "Calendar" }, icon: "calendar", order: 20, Component: CalendarScreen },
+    { id: "mail", label: { ja: "\u30E1\u30FC\u30EB", en: "Mail" }, icon: "mail", order: 25, Component: MailScreen }
   ],
   settingsPages: [{ id: "internet", label: { ja: "\u30A4\u30F3\u30BF\u30FC\u30CD\u30C3\u30C8\u30A2\u30AB\u30A6\u30F3\u30C8", en: "Internet Accounts" }, icon: "globe", parent: "account", Component: AccountsPage }]
 });

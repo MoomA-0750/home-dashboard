@@ -2,7 +2,7 @@
 var m = globalThis.__homeDashboard?.modules?.["@home-dashboard/widget-sdk"];
 if (!m) throw new Error("\u672C\u4F53\u306E @home-dashboard/widget-sdk \u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093\uFF08\u30C0\u30C3\u30B7\u30E5\u30DC\u30FC\u30C9\u306E\u4E2D\u3067\u8AAD\u307F\u8FBC\u3093\u3067\u304F\u3060\u3055\u3044\uFF09");
 var widget_sdk_default = m.default ?? m;
-var { Avatar, AvatarStack, BackButton, Badge, Button, ButtonLink, ButtonRow, ChatBubble, ChatComposer, ChatFrom, ChatHeader, ChatIconButton, ChatLayout, ChatLog, ChatMeta, ChatPending, ChatRow, Check, CodeBlock, DetailFrame, Dialog, FeatureProvidersContext, Field, Group, Icon, LOCALES, List, ListItem, LocaleContext, Message, Note, Notice, PillMenu, ScreenFrame, ScreenNotice, ScreenSection, SectionTitle, StatGrid, StatTile, ToggleSwitch, WidgetCard, WidgetHint, WidgetRegistry, defineMessages, defineWebExtension, defineWidget, extensionApiUrl, formatClock, formatPastDay, getLocale, intlLocale, setCurrentLocale, textFor, useFeatureProviders, useLocale, usePolledResource, usePolling, weatherConditionText, weatherIcon, widgetRegistry } = m;
+var { Avatar, AvatarStack, BackButton, Badge, Button, ButtonLink, ButtonRow, ChatAttachments, ChatBubble, ChatComposer, ChatFile, ChatFileChips, ChatFrom, ChatHeader, ChatIconButton, ChatImage, ChatLayout, ChatLog, ChatMeta, ChatPending, ChatRow, Check, Chip, CodeBlock, DEFAULT_DISPLAY, DetailFrame, Dialog, DisplayContext, FeatureProvidersContext, Field, Group, Icon, IconButton, LOCALES, List, ListIcon, ListItem, ListNoChevron, LocaleContext, Message, NarrowOnly, Note, Notice, PillMenu, PollingActiveContext, ProgressBar, ScreenFrame, ScreenNotice, ScreenSection, SectionTitle, SideLayout, Slider, StatGrid, StatTile, StatusDot, ToggleSwitch, WidgetCard, WidgetHint, WidgetRegistry, buttonClass, convertReading, convertTemperature, cx, defineMessages, defineWebExtension, defineWidget, extensionApiUrl, formatClock, formatDate, formatPastDay, formatTemperature, formatTime, getDisplay, getLocale, inputClass, intlLocale, motionMs, normalizeDisplay, openSettings, reducedMotion, scrollBehavior, setCurrentDisplay, setCurrentLocale, showSnackbar, startOfWeek, temperatureUnit, textFor, useClosing, useDateFormat, useDisplay, useFeatureProviders, useLocale, usePolledResource, usePolling, usePresence, useSettingsLinks, useSnackbars, useTemperature, useTimeFormat, weatherConditionText, weatherIcon, widgetRegistry } = m;
 
 // host-module:react/jsx-runtime
 var m2 = globalThis.__homeDashboard?.modules?.["react/jsx-runtime"];
@@ -52,31 +52,32 @@ function relativeLastSeen(iso, t) {
   if (hours < 24) return t("hoursAgo", { n: hours });
   return t("daysAgo", { n: Math.floor(hours / 24) });
 }
+var Dot = ({ ok }) => /* @__PURE__ */ jsx("span", { className: cx("size-2.5 shrink-0 rounded-full", ok ? "bg-ok" : "bg-warn") });
 function TailscaleView({ ctx, config, openDetail }) {
   const t = messages.useT();
   const { data, loading } = usePolling(() => fetchStatus(ctx.apiBaseUrl), config.pollIntervalMs);
-  if (loading && !data) return /* @__PURE__ */ jsx("div", { className: "widget-card widget-tailscale", children: t("checking") });
+  if (loading && !data) return /* @__PURE__ */ jsx(WidgetCard, { children: t("checking") });
   if (data && !data.configured) {
-    return /* @__PURE__ */ jsxs("div", { className: "widget-card widget-tailscale widget-tailscale--unconfigured", children: [
+    return /* @__PURE__ */ jsxs(WidgetCard, { children: [
       t("notConnected"),
-      /* @__PURE__ */ jsx("span", { className: "widget-hint", children: data.reason })
+      /* @__PURE__ */ jsx(WidgetHint, { children: data.reason })
     ] });
   }
   const running = data?.backendState === "Running";
-  return /* @__PURE__ */ jsxs("button", { type: "button", className: "widget-card widget-tailscale", onClick: openDetail, children: [
-    /* @__PURE__ */ jsxs("span", { className: "widget-tailscale__header", children: [
-      /* @__PURE__ */ jsx("span", { className: `widget-homelab__dot ${running ? "widget-homelab__dot--ok" : "widget-homelab__dot--warn"}` }),
-      /* @__PURE__ */ jsx("span", { className: "widget-tailscale__title", children: "Tailscale" })
+  return /* @__PURE__ */ jsxs(WidgetCard, { className: "items-stretch gap-1 text-left tabular-nums", onClick: openDetail, children: [
+    /* @__PURE__ */ jsxs("span", { className: "flex items-center gap-1.5", children: [
+      /* @__PURE__ */ jsx(Dot, { ok: running }),
+      /* @__PURE__ */ jsx("span", { className: "text-note text-muted", children: "Tailscale" })
     ] }),
-    /* @__PURE__ */ jsxs("span", { className: "widget-tailscale__count", children: [
+    /* @__PURE__ */ jsxs("span", { className: "text-stat font-semibold leading-none", children: [
       data?.onlineCount ?? 0,
-      /* @__PURE__ */ jsxs("span", { className: "widget-tailscale__total", children: [
+      /* @__PURE__ */ jsxs("span", { className: "text-body font-normal text-muted", children: [
         "/",
         data?.totalCount ?? 0
       ] })
     ] }),
-    /* @__PURE__ */ jsx("span", { className: "widget-tailscale__sub", children: data?.self?.ip ?? "" }),
-    data?.exitNode && /* @__PURE__ */ jsxs("span", { className: "widget-tailscale__exit", children: [
+    /* @__PURE__ */ jsx("span", { className: "text-caption text-muted", children: data?.self?.ip ?? "" }),
+    data?.exitNode && /* @__PURE__ */ jsxs("span", { className: "text-caption text-muted", children: [
       "exit: ",
       data.exitNode.name
     ] })
@@ -85,40 +86,34 @@ function TailscaleView({ ctx, config, openDetail }) {
 function TailscaleDetail({ ctx, config }) {
   const t = messages.useT();
   const { data } = usePolling(() => fetchStatus(ctx.apiBaseUrl), config.pollIntervalMs);
-  if (!data?.configured) return /* @__PURE__ */ jsx("div", { className: "widget-detail", children: t("loading") });
-  return /* @__PURE__ */ jsxs("div", { className: "widget-detail widget-tailscale-detail", children: [
-    /* @__PURE__ */ jsx("h2", { children: "Tailscale" }),
-    /* @__PURE__ */ jsxs("p", { className: "widget-tailscale-detail__self", children: [
+  if (!data?.configured) return /* @__PURE__ */ jsx(DetailFrame, { children: t("loading") });
+  return /* @__PURE__ */ jsxs(DetailFrame, { title: "Tailscale", children: [
+    /* @__PURE__ */ jsxs("p", { className: "mb-3 text-label text-muted", children: [
       t("self", { name: data.self?.name ?? "", ip: data.self?.ip ?? "" }),
       " \xB7 ",
       data.backendState,
       " \xB7 v",
       data.version.split("-")[0]
     ] }),
-    /* @__PURE__ */ jsx("ul", { className: "widget-tailscale-detail__list", children: data.peers.map((peer) => /* @__PURE__ */ jsxs("li", { className: "widget-tailscale-detail__item", children: [
-      /* @__PURE__ */ jsx(
-        "span",
-        {
-          className: `widget-homelab__dot ${peer.online ? "widget-homelab__dot--ok" : "widget-homelab__dot--warn"}`
-        }
-      ),
-      /* @__PURE__ */ jsxs("span", { className: "widget-tailscale-detail__name", children: [
-        /* @__PURE__ */ jsx(Icon, { name: osIcon(peer.os), label: peer.os || void 0, className: "widget-tailscale-detail__os" }),
+    /* @__PURE__ */ jsx("ul", { className: "flex flex-col gap-1.5", children: data.peers.map((peer) => /* @__PURE__ */ jsxs("li", { className: "flex items-center gap-2.5 text-label", children: [
+      /* @__PURE__ */ jsx(Dot, { ok: peer.online }),
+      /* @__PURE__ */ jsxs("span", { className: "inline-flex min-w-0 flex-1 items-center gap-1.5", children: [
+        /* @__PURE__ */ jsx(Icon, { name: osIcon(peer.os), label: peer.os || void 0, className: "size-4.5 shrink-0 text-muted" }),
         peer.name
       ] }),
-      /* @__PURE__ */ jsx("span", { className: "widget-tailscale-detail__ip", children: peer.ip }),
-      /* @__PURE__ */ jsxs("span", { className: "widget-tailscale-detail__meta", children: [
-        peer.isExitNode && /* @__PURE__ */ jsx("span", { className: "widget-tailscale-detail__badge", children: "exit node" }),
-        !peer.isExitNode && peer.offersExitNode && /* @__PURE__ */ jsx("span", { className: "widget-tailscale-detail__badge widget-tailscale-detail__badge--dim", children: t("exitCapable") }),
-        peer.active && peer.directAddr && /* @__PURE__ */ jsx("span", { className: "widget-tailscale-detail__badge", children: "direct" }),
-        peer.active && !peer.directAddr && peer.relay && /* @__PURE__ */ jsxs("span", { className: "widget-tailscale-detail__badge", children: [
+      /* @__PURE__ */ jsx("span", { className: "text-muted tabular-nums", children: peer.ip }),
+      /* @__PURE__ */ jsxs("span", { className: "flex items-center gap-1", children: [
+        peer.isExitNode && /* @__PURE__ */ jsx(Badge, { children: "exit node" }),
+        !peer.isExitNode && peer.offersExitNode && /* @__PURE__ */ jsx(Badge, { tone: "dim", children: t("exitCapable") }),
+        peer.active && peer.directAddr && /* @__PURE__ */ jsx(Badge, { children: "direct" }),
+        peer.active && !peer.directAddr && peer.relay && /* @__PURE__ */ jsxs(Badge, { children: [
           "derp:",
           peer.relay
         ] }),
-        !peer.online && /* @__PURE__ */ jsx("span", { className: "widget-tailscale-detail__seen", children: relativeLastSeen(peer.lastSeen, t) })
+        !peer.online && /* @__PURE__ */ jsx("span", { className: "text-muted tabular-nums", children: relativeLastSeen(peer.lastSeen, t) })
       ] })
     ] }, peer.dnsName || peer.name)) }),
-    /* @__PURE__ */ jsx("p", { className: "widget-note", children: t("note") })
+    /* @__PURE__ */ jsx(Note, { children: t("note") })
   ] });
 }
 var widget_default = defineWidget({

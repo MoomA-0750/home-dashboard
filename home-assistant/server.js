@@ -20,6 +20,24 @@ function defineServerMessages(dicts) {
 function defineServerExtension(extension) {
   return extension;
 }
+function cachedLoader(ttlMs) {
+  const values = /* @__PURE__ */ new Map();
+  const pending = /* @__PURE__ */ new Map();
+  function load(key, task) {
+    const hit = values.get(key);
+    if (hit && hit.expiresAt > Date.now()) return Promise.resolve(hit.value);
+    const running = pending.get(key);
+    if (running) return running;
+    const promise = task().then((value) => {
+      values.set(key, { value, expiresAt: Date.now() + ttlMs });
+      return value;
+    }).finally(() => pending.delete(key));
+    pending.set(key, promise);
+    return promise;
+  }
+  load.clear = () => values.clear();
+  return load;
+}
 
 // extensions/home-assistant/src/homeassistant.ts
 import { mkdir, readFile, writeFile } from "node:fs/promises";
@@ -63,7 +81,6 @@ var haSettings = {
 };
 var baseUrl = () => String(haSettings.current.baseUrl ?? "");
 var token = () => String(haSettings.current.token ?? "");
-var allowUnlockByVoice = () => haSettings.current.allowUnlock === true;
 var ALLOWED_SERVICES = {
   light: ["turn_on", "turn_off", "toggle"],
   switch: ["turn_on", "turn_off", "toggle"],
@@ -72,7 +89,12 @@ var ALLOWED_SERVICES = {
   climate: ["turn_on", "turn_off", "set_temperature", "set_hvac_mode"]
 };
 var ALLOWED_DATA = {
-  "light.turn_on": { brightness_pct: (v) => typeof v === "number" && v >= 0 && v <= 100 },
+  "light.turn_on": {
+    brightness_pct: (v) => typeof v === "number" && v >= 0 && v <= 100,
+    // 色（色相 0〜360・彩度 0〜100）と、白の色温度（ケルビン）
+    hs_color: (v) => Array.isArray(v) && v.length === 2 && typeof v[0] === "number" && typeof v[1] === "number" && v[0] >= 0 && v[0] <= 360 && v[1] >= 0 && v[1] <= 100,
+    color_temp_kelvin: (v) => typeof v === "number" && Number.isInteger(v) && v >= 1e3 && v <= 12e3
+  },
   "climate.set_temperature": { temperature: (v) => typeof v === "number" && v >= 5 && v <= 40 },
   "climate.set_hvac_mode": {
     hvac_mode: (v) => typeof v === "string" && ["off", "heat", "cool", "heat_cool", "auto", "dry", "fan_only"].includes(v)
@@ -119,10 +141,14 @@ async function haFetch(path, init) {
     throw new HaUnreachableError();
   }
 }
-async function fetchStates() {
-  const res = await haFetch("/api/states");
-  if (!res.ok) throw new Error(`home assistant states error: ${res.status}`);
-  return res.json();
+var statesCache = cachedLoader(2e3);
+var areasCache = cachedLoader(10 * 6e4);
+function fetchStates() {
+  return statesCache("all", async () => {
+    const res = await haFetch("/api/states");
+    if (!res.ok) throw new Error(`home assistant states error: ${res.status}`);
+    return res.json();
+  });
 }
 function toEntity(s) {
   return {
@@ -165,7 +191,7 @@ function averageReadings(sensors) {
   });
 }
 async function getControls() {
-  if (!isConfigured()) return { configured: false, entities: [], readings: [], allowUnlock: false };
+  if (!isConfigured()) return { configured: false, entities: [], readings: [] };
   const [states, haConfig, prefs] = await Promise.all([fetchStates(), readHaConfig(), readSensorPrefs()]);
   const entities = selectEntities(
     states,
@@ -174,7 +200,7 @@ async function getControls() {
   );
   const disabled = new Set(prefs.disabled);
   const readings = averageReadings(states.filter((s) => isMeasuringSensor(s) && !disabled.has(s.entity_id)));
-  return { configured: true, entities, readings, allowUnlock: allowUnlockByVoice() };
+  return { configured: true, entities, readings };
 }
 async function listSensors() {
   if (!isConfigured()) return { configured: false, sensors: [] };
@@ -222,7 +248,7 @@ async function getClimate() {
   return { configured: true, sensors, thermostats };
 }
 function canUnlock(loggedIn) {
-  return allowUnlockByVoice() || loggedIn;
+  return loggedIn;
 }
 function sanitizeServiceData(key, data) {
   const allowed = ALLOWED_DATA[key] ?? {};
@@ -244,24 +270,24 @@ async function callHomeAssistantService(entityId, service, data, options = {}) {
     throw new HttpError(403, `service not allowed: ${domain}.${service}`);
   }
   if (domain === "lock" && service === "unlock" && !canUnlock(options.loggedIn ?? false)) {
-    throw new HttpError(403, "unlock is disabled (log in, or set HOMEASSISTANT_ALLOW_UNLOCK=true)");
+    throw new HttpError(403, "unlock needs a signed-in account (or approval on a screen for the voice assistant)");
   }
   const body = { ...sanitizeServiceData(`${domain}.${service}`, data), entity_id: entityId };
   const res = await haFetch(`/api/services/${domain}/${service}`, { method: "POST", body: JSON.stringify(body) });
+  statesCache.clear();
   if (!res.ok) throw new HttpError(502, `home assistant service error: ${res.status}`);
 }
 async function fetchAreas(entityIds) {
   const ids = entityIds.filter((id) => ENTITY_ID_PATTERN.test(id));
   if (ids.length === 0) return {};
+  return areasCache(ids.join(","), () => fetchAreasNow(ids)).catch(() => ({}));
+}
+async function fetchAreasNow(ids) {
   const template = `{% set ids = ${JSON.stringify(ids)} %}{% set ns = namespace(out=[]) %}{% for id in ids %}{% set ns.out = ns.out + [[id, area_name(id)]] %}{% endfor %}{{ ns.out | tojson }}`;
-  try {
-    const res = await haFetch("/api/template", { method: "POST", body: JSON.stringify({ template }) });
-    if (!res.ok) return {};
-    const pairs = JSON.parse(await res.text());
-    return Object.fromEntries(pairs);
-  } catch {
-    return {};
-  }
+  const res = await haFetch("/api/template", { method: "POST", body: JSON.stringify({ template }) });
+  if (!res.ok) throw new Error(`home assistant template error: ${res.status}`);
+  const pairs = JSON.parse(await res.text());
+  return Object.fromEntries(pairs);
 }
 function numberAttr(s, name) {
   const value = s.attributes[name];
@@ -305,12 +331,21 @@ async function getOverview(loggedIn) {
   const toggles = [...byDomain("light"), ...byDomain("switch"), ...byDomain("fan")].map((s) => {
     const brightness = numberAttr(s, "brightness");
     const modes = s.attributes.supported_color_modes;
-    const dimmable = Array.isArray(modes) && modes.some((mode) => mode !== "onoff");
+    const isLight = s.entity_id.startsWith("light.");
+    const colorModes = isLight && Array.isArray(modes) ? modes : [];
+    const hs = s.attributes.hs_color;
     return {
       ...withArea(s),
       // HA の brightness は 0〜255。画面では % で扱う
       brightnessPct: brightness === null ? null : Math.round(brightness / 255 * 100),
-      dimmable: s.entity_id.startsWith("light.") && dimmable
+      dimmable: colorModes.some((mode) => mode !== "onoff"),
+      // 色を変えられるか（hs・rgb など）と、白の色温度を変えられるか
+      colorable: colorModes.some((mode) => ["hs", "xy", "rgb", "rgbw", "rgbww"].includes(mode)),
+      colorTemp: colorModes.includes("color_temp"),
+      hsColor: Array.isArray(hs) && hs.length === 2 && hs.every((v) => typeof v === "number") ? [hs[0], hs[1]] : null,
+      colorTempKelvin: numberAttr(s, "color_temp_kelvin"),
+      minKelvin: numberAttr(s, "min_color_temp_kelvin"),
+      maxKelvin: numberAttr(s, "max_color_temp_kelvin")
     };
   });
   return { configured: true, ...unlock, sensors, locks, climates, toggles };
@@ -373,9 +408,94 @@ async function testConnection(locale = "ja") {
     return { ok: false, message: messages.t(locale, "cannotConnect", { url: baseUrl() }) };
   }
 }
+var ONOFF_DOMAINS = ["light", "switch", "fan", "binary_sensor", "input_boolean", "media_player"];
+function isOn(state) {
+  if (state === "unavailable" || state === "unknown") return null;
+  return ["on", "open", "playing", "home", "heat", "cool", "auto"].includes(state);
+}
+function toReading(s) {
+  const domain = s.entity_id.split(".")[0];
+  const name = s.attributes.friendly_name ?? s.entity_id;
+  const unit = s.attributes.unit_of_measurement ?? null;
+  if (domain === "sensor" && unit) {
+    const value = Number(s.state);
+    const rank = s.attributes.device_class === "illuminance" ? 0 : 3;
+    return { id: s.entity_id, name, kind: "number", value: s.state.trim() !== "" && Number.isFinite(value) ? value : null, unit, rank };
+  }
+  if (ONOFF_DOMAINS.includes(domain)) {
+    return { id: s.entity_id, name, kind: "onoff", value: isOn(s.state), rank: domain === "light" ? 1 : 2 };
+  }
+  return null;
+}
+async function listStateReadings() {
+  if (!isConfigured()) return [];
+  return (await fetchStates()).map(toReading).filter((r) => r !== null).sort((a, b) => a.rank - b.rank || a.name.localeCompare(b.name)).map(({ rank: _rank, ...reading }) => reading);
+}
+async function readStateReadings(ids) {
+  if (!isConfigured() || ids.length === 0) return [];
+  const wanted = new Set(ids);
+  return (await fetchStates()).filter((s) => wanted.has(s.entity_id)).map(toReading).filter((r) => r !== null).map(({ rank: _rank, ...reading }) => reading);
+}
+
+// extensions/home-assistant/src/layout.ts
+import { mkdir as mkdir2, readFile as readFile2, writeFile as writeFile2 } from "node:fs/promises";
+import { join as join2 } from "node:path";
+var TILE_SIZES = ["2x1", "2x2", "4x2", "4x4"];
+var MAX_TILES = 500;
+var ENTITY_ID = /^[a-z0-9_]+\.[a-z0-9_]+$/;
+var COLOR = /^#[0-9a-f]{6}$/i;
+var EMPTY_LAYOUT = { order: [], tiles: {} };
+function normalizeLayout(raw) {
+  const input = raw ?? {};
+  const order = Array.isArray(input.order) ? [...new Set(input.order.filter((id) => typeof id === "string" && ENTITY_ID.test(id)))].slice(0, MAX_TILES) : [];
+  const tiles = {};
+  if (input.tiles && typeof input.tiles === "object") {
+    for (const [id, value] of Object.entries(input.tiles).slice(0, MAX_TILES)) {
+      if (!ENTITY_ID.test(id) || !value || typeof value !== "object") continue;
+      const { size, color } = value;
+      const tile = {};
+      if (TILE_SIZES.includes(size)) tile.size = size;
+      if (typeof color === "string" && COLOR.test(color)) tile.color = color.toLowerCase();
+      if (tile.size || tile.color) tiles[id] = tile;
+    }
+  }
+  return { order, tiles };
+}
+function registerLayout(api) {
+  const layoutPath = () => join2(api.dataDir, "layout.json");
+  api.route("GET", "/layout", async () => {
+    try {
+      return normalizeLayout(JSON.parse(await readFile2(layoutPath(), "utf-8")));
+    } catch {
+      return EMPTY_LAYOUT;
+    }
+  });
+  api.route("PUT", "/layout", async ({ body }) => {
+    const layout = normalizeLayout(body);
+    await mkdir2(api.dataDir, { recursive: true });
+    await writeFile2(layoutPath(), `${JSON.stringify(layout, null, 2)}
+`);
+    return layout;
+  });
+}
 
 // extensions/home-assistant/src/server.ts
 var HA_ACTIONS = ["turn_on", "turn_off", "toggle", "lock", "unlock", "set_temperature"];
+var ACTION_LABELS = {
+  turn_on: "\u3064\u3051\u308B",
+  turn_off: "\u6D88\u3059",
+  toggle: "\u5207\u308A\u66FF\u3048\u308B",
+  lock: "\u65BD\u9320\u3059\u308B",
+  unlock: "\u89E3\u9320\u3059\u308B",
+  set_temperature: "\u306E\u6E29\u5EA6\u3092\u5909\u3048\u308B"
+};
+async function deviceName(entityId) {
+  try {
+    return (await getControls()).entities.find((e) => e.entityId === entityId)?.name ?? entityId;
+  } catch {
+    return entityId;
+  }
+}
 async function describeKnownDevices() {
   try {
     const { configured, entities } = await getControls();
@@ -387,13 +507,15 @@ async function describeKnownDevices() {
   }
 }
 function describeLockActions() {
-  return allowUnlockByVoice() ? "lock \u306F lock\u30FBunlock\uFF08\u65BD\u9320\u30FB\u89E3\u9320\uFF09" : "lock \u306F lock\uFF08\u65BD\u9320\uFF09\u306E\u307F\u3002\u89E3\u9320\u306F\u3053\u306E\u5BB6\u306E\u8A2D\u5B9A\u3067\u7981\u6B62\u3055\u308C\u3066\u3044\u3066\u5B9F\u884C\u3067\u304D\u306A\u3044";
+  return "lock \u306F lock\u30FBunlock\uFF08\u65BD\u9320\u30FB\u89E3\u9320\u3002\u89E3\u9320\u306F\u3001\u5BB6\u306E\u4EBA\u304C\u753B\u9762\u3067\u672C\u4EBA\u78BA\u8A8D\u3057\u3066\u8A31\u53EF\u3057\u305F\u3068\u304D\u3060\u3051\u5B9F\u884C\u3055\u308C\u308B\uFF09";
 }
 var server_default = defineServerExtension({
   register(api) {
     haSettings.current = api.settings;
     haSettings.configDir = api.configDir;
     haSettings.dataDir = api.dataDir;
+    api.provideStates({ list: listStateReadings, read: readStateReadings });
+    registerLayout(api);
     api.route(
       "GET",
       "/controls",
@@ -443,7 +565,6 @@ var server_default = defineServerExtension({
         const [controls, climate] = await Promise.all([getControls(), getClimate()]);
         return {
           configured: controls.configured,
-          unlockAllowed: controls.allowUnlock,
           devices: controls.entities,
           sensors: climate.sensors,
           thermostats: climate.thermostats
@@ -458,11 +579,20 @@ var server_default = defineServerExtension({
         action: z.enum(HA_ACTIONS),
         temperature: z.number().optional().describe("set_temperature \u306E\u3068\u304D\u306E\u8A2D\u5B9A\u6E29\u5EA6\uFF08\u2103\uFF09")
       }),
-      handler: async ({ entity_id, action, temperature }) => {
+      // 照明・スイッチ・空調はすぐ戻せるのでそのまま、施錠は了承を、解錠は画面での本人確認を求める
+      // （Google のスマートホームの決まりでも、施錠は確認、解錠は暗証番号が要る）
+      risk: ({ action }) => action === "unlock" ? "approve" : action === "lock" ? "confirm" : "low",
+      describe: async ({ entity_id, action, temperature }) => {
+        const name = await deviceName(entity_id);
+        return action === "set_temperature" ? `${name}\u306E\u6E29\u5EA6\u3092${temperature}\u5EA6\u306B\u3059\u308B` : `${name}\u3092${ACTION_LABELS[action]}`;
+      },
+      handler: async ({ entity_id, action, temperature }, { approvedBy }) => {
         if (action === "set_temperature" && temperature === void 0) {
           throw new HttpError(400, "set_temperature requires temperature");
         }
-        await callHomeAssistantService(entity_id, action, action === "set_temperature" ? { temperature } : void 0);
+        await callHomeAssistantService(entity_id, action, action === "set_temperature" ? { temperature } : void 0, {
+          loggedIn: approvedBy !== null
+        });
         return { ok: true };
       }
     });

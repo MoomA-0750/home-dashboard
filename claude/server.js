@@ -1,5 +1,8 @@
 import { createRequire as __hdCreateRequire } from 'node:module'; import { fileURLToPath as __hdFileURLToPath } from 'node:url'; import { dirname as __hdDirnameOf } from 'node:path'; const require = __hdCreateRequire(import.meta.url); const __hdFilename = __hdFileURLToPath(import.meta.url); const __hdDirname = __hdDirnameOf(__hdFilename);
 
+// extensions/claude/src/server.ts
+import { createHash, timingSafeEqual } from "node:crypto";
+
 // packages/extension-sdk/src/index.ts
 function defineServerMessages(dicts) {
   return {
@@ -300,7 +303,8 @@ function mergeObservations(windows, observations, observedAt) {
       observedAt
     };
   }
-  return next;
+  const kept = Object.values(next).sort((a, b) => b.observedAt.localeCompare(a.observedAt)).slice(0, MAX_WINDOWS);
+  return Object.fromEntries(kept.map((window) => [window.kind, window]));
 }
 async function getClaudeLimits() {
   const { windows } = await loadStore();
@@ -320,6 +324,11 @@ async function recordStatusLine(input) {
 }
 
 // extensions/claude/src/server.ts
+function sameToken(given, expected) {
+  if (!given || !expected) return false;
+  const digest = (value) => createHash("sha256").update(value).digest();
+  return timingSafeEqual(digest(given), digest(expected));
+}
 var server_default = defineServerExtension({
   register(api) {
     setLimitsDataDir(api.dataDir);
@@ -328,7 +337,15 @@ var server_default = defineServerExtension({
     api.onSettingsChange(syncDir);
     api.route("GET", "/usage", (ctx) => getClaudeUsage(ctx.locale));
     api.route("GET", "/limits", () => getClaudeLimits());
-    api.route("POST", "/limits", ({ body }) => recordStatusLine(body), { public: true });
+    api.route(
+      "POST",
+      "/limits",
+      ({ body, bearer }) => {
+        if (!sameToken(bearer, String(api.settings.reportToken ?? ""))) throw api.error(401, "\u5408\u8A00\u8449\u304C\u9055\u3044\u307E\u3059");
+        return recordStatusLine(body);
+      },
+      { public: true }
+    );
   }
 });
 export {

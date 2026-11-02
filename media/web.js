@@ -2,13 +2,33 @@
 var m = globalThis.__homeDashboard?.modules?.["@home-dashboard/widget-sdk"];
 if (!m) throw new Error("\u672C\u4F53\u306E @home-dashboard/widget-sdk \u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093\uFF08\u30C0\u30C3\u30B7\u30E5\u30DC\u30FC\u30C9\u306E\u4E2D\u3067\u8AAD\u307F\u8FBC\u3093\u3067\u304F\u3060\u3055\u3044\uFF09");
 var widget_sdk_default = m.default ?? m;
-var { Avatar, AvatarStack, BackButton, Badge, Button, ButtonLink, ButtonRow, ChatBubble, ChatComposer, ChatFrom, ChatHeader, ChatIconButton, ChatLayout, ChatLog, ChatMeta, ChatPending, ChatRow, Check, CodeBlock, DetailFrame, Dialog, FeatureProvidersContext, Field, Group, Icon, LOCALES, List, ListItem, LocaleContext, Message, Note, Notice, PillMenu, ScreenFrame, ScreenNotice, ScreenSection, SectionTitle, StatGrid, StatTile, ToggleSwitch, WidgetCard, WidgetHint, WidgetRegistry, defineMessages, defineWebExtension, defineWidget, extensionApiUrl, formatClock, formatPastDay, getLocale, intlLocale, setCurrentLocale, textFor, useFeatureProviders, useLocale, usePolledResource, usePolling, weatherConditionText, weatherIcon, widgetRegistry } = m;
+var { Avatar, AvatarStack, BackButton, Badge, Button, ButtonLink, ButtonRow, ChatAttachments, ChatBubble, ChatComposer, ChatFile, ChatFileChips, ChatFrom, ChatHeader, ChatIconButton, ChatImage, ChatLayout, ChatLog, ChatMeta, ChatPending, ChatRow, Check, Chip, CodeBlock, DEFAULT_DISPLAY, DetailFrame, Dialog, DisplayContext, FeatureProvidersContext, Field, Group, Icon, IconButton, LOCALES, List, ListIcon, ListItem, ListNoChevron, LocaleContext, Message, NarrowOnly, Note, Notice, PillMenu, PollingActiveContext, ProgressBar, ScreenFrame, ScreenNotice, ScreenSection, SectionTitle, SideLayout, Slider, StatGrid, StatTile, StatusDot, ToggleSwitch, WidgetCard, WidgetHint, WidgetRegistry, buttonClass, convertReading, convertTemperature, cx, defineMessages, defineWebExtension, defineWidget, extensionApiUrl, formatClock, formatDate, formatPastDay, formatTemperature, formatTime, getDisplay, getLocale, inputClass, intlLocale, motionMs, normalizeDisplay, openSettings, reducedMotion, scrollBehavior, setCurrentDisplay, setCurrentLocale, showSnackbar, startOfWeek, temperatureUnit, textFor, useClosing, useDateFormat, useDisplay, useFeatureProviders, useLocale, usePolledResource, usePolling, usePresence, useSettingsLinks, useSnackbars, useTemperature, useTimeFormat, weatherConditionText, weatherIcon, widgetRegistry } = m;
 
 // host-module:react
 var m2 = globalThis.__homeDashboard?.modules?.["react"];
 if (!m2) throw new Error("\u672C\u4F53\u306E react \u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093\uFF08\u30C0\u30C3\u30B7\u30E5\u30DC\u30FC\u30C9\u306E\u4E2D\u3067\u8AAD\u307F\u8FBC\u3093\u3067\u304F\u3060\u3055\u3044\uFF09");
 var react_default = m2.default ?? m2;
 var { Children, Component, Fragment, Profiler, PureComponent, StrictMode, Suspense, __SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED, act, cloneElement, createContext, createElement, createFactory, createRef, forwardRef, isValidElement, lazy, memo, startTransition, unstable_act, useCallback, useContext, useDebugValue, useDeferredValue, useEffect, useId, useImperativeHandle, useInsertionEffect, useLayoutEffect, useMemo, useReducer, useRef, useState, useSyncExternalStore, useTransition, version } = m2;
+
+// host-module:react/jsx-runtime
+var m3 = globalThis.__homeDashboard?.modules?.["react/jsx-runtime"];
+if (!m3) throw new Error("\u672C\u4F53\u306E react/jsx-runtime \u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093\uFF08\u30C0\u30C3\u30B7\u30E5\u30DC\u30FC\u30C9\u306E\u4E2D\u3067\u8AAD\u307F\u8FBC\u3093\u3067\u304F\u3060\u3055\u3044\uFF09");
+var jsx_runtime_default = m3.default ?? m3;
+var { Fragment: Fragment2, jsx, jsxs } = m3;
+
+// extensions/media/src/Artwork.tsx
+function Artwork({ url, className }) {
+  return /* @__PURE__ */ jsx(
+    "span",
+    {
+      className: cx(
+        "grid aspect-square place-items-center overflow-hidden bg-white/8 [&_.fluent-icon]:size-1/3 [&_.fluent-icon]:opacity-50",
+        className
+      ),
+      children: url ? /* @__PURE__ */ jsx("img", { src: url, alt: "", loading: "lazy", className: "size-full object-cover" }) : /* @__PURE__ */ jsx(Icon, { name: "music-note" })
+    }
+  );
+}
 
 // extensions/media/src/i18n.ts
 var messages = defineMessages({
@@ -47,7 +67,7 @@ var messages = defineMessages({
     viewPlaylist: "{name}\u306E\u66F2\u3092\u898B\u308B",
     playPlaylist: "{name}\u3092\u518D\u751F",
     trackCount: "{n}\u66F2",
-    backToPlaylists: "\u2190 \u30D7\u30EC\u30A4\u30EA\u30B9\u30C8",
+    backToPlaylists: "\u30D7\u30EC\u30A4\u30EA\u30B9\u30C8",
     playFromStart: "\u6700\u521D\u304B\u3089\u518D\u751F",
     noSuggestions: "\u304A\u3059\u3059\u3081\u3092\u51FA\u305B\u308B\u6750\u6599\u304C\u307E\u3060\u3042\u308A\u307E\u305B\u3093\u3002",
     enqueue: "{title}\u3092\u6B21\u306B\u518D\u751F\u3059\u308B\u66F2\u306B\u8DB3\u3059",
@@ -101,7 +121,7 @@ var messages = defineMessages({
     viewPlaylist: "View songs in {name}",
     playPlaylist: "Play {name}",
     trackCount: (p) => Number(p.n) === 1 ? "1 song" : `${p.n} songs`,
-    backToPlaylists: "\u2190 Playlists",
+    backToPlaylists: "Playlists",
     playFromStart: "Play from start",
     noSuggestions: "Not enough listening history for suggestions yet.",
     enqueue: "Add {title} to up next",
@@ -159,12 +179,6 @@ function useMusicProviders() {
   return useMemo(() => providers.map((p) => ({ ...p, name: textFor(p.name, locale) })), [providers, locale]);
 }
 
-// host-module:react/jsx-runtime
-var m3 = globalThis.__homeDashboard?.modules?.["react/jsx-runtime"];
-if (!m3) throw new Error("\u672C\u4F53\u306E react/jsx-runtime \u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093\uFF08\u30C0\u30C3\u30B7\u30E5\u30DC\u30FC\u30C9\u306E\u4E2D\u3067\u8AAD\u307F\u8FBC\u3093\u3067\u304F\u3060\u3055\u3044\uFF09");
-var jsx_runtime_default = m3.default ?? m3;
-var { Fragment: Fragment2, jsx, jsxs } = m3;
-
 // extensions/media/src/MediaScreen.tsx
 async function getJson(url) {
   const res = await fetch(url);
@@ -183,7 +197,7 @@ async function postJson(url, body) {
     throw new Error(data.error ?? messages.t("actionFailed", { status: res.status }));
   }
 }
-function formatTime(ms) {
+function formatTime2(ms) {
   if (ms === null || !Number.isFinite(ms)) return "--:--";
   const total = Math.max(0, Math.floor(ms / 1e3));
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
@@ -205,7 +219,7 @@ function MediaScreen({ ctx, account }) {
   const [provider, choose] = useSelectedMusicProvider(providers);
   const t = messages.useT();
   if (!provider) {
-    return /* @__PURE__ */ jsx(ScreenFrame, { title: "Media", children: /* @__PURE__ */ jsx("p", { className: "screen__notice", children: t("noProviders") }) });
+    return /* @__PURE__ */ jsx(ScreenFrame, { title: { ja: "\u30E1\u30C7\u30A3\u30A2", en: "Media" }, children: /* @__PURE__ */ jsx(ScreenNotice, { children: t("noProviders") }) });
   }
   return /* @__PURE__ */ jsx(
     MediaScreenBody,
@@ -245,7 +259,7 @@ function MediaScreenBody({ ctx, provider, providers, onChooseProvider }) {
   const control = (action, state) => act2(() => postJson(`${apiBaseUrl}/control`, { action, state }));
   const play = (target) => act2(() => postJson(`${apiBaseUrl}/play`, target));
   const enqueue = (trackUri) => act2(() => postJson(`${apiBaseUrl}/queue`, { trackUri }));
-  const actions = /* @__PURE__ */ jsxs("div", { className: "media__pickers", children: [
+  const actions = /* @__PURE__ */ jsxs("div", { className: "flex flex-wrap items-center gap-2.5", children: [
     /* @__PURE__ */ jsx(
       PillMenu,
       {
@@ -270,108 +284,133 @@ function MediaScreenBody({ ctx, provider, providers, onChooseProvider }) {
     )
   ] });
   if (playbackResource.loading)
-    return /* @__PURE__ */ jsx(ScreenFrame, { title: "Media", actions, children: t("loading") });
+    return /* @__PURE__ */ jsx(ScreenFrame, { title: { ja: "\u30E1\u30C7\u30A3\u30A2", en: "Media" }, actions, children: t("loading") });
   if (playbackResource.error && !playback) {
-    return /* @__PURE__ */ jsx(ScreenFrame, { title: "Media", actions, children: /* @__PURE__ */ jsx("p", { className: "screen__notice", children: String(playbackResource.error.message ?? playbackResource.error) }) });
+    return /* @__PURE__ */ jsx(ScreenFrame, { title: { ja: "\u30E1\u30C7\u30A3\u30A2", en: "Media" }, actions, children: /* @__PURE__ */ jsx(ScreenNotice, { children: String(playbackResource.error.message ?? playbackResource.error) }) });
   }
   if (playback && !playback.configured) {
-    return /* @__PURE__ */ jsx(ScreenFrame, { title: "Media", actions, children: /* @__PURE__ */ jsx("p", { className: "screen__notice", children: t("notConnected", { name: provider.name }) }) });
+    return /* @__PURE__ */ jsx(ScreenFrame, { title: { ja: "\u30E1\u30C7\u30A3\u30A2", en: "Media" }, actions, children: /* @__PURE__ */ jsx(ScreenNotice, { children: t("notConnected", { name: provider.name }) }) });
   }
   const track = playback?.track ?? null;
   const duration = track?.durationMs ?? null;
   const canShuffle = playback?.capabilities?.shuffle ?? true;
   const canRepeat = playback?.capabilities?.repeat ?? true;
-  return /* @__PURE__ */ jsxs(ScreenFrame, { title: "Media", actions, children: [
-    failure && /* @__PURE__ */ jsx("p", { className: "screen__error", role: "alert", children: failure }),
-    /* @__PURE__ */ jsxs("div", { className: "media", children: [
-      /* @__PURE__ */ jsxs("section", { className: "media__now", "aria-label": t("nowPlaying"), children: [
-        /* @__PURE__ */ jsx("div", { className: "media__art", children: track?.artUrl ? /* @__PURE__ */ jsx("img", { src: track.artUrl, alt: "" }) : /* @__PURE__ */ jsx(Icon, { name: "music-note" }) }),
-        /* @__PURE__ */ jsxs("div", { className: "media__meta", children: [
-          /* @__PURE__ */ jsx("span", { className: "media__title", children: track?.title ?? t("notPlaying") }),
-          /* @__PURE__ */ jsx("span", { className: "media__artist", children: track ? [track.artist, track.album].filter(Boolean).join(" \u2014 ") : "" })
-        ] }),
-        /* @__PURE__ */ jsx(
-          SeekBar,
-          {
-            position,
-            duration,
-            onSeek: (positionMs) => act2(() => postJson(`${apiBaseUrl}/seek`, { positionMs }))
-          },
-          track?.uri ?? "none"
-        ),
-        /* @__PURE__ */ jsxs("div", { className: `media__controls${canShuffle && canRepeat ? "" : " media__controls--basic"}`, children: [
-          canShuffle && /* @__PURE__ */ jsx(
-            "button",
-            {
-              type: "button",
-              className: `home-icon-button${playback?.shuffle ? " home-icon-button--on" : ""}`,
-              "aria-label": t("shuffle"),
-              "aria-pressed": playback?.shuffle ?? false,
-              onClick: () => control("shuffle", !playback?.shuffle),
-              children: /* @__PURE__ */ jsx(Icon, { name: "shuffle" })
-            }
-          ),
-          /* @__PURE__ */ jsx("button", { type: "button", className: "home-icon-button", "aria-label": t("previous"), onClick: () => control("previous"), children: /* @__PURE__ */ jsx(Icon, { name: "previous" }) }),
-          /* @__PURE__ */ jsx(
-            "button",
-            {
-              type: "button",
-              className: "media__play",
-              "aria-label": playback?.isPlaying ? t("pause") : t("play"),
-              onClick: () => control(playback?.isPlaying ? "pause" : "play"),
-              children: /* @__PURE__ */ jsx(Icon, { name: playback?.isPlaying ? "pause" : "play" })
-            }
-          ),
-          /* @__PURE__ */ jsx("button", { type: "button", className: "home-icon-button", "aria-label": t("next"), onClick: () => control("next"), children: /* @__PURE__ */ jsx(Icon, { name: "next" }) }),
-          canRepeat && /* @__PURE__ */ jsxs(
-            "button",
-            {
-              type: "button",
-              className: `home-icon-button${playback?.repeat !== "off" ? " home-icon-button--on" : ""}`,
-              "aria-label": t("repeatState", {
-                state: t(playback?.repeat === "track" ? "repeatOne" : playback?.repeat === "context" ? "repeatAll" : "repeatOff")
-              }),
-              onClick: () => control(
-                "repeat",
-                playback?.repeat === "off" ? "context" : playback?.repeat === "context" ? "track" : "off"
+  return /* @__PURE__ */ jsxs(ScreenFrame, { title: { ja: "\u30E1\u30C7\u30A3\u30A2", en: "Media" }, actions, children: [
+    failure && /* @__PURE__ */ jsx(ScreenNotice, { tone: "error", children: failure }),
+    /* @__PURE__ */ jsxs("div", { className: "flex items-start gap-10 tablet:flex-col tablet:items-stretch tablet:gap-6 wall:media-wall-height wall:items-stretch", children: [
+      /* @__PURE__ */ jsxs(
+        "section",
+        {
+          className: "sticky top-0 flex min-w-75 shrink basis-105 flex-col gap-4.5 tablet:static tablet:basis-auto wall:static wall:min-h-0 wall:grow-5 wall:basis-0 wall:flex-row wall:gap-8",
+          "aria-label": t("nowPlaying"),
+          children: [
+            /* @__PURE__ */ jsx(
+              Artwork,
+              {
+                url: track?.artUrl ?? null,
+                className: "w-full rounded-inner shadow-widget tablet:mx-auto tablet:max-w-90 wall:h-full wall:w-auto wall:shrink-0"
+              }
+            ),
+            /* @__PURE__ */ jsxs("div", { className: "flex min-w-0 flex-col gap-4.5 wall:min-h-0 wall:flex-1", children: [
+              /* @__PURE__ */ jsxs("div", { className: "flex min-w-0 flex-col gap-2.5", children: [
+                /* @__PURE__ */ jsx("span", { className: "ellipsis text-card font-semibold", children: track?.title ?? t("notPlaying") }),
+                /* @__PURE__ */ jsx("span", { className: "ellipsis text-muted", children: track ? [track.artist, track.album].filter(Boolean).join(" \u2014 ") : "" })
+              ] }),
+              /* @__PURE__ */ jsx(
+                SeekBar,
+                {
+                  position,
+                  duration,
+                  onSeek: (positionMs) => act2(() => postJson(`${apiBaseUrl}/seek`, { positionMs }))
+                },
+                track?.uri ?? "none"
               ),
-              children: [
-                /* @__PURE__ */ jsx(Icon, { name: "repeat" }),
-                playback?.repeat === "track" && /* @__PURE__ */ jsx("span", { className: "media__repeat-one", children: "1" })
-              ]
-            }
-          )
-        ] }),
+              /* @__PURE__ */ jsxs("div", { className: cx("flex items-center", canShuffle && canRepeat ? "justify-between" : "justify-center gap-8"), children: [
+                canShuffle && /* @__PURE__ */ jsx(
+                  IconButton,
+                  {
+                    icon: "shuffle",
+                    size: "lg",
+                    label: t("shuffle"),
+                    selected: playback?.shuffle ?? false,
+                    onClick: () => control("shuffle", !playback?.shuffle)
+                  }
+                ),
+                /* @__PURE__ */ jsx(IconButton, { icon: "previous", size: "lg", label: t("previous"), onClick: () => control("previous") }),
+                /* @__PURE__ */ jsx(
+                  IconButton,
+                  {
+                    icon: playback?.isPlaying ? "pause" : "play",
+                    size: "lg",
+                    selected: true,
+                    "aria-pressed": void 0,
+                    label: playback?.isPlaying ? t("pause") : t("play"),
+                    className: "size-19 [&_.fluent-icon]:size-8.5",
+                    onClick: () => control(playback?.isPlaying ? "pause" : "play")
+                  }
+                ),
+                /* @__PURE__ */ jsx(IconButton, { icon: "next", size: "lg", label: t("next"), onClick: () => control("next") }),
+                canRepeat && /* @__PURE__ */ jsxs("span", { className: "relative", children: [
+                  /* @__PURE__ */ jsx(
+                    IconButton,
+                    {
+                      icon: "repeat",
+                      size: "lg",
+                      selected: playback?.repeat !== "off",
+                      label: t("repeatState", {
+                        state: t(
+                          playback?.repeat === "track" ? "repeatOne" : playback?.repeat === "context" ? "repeatAll" : "repeatOff"
+                        )
+                      }),
+                      onClick: () => control(
+                        "repeat",
+                        playback?.repeat === "off" ? "context" : playback?.repeat === "context" ? "track" : "off"
+                      )
+                    }
+                  ),
+                  playback?.repeat === "track" && /* @__PURE__ */ jsx("span", { className: "pointer-events-none absolute right-1.5 bottom-1.5 text-micro font-bold text-on-fill", children: "1" })
+                ] })
+              ] }),
+              /* @__PURE__ */ jsx(
+                UpNext,
+                {
+                  apiBaseUrl,
+                  trackUri: track?.uri ?? null,
+                  onSkip: (index, trackUri) => act2(() => postJson(`${apiBaseUrl}/queue/skip`, { index, trackUri }))
+                }
+              )
+            ] })
+          ]
+        }
+      ),
+      /* @__PURE__ */ jsxs("section", { className: "glass flex min-w-0 flex-1 flex-col rounded-card media-panel-height tablet:min-h-0 wall:h-full wall:min-h-0 wall:grow-4 wall:basis-0", children: [
         /* @__PURE__ */ jsx(
-          UpNext,
+          "div",
           {
-            apiBaseUrl,
-            trackUri: track?.uri ?? null,
-            onSkip: (index, trackUri) => act2(() => postJson(`${apiBaseUrl}/queue/skip`, { index, trackUri }))
-          }
-        )
-      ] }),
-      /* @__PURE__ */ jsxs("section", { className: "media__panel", children: [
-        /* @__PURE__ */ jsx("div", { className: "media__tabs", role: "tablist", "aria-label": t("tabsAria"), children: [
-          ["lyrics", t("lyrics"), "lyrics"],
-          ["playlists", t("playlists"), "music-note"],
-          ["suggestions", t("suggestions"), "sparkle"]
-        ].map(([id, label, icon]) => /* @__PURE__ */ jsxs(
-          "button",
-          {
-            type: "button",
-            role: "tab",
-            "aria-selected": tab === id,
-            className: `media__tab${tab === id ? " media__tab--active" : ""}`,
-            onClick: () => setTab(id),
+            className: "flex gap-1.5 border-b border-glass-border p-5 phone:overflow-x-auto",
+            role: "tablist",
+            "aria-label": t("tabsAria"),
             children: [
-              /* @__PURE__ */ jsx(Icon, { name: icon }),
-              label
-            ]
-          },
-          id
-        )) }),
-        /* @__PURE__ */ jsxs("div", { className: "media__tab-body", children: [
+              ["lyrics", t("lyrics"), "lyrics"],
+              ["playlists", t("playlists"), "music-note"],
+              ["suggestions", t("suggestions"), "sparkle"]
+            ].map(([id, label, icon]) => /* @__PURE__ */ jsx(
+              Chip,
+              {
+                role: "tab",
+                icon,
+                selected: tab === id,
+                "aria-pressed": void 0,
+                "aria-selected": tab === id,
+                className: "shrink-0 whitespace-nowrap phone:[&_.fluent-icon]:hidden",
+                onClick: () => setTab(id),
+                children: label
+              },
+              id
+            ))
+          }
+        ),
+        /* @__PURE__ */ jsxs("div", { className: "min-h-0 flex-1 p-6 *:animate-enter wall:overflow-y-auto", children: [
           tab === "lyrics" && /* @__PURE__ */ jsx(LyricsView, { apiBaseUrl, track, positionMs: position }),
           tab === "playlists" && /* @__PURE__ */ jsx(PlaylistsView, { apiBaseUrl, onPlay: play }),
           tab === "suggestions" && /* @__PURE__ */ jsx(
@@ -404,37 +443,58 @@ function UpNext({
   }, [trackUri, refresh]);
   const tracks = data?.tracks.slice(0, 5) ?? [];
   if (tracks.length === 0) return null;
-  return /* @__PURE__ */ jsxs("div", { className: "media__up-next", children: [
-    /* @__PURE__ */ jsx("h2", { className: "screen__section-title", children: t("upNext") }),
-    /* @__PURE__ */ jsx("ol", { className: "media__track-list", children: tracks.map((track, index) => /* @__PURE__ */ jsx("li", { children: /* @__PURE__ */ jsxs(
-      "button",
-      {
-        type: "button",
-        className: `media__track${skipping === index ? " media__track--pending" : ""}`,
-        disabled: skipping !== null,
-        "aria-label": t("skipTo", { title: track.title }),
-        onClick: async () => {
-          setSkipping(index);
-          try {
-            await onSkip(index, track.uri);
-            await refresh();
-          } finally {
-            setSkipping(null);
-          }
-        },
-        children: [
-          /* @__PURE__ */ jsx(TrackArt, { track }),
-          /* @__PURE__ */ jsxs("span", { className: "media__track-text", children: [
-            /* @__PURE__ */ jsx("span", { className: "media__track-title", children: track.title }),
-            /* @__PURE__ */ jsx("span", { className: "media__track-artist", children: skipping === index ? t("skipping") : track.artist })
-          ] })
-        ]
+  return /* @__PURE__ */ jsx(ScreenSection, { title: t("upNext"), className: "mt-2 mb-0 wall:min-h-0 wall:overflow-y-auto", children: /* @__PURE__ */ jsx(TrackList, { children: tracks.map((track, index) => /* @__PURE__ */ jsx("li", { children: /* @__PURE__ */ jsx(
+    TrackButton,
+    {
+      track,
+      detail: skipping === index ? t("skipping") : void 0,
+      pending: skipping === index,
+      disabled: skipping !== null,
+      "aria-label": t("skipTo", { title: track.title }),
+      onClick: async () => {
+        setSkipping(index);
+        try {
+          await onSkip(index, track.uri);
+          await refresh();
+        } finally {
+          setSkipping(null);
+        }
       }
-    ) }, `${track.uri}-${index}`)) })
-  ] });
+    }
+  ) }, `${track.uri}-${index}`)) }) });
 }
-function TrackArt({ track }) {
-  return /* @__PURE__ */ jsx("span", { className: "media__track-art", children: track.artUrl ? /* @__PURE__ */ jsx("img", { src: track.artUrl, alt: "", loading: "lazy" }) : /* @__PURE__ */ jsx(Icon, { name: "music-note" }) });
+function TrackList({ children }) {
+  return /* @__PURE__ */ jsx("ol", { className: "flex flex-col gap-1", children });
+}
+function TrackButton({
+  track,
+  detail,
+  time,
+  pending,
+  className,
+  ...rest
+}) {
+  return /* @__PURE__ */ jsxs(
+    "button",
+    {
+      type: "button",
+      className: cx(
+        "press-wide flex min-h-15 w-full cursor-pointer items-center gap-3.5 rounded-inner px-2.5 py-1.5 text-left text-text",
+        "hover:bg-white/8 disabled:cursor-progress",
+        pending && "bg-tint/10",
+        className
+      ),
+      ...rest,
+      children: [
+        /* @__PURE__ */ jsx(Artwork, { url: track.artUrl, className: "size-12 shrink-0 rounded-art" }),
+        /* @__PURE__ */ jsxs("span", { className: "flex min-w-0 flex-1 flex-col gap-1", children: [
+          /* @__PURE__ */ jsx("span", { className: "ellipsis", children: track.title }),
+          /* @__PURE__ */ jsx("span", { className: "ellipsis text-note font-medium text-muted", children: detail ?? track.artist })
+        ] }),
+        time && /* @__PURE__ */ jsx("span", { className: "text-note font-medium text-muted tabular-nums", children: time })
+      ]
+    }
+  );
 }
 function activeLineIndex(lines, positionMs) {
   if (positionMs === null) return -1;
@@ -485,24 +545,29 @@ function LyricsView({
     container.scrollTo({
       // 歌詞の枠（position: relative）が offsetParent なので、offsetTop は枠の中での位置
       top: element.offsetTop - container.clientHeight / 2 + element.clientHeight / 2,
-      behavior: "smooth"
+      behavior: scrollBehavior()
     });
   }, [active]);
-  if (!track) return /* @__PURE__ */ jsx("p", { className: "screen__notice", children: t("lyricsIdle") });
-  if (error) return /* @__PURE__ */ jsx("p", { className: "screen__notice", children: t("lyricsFailed", { error }) });
-  if (!lyrics) return /* @__PURE__ */ jsx("p", { className: "screen__notice", children: t("lyricsSearching") });
-  if (lyrics.instrumental) return /* @__PURE__ */ jsx("p", { className: "screen__notice", children: t("instrumental") });
-  if (!lyrics.found) return /* @__PURE__ */ jsx("p", { className: "screen__notice", children: t("lyricsNotFound") });
-  return /* @__PURE__ */ jsxs("div", { className: "media__lyrics", children: [
-    /* @__PURE__ */ jsx("ol", { ref: listRef, className: `media__lyrics-lines${lyrics.synced ? " media__lyrics-lines--synced" : ""}`, children: lyrics.lines.map((line, index) => /* @__PURE__ */ jsx(
+  if (!track) return /* @__PURE__ */ jsx(ScreenNotice, { children: t("lyricsIdle") });
+  if (error) return /* @__PURE__ */ jsx(ScreenNotice, { children: t("lyricsFailed", { error }) });
+  if (!lyrics) return /* @__PURE__ */ jsx(ScreenNotice, { children: t("lyricsSearching") });
+  if (lyrics.instrumental) return /* @__PURE__ */ jsx(ScreenNotice, { children: t("instrumental") });
+  if (!lyrics.found) return /* @__PURE__ */ jsx(ScreenNotice, { children: t("lyricsNotFound") });
+  return /* @__PURE__ */ jsxs("div", { className: "relative lyrics-scroll wall:h-full wall:max-h-none", children: [
+    /* @__PURE__ */ jsx("ol", { ref: listRef, className: "flex flex-col gap-4.5 lyrics-pad", children: lyrics.lines.map((line, index) => /* @__PURE__ */ jsx(
       "li",
       {
-        className: index === active ? "media__lyric media__lyric--active" : index < active ? "media__lyric media__lyric--past" : "media__lyric",
+        className: cx(
+          "text-card leading-normal font-semibold untrim",
+          // 時刻付きの歌詞では、歌っている行だけを明るくし、ほかは控えめにする
+          lyrics.synced && "origin-left transition duration-(--motion-slow) ease-standard",
+          lyrics.synced && (index === active ? "scale-104" : index < active ? "text-text/55" : "text-text/40")
+        ),
         children: line.text || "\u266A"
       },
       index
     )) }),
-    /* @__PURE__ */ jsx("p", { className: "media__credit", children: t("lyricsCredit") })
+    /* @__PURE__ */ jsx("p", { className: "text-right text-micro text-muted", children: t("lyricsCredit") })
   ] });
 }
 function PlaylistsView({
@@ -515,36 +580,38 @@ function PlaylistsView({
     5 * 60 * 1e3
   );
   const [open, setOpen] = useState(null);
-  if (error) return /* @__PURE__ */ jsx("p", { className: "screen__notice", children: error.message });
-  if (!data) return /* @__PURE__ */ jsx("p", { className: "screen__notice", children: t("loading") });
+  if (error) return /* @__PURE__ */ jsx(ScreenNotice, { children: error.message });
+  if (!data) return /* @__PURE__ */ jsx(ScreenNotice, { children: t("loading") });
   if (open)
     return /* @__PURE__ */ jsx(PlaylistTracks, { apiBaseUrl, playlist: open, onBack: () => setOpen(null), onPlay });
-  if (data.playlists.length === 0) return /* @__PURE__ */ jsx("p", { className: "screen__notice", children: t("noPlaylists") });
-  return /* @__PURE__ */ jsx("ul", { className: "media__playlists", children: data.playlists.map((playlist) => /* @__PURE__ */ jsxs("li", { className: "media__playlist", children: [
+  if (data.playlists.length === 0) return /* @__PURE__ */ jsx(ScreenNotice, { children: t("noPlaylists") });
+  return /* @__PURE__ */ jsx("ul", { className: "grid media-tiles gap-4.5", children: data.playlists.map((playlist) => /* @__PURE__ */ jsxs("li", { className: "relative", children: [
     /* @__PURE__ */ jsxs(
       "button",
       {
         type: "button",
-        className: "media__playlist-open",
+        className: "press flex w-full cursor-pointer flex-col gap-2 text-left text-text",
         onClick: () => playlist.browsable ? setOpen(playlist) : onPlay({ contextUri: playlist.uri }),
         "aria-label": playlist.browsable ? t("viewPlaylist", { name: playlist.name }) : t("playPlaylist", { name: playlist.name }),
         children: [
-          /* @__PURE__ */ jsx("span", { className: "media__playlist-art", children: playlist.artUrl ? /* @__PURE__ */ jsx("img", { src: playlist.artUrl, alt: "", loading: "lazy" }) : /* @__PURE__ */ jsx(Icon, { name: "music-note" }) }),
-          /* @__PURE__ */ jsx("span", { className: "media__playlist-name", children: playlist.name }),
-          /* @__PURE__ */ jsx("span", { className: "media__playlist-meta", children: [playlist.owner, playlist.trackCount !== null ? t("trackCount", { n: playlist.trackCount }) : null].filter(Boolean).join(" \xB7 ") })
+          /* @__PURE__ */ jsx(Artwork, { url: playlist.artUrl, className: "w-full rounded-inner" }),
+          /* @__PURE__ */ jsx("span", { className: "ellipsis font-semibold", children: playlist.name }),
+          /* @__PURE__ */ jsx("span", { className: "text-caption font-medium text-muted untrim", children: [playlist.owner, playlist.trackCount !== null ? t("trackCount", { n: playlist.trackCount }) : null].filter(Boolean).join(" \xB7 ") })
         ]
       }
     ),
-    /* @__PURE__ */ jsx(
-      "button",
+    /* @__PURE__ */ jsx("div", { className: "pointer-events-none absolute inset-x-0 top-0 flex aspect-square items-end justify-end p-2.5", children: /* @__PURE__ */ jsx(
+      IconButton,
       {
-        type: "button",
-        className: "media__playlist-play",
-        "aria-label": t("playPlaylist", { name: playlist.name }),
-        onClick: () => onPlay({ contextUri: playlist.uri }),
-        children: /* @__PURE__ */ jsx(Icon, { name: "play" })
+        icon: "play",
+        size: "lg",
+        selected: true,
+        "aria-pressed": void 0,
+        label: t("playPlaylist", { name: playlist.name }),
+        className: "pointer-events-auto",
+        onClick: () => onPlay({ contextUri: playlist.uri })
       }
-    )
+    ) })
   ] }, playlist.id)) });
 }
 function PlaylistTracks({
@@ -558,36 +625,20 @@ function PlaylistTracks({
     () => getJson(`${apiBaseUrl}/playlists/${encodeURIComponent(playlist.id)}/tracks`),
     5 * 60 * 1e3
   );
-  return /* @__PURE__ */ jsxs("div", { className: "media__playlist-detail", children: [
-    /* @__PURE__ */ jsxs("div", { className: "media__playlist-head", children: [
-      /* @__PURE__ */ jsx("button", { type: "button", className: "home-button home-button--ghost", onClick: onBack, children: t("backToPlaylists") }),
-      /* @__PURE__ */ jsx("span", { className: "media__playlist-title", children: playlist.name }),
-      /* @__PURE__ */ jsx(
-        "button",
-        {
-          type: "button",
-          className: "home-button home-button--primary",
-          onClick: () => onPlay({ contextUri: playlist.uri }),
-          children: t("playFromStart")
-        }
-      )
+  return /* @__PURE__ */ jsxs("div", { children: [
+    /* @__PURE__ */ jsx(BackButton, { label: t("backToPlaylists"), onClick: onBack }),
+    /* @__PURE__ */ jsxs("div", { className: "mb-4 flex flex-wrap items-center gap-4", children: [
+      /* @__PURE__ */ jsx("span", { className: "min-w-0 flex-1 text-heading font-semibold", children: playlist.name }),
+      /* @__PURE__ */ jsx(Button, { variant: "primary", icon: "play", onClick: () => onPlay({ contextUri: playlist.uri }), children: t("playFromStart") })
     ] }),
-    error !== null && /* @__PURE__ */ jsx("p", { className: "screen__notice", children: error.message }),
-    !data && !error && /* @__PURE__ */ jsx("p", { className: "screen__notice", children: t("loading") }),
-    /* @__PURE__ */ jsx("ol", { className: "media__track-list", children: data?.tracks.map((track, index) => /* @__PURE__ */ jsx("li", { children: /* @__PURE__ */ jsxs(
-      "button",
+    error !== null && /* @__PURE__ */ jsx(ScreenNotice, { children: error.message }),
+    !data && !error && /* @__PURE__ */ jsx(ScreenNotice, { children: t("loading") }),
+    /* @__PURE__ */ jsx(TrackList, { children: data?.tracks.map((track, index) => /* @__PURE__ */ jsx("li", { children: /* @__PURE__ */ jsx(
+      TrackButton,
       {
-        type: "button",
-        className: "media__track",
-        onClick: () => onPlay({ contextUri: playlist.uri, offsetUri: track.uri }),
-        children: [
-          /* @__PURE__ */ jsx(TrackArt, { track }),
-          /* @__PURE__ */ jsxs("span", { className: "media__track-text", children: [
-            /* @__PURE__ */ jsx("span", { className: "media__track-title", children: track.title }),
-            /* @__PURE__ */ jsx("span", { className: "media__track-artist", children: track.artist })
-          ] }),
-          /* @__PURE__ */ jsx("span", { className: "media__track-time", children: formatTime(track.durationMs) })
-        ]
+        track,
+        time: formatTime2(track.durationMs),
+        onClick: () => onPlay({ contextUri: playlist.uri, offsetUri: track.uri })
       }
     ) }, `${track.uri}-${index}`)) })
   ] });
@@ -606,37 +657,13 @@ function SuggestionsView({
   useEffect(() => {
     refresh();
   }, [trackUri, refresh]);
-  if (error) return /* @__PURE__ */ jsx("p", { className: "screen__notice", children: error.message });
-  if (!data) return /* @__PURE__ */ jsx("p", { className: "screen__notice", children: t("loading") });
-  if (data.groups.length === 0) return /* @__PURE__ */ jsx("p", { className: "screen__notice", children: t("noSuggestions") });
-  return /* @__PURE__ */ jsx("div", { className: "media__suggestions", children: data.groups.map((group) => /* @__PURE__ */ jsxs("section", { className: "media__suggestion-group", children: [
-    /* @__PURE__ */ jsxs("h2", { className: "screen__section-title", children: [
-      group.title,
-      group.note && /* @__PURE__ */ jsxs("small", { children: [
-        " \xB7 ",
-        group.note
-      ] })
-    ] }),
-    /* @__PURE__ */ jsx("ol", { className: "media__track-list", children: group.tracks.map((track) => /* @__PURE__ */ jsxs("li", { className: "media__track-row", children: [
-      /* @__PURE__ */ jsxs("button", { type: "button", className: "media__track", onClick: () => onPlay({ trackUri: track.uri }), children: [
-        /* @__PURE__ */ jsx(TrackArt, { track }),
-        /* @__PURE__ */ jsxs("span", { className: "media__track-text", children: [
-          /* @__PURE__ */ jsx("span", { className: "media__track-title", children: track.title }),
-          /* @__PURE__ */ jsx("span", { className: "media__track-artist", children: track.artist })
-        ] })
-      ] }),
-      /* @__PURE__ */ jsx(
-        "button",
-        {
-          type: "button",
-          className: "home-icon-button media__enqueue",
-          "aria-label": t("enqueue", { title: track.title }),
-          onClick: () => onEnqueue(track.uri),
-          children: /* @__PURE__ */ jsx(Icon, { name: "add" })
-        }
-      )
-    ] }, track.uri)) })
-  ] }, group.id)) });
+  if (error) return /* @__PURE__ */ jsx(ScreenNotice, { children: error.message });
+  if (!data) return /* @__PURE__ */ jsx(ScreenNotice, { children: t("loading") });
+  if (data.groups.length === 0) return /* @__PURE__ */ jsx(ScreenNotice, { children: t("noSuggestions") });
+  return /* @__PURE__ */ jsx("div", { children: data.groups.map((group) => /* @__PURE__ */ jsx(ScreenSection, { title: group.note ? `${group.title} \xB7 ${group.note}` : group.title, className: "mb-8 last:mb-0", children: /* @__PURE__ */ jsx(TrackList, { children: group.tracks.map((track) => /* @__PURE__ */ jsxs("li", { className: "flex items-center gap-2", children: [
+    /* @__PURE__ */ jsx(TrackButton, { track, onClick: () => onPlay({ trackUri: track.uri }) }),
+    /* @__PURE__ */ jsx(IconButton, { icon: "add", label: t("enqueue", { title: track.title }), onClick: () => onEnqueue(track.uri) })
+  ] }, track.uri)) }) }, group.id)) });
 }
 function DevicePill({
   apiBaseUrl,
@@ -681,77 +708,45 @@ function SeekBar({
   onSeek
 }) {
   const t = messages.useT();
-  const barRef = useRef(null);
   const [preview, setPreview] = useState(null);
-  const dragging = useRef(false);
+  const timer = useRef();
   const canSeek = duration !== null && duration > 0;
   const shown = preview ?? position;
-  const ratio = canSeek && shown !== null ? Math.min(1, Math.max(0, shown / duration)) : 0;
-  const positionAt = (clientX) => {
-    const rect = barRef.current.getBoundingClientRect();
-    return Math.round(Math.min(1, Math.max(0, (clientX - rect.left) / rect.width)) * (duration ?? 0));
-  };
   const commit = async (positionMs) => {
+    clearTimeout(timer.current);
     setPreview(positionMs);
     try {
       await onSeek(positionMs);
     } finally {
-      setTimeout(() => !dragging.current && setPreview(null), 1500);
+      timer.current = setTimeout(() => setPreview(null), 1500);
     }
   };
-  return /* @__PURE__ */ jsxs("div", { className: "media__progress", children: [
-    /* @__PURE__ */ jsxs(
-      "div",
+  return /* @__PURE__ */ jsxs("div", { children: [
+    /* @__PURE__ */ jsx(
+      Slider,
       {
-        ref: barRef,
-        className: `media__seek${canSeek ? "" : " media__seek--disabled"}`,
-        role: "slider",
-        tabIndex: canSeek ? 0 : -1,
-        "aria-label": t("seekPosition"),
-        "aria-valuemin": 0,
-        "aria-valuemax": duration ?? 0,
-        "aria-valuenow": shown ?? 0,
-        "aria-valuetext": `${formatTime(shown)} / ${formatTime(duration)}`,
-        "aria-disabled": !canSeek,
-        onPointerDown: (event) => {
-          if (!canSeek) return;
-          event.currentTarget.setPointerCapture(event.pointerId);
-          dragging.current = true;
-          setPreview(positionAt(event.clientX));
+        value: shown ?? 0,
+        max: duration ?? 0,
+        keyStep: SEEK_KEY_STEP_MS,
+        disabled: !canSeek,
+        label: t("seekPosition"),
+        valueText: `${formatTime2(shown)} / ${formatTime2(duration)}`,
+        onInput: (value) => {
+          clearTimeout(timer.current);
+          setPreview(value);
         },
-        onPointerMove: (event) => {
-          if (dragging.current) setPreview(positionAt(event.clientX));
-        },
-        onPointerUp: (event) => {
-          if (!dragging.current) return;
-          dragging.current = false;
-          void commit(positionAt(event.clientX));
-        },
-        onPointerCancel: () => {
-          dragging.current = false;
-          setPreview(null);
-        },
-        onKeyDown: (event) => {
-          if (!canSeek || shown === null) return;
-          const step = event.key === "ArrowRight" ? SEEK_KEY_STEP_MS : event.key === "ArrowLeft" ? -SEEK_KEY_STEP_MS : 0;
-          if (!step) return;
-          event.preventDefault();
-          void commit(Math.min(duration, Math.max(0, shown + step)));
-        },
-        children: [
-          /* @__PURE__ */ jsx("div", { className: "media__seek-track", children: /* @__PURE__ */ jsx("span", { className: "media__seek-fill", style: { width: `${ratio * 100}%` } }) }),
-          /* @__PURE__ */ jsx("span", { className: "media__seek-thumb", style: { left: `${ratio * 100}%` } })
-        ]
+        onCommit: (value) => void commit(value)
       }
     ),
-    /* @__PURE__ */ jsxs("div", { className: "media__times", children: [
-      /* @__PURE__ */ jsx("span", { children: formatTime(shown) }),
-      /* @__PURE__ */ jsx("span", { children: formatTime(duration) })
+    /* @__PURE__ */ jsxs("div", { className: "mt-0.5 flex justify-between text-caption font-medium text-muted tabular-nums", children: [
+      /* @__PURE__ */ jsx("span", { children: formatTime2(shown) }),
+      /* @__PURE__ */ jsx("span", { children: formatTime2(duration) })
     ] })
   ] });
 }
 
 // extensions/media/src/MediaWidget.tsx
+var TITLE = "ellipsis text-card font-semibold leading-tight";
 function MediaWidgetView({ ctx, config }) {
   const providers = useMusicProviders();
   const [provider] = useSelectedMusicProvider(providers);
@@ -777,77 +772,75 @@ function MediaWidgetView({ ctx, config }) {
     [base, refresh]
   );
   if (!provider) {
-    return /* @__PURE__ */ jsx("div", { className: "widget-card widget-media widget-media--idle", children: /* @__PURE__ */ jsxs("div", { className: "widget-media__meta", children: [
-      /* @__PURE__ */ jsx("p", { className: "widget-media__title", children: t("noApps") }),
-      /* @__PURE__ */ jsx("span", { className: "widget-hint", children: t("noAppsHint") })
-    ] }) });
+    return /* @__PURE__ */ jsxs(WidgetCard, { children: [
+      /* @__PURE__ */ jsx("p", { className: TITLE, children: t("noApps") }),
+      /* @__PURE__ */ jsx(WidgetHint, { children: t("noAppsHint") })
+    ] });
   }
-  const providerLabel = /* @__PURE__ */ jsx("span", { className: "widget-media__provider", children: provider.name });
+  const providerLabel = /* @__PURE__ */ jsx("span", { className: "text-micro text-muted", children: provider.name });
   if (error && !data) {
-    return /* @__PURE__ */ jsx("div", { className: "widget-card widget-media widget-media--idle", children: /* @__PURE__ */ jsxs("div", { className: "widget-media__meta", children: [
+    return /* @__PURE__ */ jsxs(WidgetCard, { children: [
       providerLabel,
-      /* @__PURE__ */ jsx("p", { className: "widget-media__title", children: t("unreachable", { name: provider.name }) })
-    ] }) });
+      /* @__PURE__ */ jsx("p", { className: TITLE, children: t("unreachable", { name: provider.name }) })
+    ] });
   }
   if (data && !data.configured) {
-    return /* @__PURE__ */ jsx("div", { className: "widget-card widget-media widget-media--idle", children: /* @__PURE__ */ jsxs("div", { className: "widget-media__meta", children: [
+    return /* @__PURE__ */ jsxs(WidgetCard, { children: [
       providerLabel,
-      /* @__PURE__ */ jsx("p", { className: "widget-media__title", children: t("notConnectedShort", { name: provider.name }) }),
-      /* @__PURE__ */ jsx("span", { className: "widget-hint", children: t("notConnectedHint", { name: provider.name }) })
-    ] }) });
+      /* @__PURE__ */ jsx("p", { className: TITLE, children: t("notConnectedShort", { name: provider.name }) }),
+      /* @__PURE__ */ jsx(WidgetHint, { children: t("notConnectedHint", { name: provider.name }) })
+    ] });
   }
   if (!data?.track) {
-    return /* @__PURE__ */ jsx("div", { className: "widget-card widget-media widget-media--idle", children: /* @__PURE__ */ jsxs("div", { className: "widget-media__meta", children: [
+    return /* @__PURE__ */ jsxs(WidgetCard, { children: [
       providerLabel,
-      /* @__PURE__ */ jsx("p", { className: "widget-media__title", children: data ? t("notPlaying") : t("loading") })
-    ] }) });
+      /* @__PURE__ */ jsx("p", { className: TITLE, children: data ? t("notPlaying") : t("loading") })
+    ] });
   }
   const canShuffle = data.capabilities?.shuffle ?? true;
   const canRepeat = data.capabilities?.repeat ?? true;
   const nextRepeat = data.repeat === "off" ? "context" : data.repeat === "context" ? "track" : "off";
-  return /* @__PURE__ */ jsxs("div", { className: "widget-card widget-media", children: [
-    /* @__PURE__ */ jsxs("div", { className: "widget-media__meta", children: [
+  return /* @__PURE__ */ jsxs(WidgetCard, { className: "flex-row items-center justify-between gap-5", children: [
+    /* @__PURE__ */ jsxs("div", { className: "flex min-w-0 flex-col gap-1", children: [
       providerLabel,
-      /* @__PURE__ */ jsx("p", { className: "widget-media__title", children: data.track.title }),
-      /* @__PURE__ */ jsx("p", { className: "widget-media__artist muted", children: data.track.artist }),
-      /* @__PURE__ */ jsxs("div", { className: "widget-media__controls", "aria-label": t("player"), children: [
+      /* @__PURE__ */ jsx("p", { className: TITLE, children: data.track.title }),
+      /* @__PURE__ */ jsx("p", { className: "ellipsis text-small text-muted", children: data.track.artist }),
+      /* @__PURE__ */ jsxs("div", { className: "mt-1 flex items-center gap-1", "aria-label": t("player"), children: [
         canShuffle && /* @__PURE__ */ jsx(
-          "button",
+          IconButton,
           {
-            type: "button",
-            className: `widget-media__toggle${data.shuffle ? " widget-media__toggle--on" : ""}`,
-            "aria-label": t("shuffle"),
-            "aria-pressed": data.shuffle,
-            onClick: () => void control("shuffle", !data.shuffle),
-            children: /* @__PURE__ */ jsx(Icon, { name: "shuffle" })
+            icon: "shuffle",
+            label: t("shuffle"),
+            selected: data.shuffle,
+            className: cx(!data.shuffle && "text-muted"),
+            onClick: () => void control("shuffle", !data.shuffle)
           }
         ),
-        /* @__PURE__ */ jsx("button", { type: "button", "aria-label": t("previous"), onClick: () => void control("previous"), children: /* @__PURE__ */ jsx(Icon, { name: "previous" }) }),
+        /* @__PURE__ */ jsx(IconButton, { icon: "previous", label: t("previous"), onClick: () => void control("previous") }),
         /* @__PURE__ */ jsx(
-          "button",
+          IconButton,
           {
-            type: "button",
-            className: "widget-media__play",
-            "aria-label": data.isPlaying ? t("pause") : t("play"),
-            onClick: () => void control(data.isPlaying ? "pause" : "play"),
-            children: /* @__PURE__ */ jsx(Icon, { name: data.isPlaying ? "pause" : "play" })
+            icon: data.isPlaying ? "pause" : "play",
+            selected: true,
+            "aria-pressed": void 0,
+            label: data.isPlaying ? t("pause") : t("play"),
+            onClick: () => void control(data.isPlaying ? "pause" : "play")
           }
         ),
-        /* @__PURE__ */ jsx("button", { type: "button", "aria-label": t("next"), onClick: () => void control("next"), children: /* @__PURE__ */ jsx(Icon, { name: "next" }) }),
+        /* @__PURE__ */ jsx(IconButton, { icon: "next", label: t("next"), onClick: () => void control("next") }),
         canRepeat && /* @__PURE__ */ jsx(
-          "button",
+          IconButton,
           {
-            type: "button",
-            className: `widget-media__toggle${data.repeat !== "off" ? " widget-media__toggle--on" : ""}`,
-            "aria-label": t("repeat"),
-            "aria-pressed": data.repeat !== "off",
-            onClick: () => void control("repeat", nextRepeat),
-            children: /* @__PURE__ */ jsx(Icon, { name: "repeat" })
+            icon: "repeat",
+            label: t("repeat"),
+            selected: data.repeat !== "off",
+            className: cx(data.repeat === "off" && "text-muted"),
+            onClick: () => void control("repeat", nextRepeat)
           }
         )
       ] })
     ] }),
-    data.track.artUrl ? /* @__PURE__ */ jsx("img", { className: "widget-media__art", src: data.track.artUrl, alt: "" }) : /* @__PURE__ */ jsx("div", { className: "widget-media__art widget-media__art--placeholder", "aria-hidden": "true", children: data.track.title.slice(0, 1) })
+    /* @__PURE__ */ jsx(Artwork, { url: data.track.artUrl, className: "size-35 shrink-0 rounded-inner phone:size-23" })
   ] });
 }
 function MediaWidget(props) {
@@ -871,7 +864,7 @@ var mediaWidget = defineWidget({
 // extensions/media/src/web.tsx
 var web_default = defineWebExtension({
   widgets: [mediaWidget],
-  screens: [{ id: "media", label: "Media", ariaLabel: { ja: "\u30E1\u30C7\u30A3\u30A2", en: "Media" }, icon: "play", order: 10, Component: MediaScreen }]
+  screens: [{ id: "media", label: { ja: "\u30E1\u30C7\u30A3\u30A2", en: "Media" }, icon: "play", order: 10, Component: MediaScreen }]
 });
 export {
   web_default as default

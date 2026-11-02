@@ -1,7 +1,7 @@
 {
   "id": "spotify",
   "name": "Spotify",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Spotify の再生中の曲と操作・キュー・プレイリスト・おすすめを、Media（画面・ウィジェット・音声アシスタントの音楽の操作）へ渡す",
   "apiVersion": 1,
   "provides": [

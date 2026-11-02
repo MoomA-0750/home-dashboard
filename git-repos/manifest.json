@@ -1,7 +1,7 @@
 {
   "id": "git-repos",
   "name": "git リポジトリ",
-  "version": "1.1.0",
+  "version": "1.1.2",
   "description": "決めたフォルダの直下の git リポジトリの、未コミット・未 push を出す",
   "apiVersion": 1,
   "settings": [

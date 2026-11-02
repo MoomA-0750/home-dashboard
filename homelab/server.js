@@ -20174,6 +20174,24 @@ function defineServerMessages(dicts) {
 function defineServerExtension(extension) {
   return extension;
 }
+function cachedLoader(ttlMs) {
+  const values = /* @__PURE__ */ new Map();
+  const pending = /* @__PURE__ */ new Map();
+  function load(key, task) {
+    const hit = values.get(key);
+    if (hit && hit.expiresAt > Date.now()) return Promise.resolve(hit.value);
+    const running = pending.get(key);
+    if (running) return running;
+    const promise = task().then((value) => {
+      values.set(key, { value, expiresAt: Date.now() + ttlMs });
+      return value;
+    }).finally(() => pending.delete(key));
+    pending.set(key, promise);
+    return promise;
+  }
+  load.clear = () => values.clear();
+  return load;
+}
 
 // extensions/homelab/src/hosts.ts
 import { randomUUID } from "node:crypto";
@@ -20858,10 +20876,15 @@ async function testHost(host, diskPath, locale = "ja") {
 var server_default = defineServerExtension({
   register(api) {
     const store = new HostStore(api.dataDir, join3(api.configDir, "homelab-hosts.json"));
-    api.route("GET", "/status", async ({ locale }) => {
-      const hosts = await store.list();
-      return { hosts: await Promise.all(hosts.map((host) => readHost(host, api.dataDir, locale))) };
-    });
+    const status = cachedLoader(1e4);
+    api.route(
+      "GET",
+      "/status",
+      async ({ locale }) => status(locale, async () => {
+        const hosts = await store.list();
+        return { hosts: await Promise.all(hosts.map((host) => readHost(host, api.dataDir, locale))) };
+      })
+    );
     api.route("GET", "/hosts", async () => ({ hosts: await store.listPublic() }), { adminOnly: true });
     api.route(
       "GET",

@@ -1,8 +1,8 @@
 {
   "id": "home-assistant",
   "name": "Home Assistant",
-  "version": "1.1.0",
-  "description": "Home Control 画面（室温・湿度・CO₂、照明・エアコン・鍵）、家電操作のウィジェット（室温・湿度などの平均も出す）、音声アシスタントの家電の操作",
+  "version": "1.1.4",
+  "description": "ホームコントロールの画面（室温・湿度・CO₂、照明・エアコン・鍵）、家電操作のウィジェット（室温・湿度などの平均も出す）、音声アシスタントの家電の操作",
   "apiVersion": 1,
   "settingsNote": "トークンは HA の「プロフィール → セキュリティ → 長期アクセストークン」で発行します。表示するものを決めたいときは config/homeassistant.json に書きます（README 参照）。",
   "settingsTest": "/test",
@@ -19,14 +19,6 @@
       "label": "長期アクセストークン",
       "kind": "secret",
       "env": "HOMEASSISTANT_TOKEN"
-    },
-    {
-      "key": "allowUnlock",
-      "label": "音声アシスタントにも解錠を許す",
-      "kind": "boolean",
-      "env": "HOMEASSISTANT_ALLOW_UNLOCK",
-      "default": false,
-      "hidden": true
     }
   ],
   "locales": {
@@ -39,9 +31,6 @@
         },
         "token": {
           "label": "Long-lived access token"
-        },
-        "allowUnlock": {
-          "label": "Also allow the voice assistant to unlock"
         }
       }
     }

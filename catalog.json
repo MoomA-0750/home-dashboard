@@ -1,108 +1,119 @@
 {
   "format": 1,
-  "commit": "38224416d347a84730a7243f4c02ca92b8e7e64d",
+  "commit": "f28b7844cf69972d8bcca70a9c445867cd5f33e7",
   "extensions": [
     {
       "id": "accounts",
       "name": "カレンダー・メール",
-      "version": "2.1.0",
+      "version": "2.2.0",
       "description": "Calendar・Mail の画面、予定とメールのウィジェット、音声アシスタントの予定とメール。Google・iCloud・Microsoft・一般のアカウントを、設定の「アカウント → インターネットアカウント」でログインした人ごとに足す（家で共有するにしたものは家族と音声アシスタントにも見える）",
       "apiVersion": 1,
       "features": [
         {
           "id": "calendar",
           "name": "カレンダーの出どころ",
-          "description": "インターネットアカウントのほかに、予定のウィジェット・Calendar 画面・音声アシスタントに出すカレンダー"
+          "description": "インターネットアカウントのほかに、予定のウィジェット・カレンダーの画面・音声アシスタントに出すカレンダー"
         },
         {
           "id": "mail",
           "name": "メールの出どころ",
-          "description": "インターネットアカウントのほかに、メールのウィジェット・Mail 画面・音声アシスタントに出す受信箱"
+          "description": "インターネットアカウントのほかに、メールのウィジェット・メールの画面・音声アシスタントに出す受信箱"
         }
       ],
       "provides": [],
-      "revision": "94647f027112b044",
+      "revision": "e2420e4f93cbfdaf",
       "path": "accounts"
     },
     {
       "id": "chat",
       "name": "チャット",
-      "version": "1.2.0",
-      "description": "画面から音声アシスタントと話すチャット（サイドバーの Chat）。どの端末にも出る。機能の口「チャットアプリ」を持ち、iMessage などが入ると、Chat 画面の右上で切り替えられる。画面は本体の音声アシスタント（返事の声・話している相手）と一緒に動くので、本体に入っている",
+      "version": "1.2.1",
+      "description": "画面から音声アシスタントと話すチャット（サイドバーのチャット）。どの端末にも出る。機能の口「チャットアプリ」を持ち、iMessage などが入ると、チャットの画面の右上で切り替えられる。画面は本体の音声アシスタント（返事の声・話している相手）と一緒に動くので、本体に入っている",
       "apiVersion": 1,
       "features": [
         {
           "id": "chat",
           "name": "チャットアプリ",
-          "description": "Chat 画面の右上で、音声アシスタントと切り替えて使うチャット（iMessage など）"
+          "description": "チャットの画面の右上で、音声アシスタントと切り替えて使うチャット（iMessage など）"
         }
       ],
       "provides": [],
-      "revision": "39e8a3d6074050b5",
+      "revision": "aa2997d6a9d8b2ea",
       "path": "chat"
     },
     {
       "id": "claude",
       "name": "Claude",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "description": "Claude Code の使用量（トークン数・5時間ブロック）と、5時間・週の利用制限（statusLine から）",
       "apiVersion": 1,
       "features": [],
       "provides": [],
-      "revision": "51da17a63045f643",
+      "revision": "60ff623e6f4a1421",
       "path": "claude"
     },
     {
       "id": "git-repos",
       "name": "git リポジトリ",
-      "version": "1.1.0",
+      "version": "1.1.2",
       "description": "決めたフォルダの直下の git リポジトリの、未コミット・未 push を出す",
       "apiVersion": 1,
       "features": [],
       "provides": [],
-      "revision": "8e8d08855cc422c8",
+      "revision": "5dae76fc67aecd04",
       "path": "git-repos"
     },
     {
       "id": "home-assistant",
       "name": "Home Assistant",
-      "version": "1.1.0",
-      "description": "Home Control 画面（室温・湿度・CO₂、照明・エアコン・鍵）、家電操作のウィジェット（室温・湿度などの平均も出す）、音声アシスタントの家電の操作",
+      "version": "1.1.4",
+      "description": "ホームコントロールの画面（室温・湿度・CO₂、照明・エアコン・鍵）、家電操作のウィジェット（室温・湿度などの平均も出す）、音声アシスタントの家電の操作",
       "apiVersion": 1,
       "features": [],
       "provides": [],
-      "revision": "2e1e4f4fcc09258f",
+      "revision": "dcf535d8a1920e8f",
       "path": "home-assistant"
     },
     {
       "id": "homelab",
       "name": "homelab",
-      "version": "2.2.0",
+      "version": "2.2.2",
       "description": "登録した機械の CPU・メモリ・ディスク・連続稼働時間を出す。この機械・SSH でつなぐ機械・node_exporter を入れた機械・Proxmox VE・応答の確認だけ、から選んで登録する",
       "apiVersion": 1,
       "features": [],
       "provides": [],
-      "revision": "a3ecf5f89cf730f6",
+      "revision": "9c2bdcb35c5f0794",
       "path": "homelab"
     },
     {
       "id": "imessage",
       "name": "iMessage",
-      "version": "1.3.0",
-      "description": "Mac で動く imsg-web につないで、iMessage の会話を Chat 画面（右上で iMessage を選ぶ）で読み、送る。画像・音声も見られる。新着は15秒ごとに見に行く",
+      "version": "1.3.4",
+      "description": "Mac で動く imsg-web につないで、iMessage の会話を チャットの画面（右上で iMessage を選ぶ）で読み、送る。画像・音声も見られる。新着は15秒ごとに見に行く",
       "apiVersion": 1,
       "features": [],
       "provides": [
         "chat"
       ],
-      "revision": "92c7ae81de5fd440",
+      "revision": "ecf575d29005cf64",
       "path": "imessage"
+    },
+    {
+      "id": "location",
+      "name": "位置",
+      "version": "1.0.0",
+      "description": "icloud-locate（iCloud の「探す」）から、自分の Apple 端末の位置と家からの距離を出す。位置のウィジェットと地図の画面・音声アシスタントの get_location・家に着いた／出たときの Webhook（knot などのオートメーション向け）",
+      "apiVersion": 1,
+      "features": [],
+      "provides": [],
+      "revision": "5dc03d98b87cd9c6",
+      "path": "location"
     },
     {
       "id": "media",
       "name": "Media",
-      "version": "1.1.0",
-      "description": "Media 画面（再生中・キュー・プレイリスト・おすすめ・歌詞）、ホームのメディアのウィジェット、音声アシスタントの音楽の操作。音楽アプリは、ここへ入る拡張機能（wave・Spotify など）から右上で選ぶ",
+      "version": "1.1.3",
+      "description": "メディアの画面（再生中・キュー・プレイリスト・おすすめ・歌詞）、ホームのメディアのウィジェット、音声アシスタントの音楽の操作。音楽アプリは、ここへ入る拡張機能（wave・Spotify など）から右上で選ぶ",
       "apiVersion": 1,
       "features": [
         {
@@ -112,55 +123,66 @@
         }
       ],
       "provides": [],
-      "revision": "786274e6cc5ba2ed",
+      "revision": "8d073fa0e2e4418c",
       "path": "media"
     },
     {
       "id": "spotify",
       "name": "Spotify",
-      "version": "1.2.0",
+      "version": "1.2.1",
       "description": "Spotify の再生中の曲と操作・キュー・プレイリスト・おすすめを、Media（画面・ウィジェット・音声アシスタントの音楽の操作）へ渡す",
       "apiVersion": 1,
       "features": [],
       "provides": [
         "music"
       ],
-      "revision": "ecdb7383dbc8d62c",
+      "revision": "89d95a59f281c9c4",
       "path": "spotify"
+    },
+    {
+      "id": "sticky-notes",
+      "name": "付箋",
+      "version": "1.0.0",
+      "description": "家にいる人に向けた伝言を付箋のように貼る。文字の揃え（横・縦）と、iMessage のような効果（ドン・大声・そっと・見えないインク、付箋の中で起こる紙吹雪・風船・ハート）を付けられる。どの端末からも貼ったりはがしたりでき、音声アシスタントからも貼れる（add_sticky_note）",
+      "apiVersion": 1,
+      "features": [],
+      "provides": [],
+      "revision": "6dcc0ae9f7fc22df",
+      "path": "sticky-notes"
     },
     {
       "id": "tailscale",
       "name": "Tailscale",
-      "version": "1.1.0",
+      "version": "1.1.1",
       "description": "tailscaled の状態（つながっている機械・exit node）を読み取りだけで出す",
       "apiVersion": 1,
       "features": [],
       "provides": [],
-      "revision": "f4af0d9080aaa399",
+      "revision": "b1d65f731c6e3466",
       "path": "tailscale"
     },
     {
       "id": "wave",
       "name": "wave",
-      "version": "1.2.0",
+      "version": "1.2.1",
       "description": "wave（自作の YouTube Music クライアント）の再生中の曲と操作・キュー・プレイリスト・おすすめを、Media（画面・ウィジェット・音声アシスタントの音楽の操作）へ渡す",
       "apiVersion": 1,
       "features": [],
       "provides": [
         "music"
       ],
-      "revision": "7b4def024ba3d8d6",
+      "revision": "2b388aef3af692ef",
       "path": "wave"
     },
     {
       "id": "weather",
       "name": "天気",
-      "version": "1.3.0",
-      "description": "Open-Meteo（キー不要）から、家の地点の天気を出す。Weather 画面（今の天気・1時間ごと・10日間・UV・日の出入り・風・湿度・気圧・視程・大気質）、ホームの時刻の横の天気・天気ウィジェット・音声アシスタントの get_weather",
+      "version": "1.3.4",
+      "description": "Open-Meteo（キー不要）から、家の地点の天気を出す。天気の画面（今の天気・1時間ごと・10日間・UV・日の出入り・風・湿度・気圧・視程・大気質）、ホームの時刻の横の天気・天気ウィジェット・音声アシスタントの get_weather",
       "apiVersion": 1,
       "features": [],
       "provides": [],
-      "revision": "205100797b3c51a3",
+      "revision": "5fc54673250290ed",
       "path": "weather"
     }
   ]

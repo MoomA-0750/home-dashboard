@@ -1,8 +1,8 @@
 {
   "id": "imessage",
   "name": "iMessage",
-  "version": "1.3.0",
-  "description": "Mac で動く imsg-web につないで、iMessage の会話を Chat 画面（右上で iMessage を選ぶ）で読み、送る。画像・音声も見られる。新着は15秒ごとに見に行く",
+  "version": "1.3.4",
+  "description": "Mac で動く imsg-web につないで、iMessage の会話を チャットの画面（右上で iMessage を選ぶ）で読み、送る。画像・音声も見られる。新着は15秒ごとに見に行く",
   "apiVersion": 1,
   "settingsNote": "トークンは Mac で `imsg-web client add dashboard`（送るなら `--send` を付ける）を実行して出します。証明書は Mac の imsg-web の state/tls/cert.pem の中身を貼るか、config/imessage/cert.pem に置きます（Tailscale Serve の名前でつなぐなら要りません）。会話は管理者のアカウントにだけ見せます（下の「メンバーにも見せる」で変えられます）。",
   "settingsTest": "/test",

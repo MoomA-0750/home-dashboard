@@ -1,8 +1,8 @@
 {
   "id": "weather",
   "name": "天気",
-  "version": "1.3.0",
-  "description": "Open-Meteo（キー不要）から、家の地点の天気を出す。Weather 画面（今の天気・1時間ごと・10日間・UV・日の出入り・風・湿度・気圧・視程・大気質）、ホームの時刻の横の天気・天気ウィジェット・音声アシスタントの get_weather",
+  "version": "1.3.4",
+  "description": "Open-Meteo（キー不要）から、家の地点の天気を出す。天気の画面（今の天気・1時間ごと・10日間・UV・日の出入り・風・湿度・気圧・視程・大気質）、ホームの時刻の横の天気・天気ウィジェット・音声アシスタントの get_weather",
   "apiVersion": 1,
   "settingsNote": "地点の緯度・経度は地図アプリなどで調べて入れます。",
   "settings": [

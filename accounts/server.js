@@ -82281,6 +82281,9 @@ var require_imap_flow = __commonJS({
   }
 });
 
+// extensions/accounts/src/server.ts
+import { randomUUID as randomUUID3 } from "node:crypto";
+
 // packages/extension-sdk/src/index.ts
 var HttpError = class extends Error {
   constructor(statusCode, message2) {
@@ -82312,6 +82315,8 @@ var ja = {
   // 道
   loginRequired: "\u30ED\u30B0\u30A4\u30F3\u3057\u3066\u304F\u3060\u3055\u3044",
   badHost: "\u30B5\u30FC\u30D0\u30FC\u306E\u540D\u524D\u304C\u6B63\u3057\u304F\u3042\u308A\u307E\u305B\u3093: {host}",
+  internalHost: "{host} \u306F\u5BB6\u306E\u4E2D\u304B\u3001\u5F15\u3051\u306A\u3044\u540D\u524D\u3067\u3059\u3002\u5BB6\u306E\u4E2D\u306E\u30B5\u30FC\u30D0\u30FC\u3092\u8DB3\u305B\u308B\u306E\u306F\u7BA1\u7406\u8005\u3060\u3051\u3067\u3059",
+  httpsOnly: "\u30AB\u30EC\u30F3\u30C0\u30FC\u306E URL \u306F https\uFF08\u304B webcal\uFF09\u306B\u3057\u3066\u304F\u3060\u3055\u3044",
   badPort: "\u30DD\u30FC\u30C8\u304C\u6B63\u3057\u304F\u3042\u308A\u307E\u305B\u3093",
   kindNotAddable: "\u305D\u306E\u7A2E\u985E\u306F\u3001\u3053\u306E\u753B\u9762\u304B\u3089\u306F\u8DB3\u305B\u307E\u305B\u3093",
   imapRequired: "IMAP \u306E\u30B5\u30FC\u30D0\u30FC\u3092\u5165\u308C\u3066\u304F\u3060\u3055\u3044",
@@ -82348,6 +82353,9 @@ var ja = {
   noRefreshToken: "\u305A\u3063\u3068\u4F7F\u3046\u305F\u3081\u306E\u8A31\u3057\uFF08refresh token\uFF09\u304C\u3082\u3089\u3048\u307E\u305B\u3093\u3067\u3057\u305F\u3002\u3082\u3046\u4E00\u5EA6\u8DB3\u3057\u3066\u304F\u3060\u3055\u3044",
   notOAuth: "\u3053\u306E\u30A2\u30AB\u30A6\u30F3\u30C8\u306F OAuth \u3067\u306F\u3042\u308A\u307E\u305B\u3093",
   forbidden: "\u8A31\u3057\u304C\u8DB3\u308A\u307E\u305B\u3093\uFF08{reason}\uFF09\u3002\u30ED\u30B0\u30A4\u30F3\u3057\u76F4\u3057\u3066\u304F\u3060\u3055\u3044",
+  scopesMissing: "{provider} \u306E\u30AB\u30EC\u30F3\u30C0\u30FC\u3068\u30E1\u30FC\u30EB\u3092\u4F7F\u3046\u8A31\u3057\u304C\u3082\u3089\u3048\u307E\u305B\u3093\u3067\u3057\u305F\u3002\u3082\u3046\u4E00\u5EA6\u8DB3\u3057\u3066\u3001{provider} \u306E\u753B\u9762\u3067\u300C\u3059\u3079\u3066\u9078\u629E\u300D\uFF08\u30AB\u30EC\u30F3\u30C0\u30FC\u3068 Gmail \u306E\u9805\u76EE\u3059\u3079\u3066\uFF09\u306B\u30C1\u30A7\u30C3\u30AF\u3092\u5165\u308C\u3066\u304B\u3089\u7D9A\u3051\u3066\u304F\u3060\u3055\u3044",
+  scopesInsufficient: "\u30AB\u30EC\u30F3\u30C0\u30FC\u3068\u30E1\u30FC\u30EB\u3092\u4F7F\u3046\u8A31\u3057\u304C\u8DB3\u308A\u307E\u305B\u3093\u3002\u8A2D\u5B9A\u306E\u300C\u30A2\u30AB\u30A6\u30F3\u30C8 \u2192 \u30A4\u30F3\u30BF\u30FC\u30CD\u30C3\u30C8\u30A2\u30AB\u30A6\u30F3\u30C8\u300D\u3067\u3053\u306E\u30A2\u30AB\u30A6\u30F3\u30C8\u3092\u5916\u3057\u3066\u8DB3\u3057\u76F4\u3057\u3001Google \u306E\u753B\u9762\u3067\u3059\u3079\u3066\u306E\u9805\u76EE\u306B\u30C1\u30A7\u30C3\u30AF\u3092\u5165\u308C\u3066\u304F\u3060\u3055\u3044",
+  apiDisabled: "Google Cloud \u3067 {api} \u304C\u6709\u52B9\u306B\u306A\u3063\u3066\u3044\u307E\u305B\u3093\u3002\u7BA1\u7406\u8005\u304C Google Cloud \u306E\u300CAPI \u3068\u30B5\u30FC\u30D3\u30B9 \u2192 \u30E9\u30A4\u30D6\u30E9\u30EA\u300D\u3067 {api} \u3092\u6709\u52B9\u306B\u3057\u3066\u304F\u3060\u3055\u3044\uFF08\u6709\u52B9\u306B\u3057\u3066\u304B\u3089\u4F7F\u3048\u308B\u307E\u3067\u6570\u5206\u304B\u304B\u308B\u3053\u3068\u304C\u3042\u308A\u307E\u3059\uFF09",
   notFound: "\u898B\u3064\u304B\u308A\u307E\u305B\u3093",
   serviceFailed: "\u30B5\u30FC\u30D3\u30B9\u304C\u7B54\u3048\u307E\u305B\u3093\u3067\u3057\u305F\uFF08{reason}\uFF09",
   // メール（IMAP・Gmail・Outlook）
@@ -82363,6 +82371,11 @@ var ja = {
   caldavLoginFailed: "\u30ED\u30B0\u30A4\u30F3\u3067\u304D\u307E\u305B\u3093\uFF08iCloud \u306A\u3089 Apple ID \u306E\u30E1\u30FC\u30EB\u30A2\u30C9\u30EC\u30B9\u3068\u300CApp \u7528\u30D1\u30B9\u30EF\u30FC\u30C9\u300D\u3092\u78BA\u304B\u3081\u3066\u304F\u3060\u3055\u3044\uFF09",
   caldavConnectFailed: "\u30AB\u30EC\u30F3\u30C0\u30FC\u306B\u3064\u306A\u304C\u308A\u307E\u305B\u3093: {detail}",
   calendarNotFound: "\u305D\u306E\u30AB\u30EC\u30F3\u30C0\u30FC\u306F\u898B\u3064\u304B\u308A\u307E\u305B\u3093",
+  cannotToggleCalendar: "\u3053\u306E\u30AB\u30EC\u30F3\u30C0\u30FC\u306F\u5165\uFF0F\u5207\u3092\u5909\u3048\u3089\u308C\u307E\u305B\u3093",
+  calendarToggleOwnerOnly: "\u30AB\u30EC\u30F3\u30C0\u30FC\u306E\u5165\uFF0F\u5207\u306F\u3001\u30A2\u30AB\u30A6\u30F3\u30C8\u3092\u8DB3\u3057\u305F\u4EBA\u3060\u3051\u304C\u5909\u3048\u3089\u308C\u307E\u3059",
+  badRequest: "\u983C\u307F\u306E\u5F62\u304C\u9055\u3044\u307E\u3059",
+  cannotMove: "\u3053\u306E\u30E1\u30FC\u30EB\u306F\u79FB\u305B\u307E\u305B\u3093",
+  moveTargetMissing: "\u79FB\u3059\u5148\u306E\u30D5\u30A9\u30EB\u30C0\u30FC\u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093",
   eventNotFound: "\u305D\u306E\u4E88\u5B9A\u306F\u898B\u3064\u304B\u308A\u307E\u305B\u3093",
   createFailed: "\u4E88\u5B9A\u3092\u8DB3\u305B\u307E\u305B\u3093\u3067\u3057\u305F\uFF08{status}\uFF09",
   updateFailed: "\u4E88\u5B9A\u3092\u5909\u3048\u3089\u308C\u307E\u305B\u3093\u3067\u3057\u305F\uFF08{status}\uFF09",
@@ -82392,6 +82405,8 @@ var ja = {
 var en = {
   loginRequired: "Please sign in",
   badHost: "Invalid server name: {host}",
+  internalHost: "{host} is inside the home network or can't be resolved. Only administrators can add servers inside the home",
+  httpsOnly: "Use an https (or webcal) calendar URL",
   badPort: "Invalid port",
   kindNotAddable: "That account type can't be added here",
   imapRequired: "Enter the IMAP server",
@@ -82426,6 +82441,9 @@ var en = {
   noRefreshToken: "Didn't receive long-term access (refresh token). Please add the account again",
   notOAuth: "This account doesn't use OAuth",
   forbidden: "Insufficient permissions ({reason}). Please sign in again",
+  scopesMissing: "{provider} didn't grant access to calendars and mail. Add the account again and check Select all (every calendar and Gmail item) on the {provider} screen before continuing",
+  scopesInsufficient: "Missing access to calendars and mail. Remove this account in Settings \u2192 Accounts \u2192 Internet Accounts, add it again, and check every item on the Google screen",
+  apiDisabled: "{api} isn't enabled in Google Cloud. An admin needs to enable {api} under APIs & Services \u2192 Library in Google Cloud (it can take a few minutes to take effect)",
   notFound: "Not found",
   serviceFailed: "The service didn't respond ({reason})",
   mailNotFound: "Email not found",
@@ -82439,6 +82457,11 @@ var en = {
   caldavLoginFailed: "Couldn't sign in (for iCloud, check your Apple ID email and app-specific password)",
   caldavConnectFailed: "Couldn't connect to the calendar: {detail}",
   calendarNotFound: "Calendar not found",
+  cannotToggleCalendar: "This calendar can't be turned on or off",
+  calendarToggleOwnerOnly: "Only the person who added the account can turn its calendars on or off",
+  badRequest: "Bad request",
+  cannotMove: "This email can't be moved",
+  moveTargetMissing: "Couldn't find the folder to move to",
   eventNotFound: "Event not found",
   createFailed: "Couldn't add the event ({status})",
   updateFailed: "Couldn't update the event ({status})",
@@ -82629,6 +82652,61 @@ function toInfo(account, user) {
   };
 }
 
+// extensions/accounts/src/cache.ts
+var MAX_ENTRIES = 600;
+var SwrCache = class {
+  entries = /* @__PURE__ */ new Map();
+  async get(key, ttl, load) {
+    const entry = this.entries.get(key);
+    const age = entry && "value" in entry ? Date.now() - entry.at : Infinity;
+    if (entry && age < ttl.fresh) return entry.value;
+    if (entry && age < ttl.stale) {
+      if (!entry.loading) void this.refresh(key, entry, load).catch(() => void 0);
+      return entry.value;
+    }
+    const current = entry ?? { at: 0 };
+    return current.loading ?? this.refresh(key, current, load);
+  }
+  refresh(key, entry, load) {
+    const loading = load().then(
+      (value) => {
+        if (this.entries.get(key) === entry) {
+          entry.value = value;
+          entry.at = Date.now();
+          entry.loading = void 0;
+          this.entries.delete(key);
+          this.entries.set(key, entry);
+        }
+        return value;
+      },
+      (err) => {
+        if (this.entries.get(key) === entry) {
+          entry.loading = void 0;
+          if (!("value" in entry)) this.entries.delete(key);
+        }
+        throw err;
+      }
+    );
+    entry.loading = loading;
+    this.entries.set(key, entry);
+    while (this.entries.size > MAX_ENTRIES) this.entries.delete(this.entries.keys().next().value);
+    return loading;
+  }
+  /** prefix で始まるものを捨てる（そのアカウントに書いたとき） */
+  forget(prefix) {
+    for (const key of [...this.entries.keys()]) if (key.startsWith(prefix)) this.entries.delete(key);
+  }
+};
+var MINUTE = 6e4;
+var TTL = {
+  unread: { fresh: 3e4, stale: 30 * MINUTE },
+  messages: { fresh: 3e4, stale: 30 * MINUTE },
+  message: { fresh: 10 * MINUTE, stale: 60 * MINUTE },
+  folders: { fresh: 10 * MINUTE, stale: 24 * 60 * MINUTE },
+  calendars: { fresh: 5 * MINUTE, stale: 24 * 60 * MINUTE },
+  events: { fresh: MINUTE, stale: 30 * MINUTE }
+};
+
 // extensions/accounts/src/backend.ts
 var encode = (value) => Buffer.from(value, "utf-8").toString("base64url");
 var decode = (value) => Buffer.from(value, "base64url").toString("utf-8");
@@ -82640,6 +82718,7 @@ function splitId(id, parts) {
 }
 var message = (err) => err instanceof Error ? err.message : String(err);
 function createBackends(store, clients2, tokenFor2) {
+  const cache2 = new SwrCache();
   const contextOf = (account) => ({ account, token: () => tokenFor2(account) });
   async function accountFor(viewer, accountId) {
     const account = await store.get(accountId);
@@ -82661,6 +82740,8 @@ function createBackends(store, clients2, tokenFor2) {
     id: `${account.id}.${encode(raw.calendarId)}.${encode(raw.id)}`,
     calendarId: `${account.id}.${encode(raw.calendarId)}`
   });
+  const enabledOf = (account, raw) => account.calendarChoices?.[raw.id] ?? raw.selected ?? true;
+  const cachedCalendars = (account) => cache2.get(`${account.id}:cal:calendars`, TTL.calendars, () => calendarClient(account).listCalendars(contextOf(account)));
   async function calendarAccounts(viewer) {
     return (await store.visible(viewer)).filter((a) => a.services.calendar && clients2.calendar[a.provider]);
   }
@@ -82670,7 +82751,7 @@ function createBackends(store, clients2, tokenFor2) {
       const lists = await Promise.all(
         (await calendarAccounts(viewer)).map(async (account) => {
           try {
-            const raws = await calendarClient(account).listCalendars(contextOf(account));
+            const raws = await cachedCalendars(account);
             return raws.map(
               (raw) => ({
                 id: `${account.id}.${encode(raw.id)}`,
@@ -82678,7 +82759,10 @@ function createBackends(store, clients2, tokenFor2) {
                 color: raw.color,
                 source: account.label,
                 writable: raw.writable,
-                shared: account.shared
+                shared: account.shared,
+                enabled: enabledOf(account, raw),
+                // 入／切はアカウントを足した本人だけが変える（家で共有のものは、家族みんなに効くため）
+                toggleable: viewer.accountId !== null && account.ownerId === viewer.accountId
               })
             );
           } catch (err) {
@@ -82696,8 +82780,16 @@ function createBackends(store, clients2, tokenFor2) {
           const ctx = contextOf(account);
           const client = calendarClient(account);
           try {
-            const calendars = await client.listCalendars(ctx);
-            const events2 = await Promise.all(calendars.map((c) => client.listEvents(ctx, c.id, range)));
+            const calendars = (await cachedCalendars(account)).filter((c) => enabledOf(account, c));
+            const events2 = await Promise.all(
+              calendars.map(
+                (c) => cache2.get(
+                  `${account.id}:cal:events:${c.id}:${range.from}:${range.to}`,
+                  TTL.events,
+                  () => client.listEvents(ctx, c.id, range)
+                )
+              )
+            );
             return events2.flat().map((raw) => toEvent(account, raw));
           } catch (err) {
             errors2.push({ source: account.label, message: message(err) });
@@ -82712,6 +82804,7 @@ function createBackends(store, clients2, tokenFor2) {
       const [accountId, calendarId] = splitId(input.calendarId, 1);
       const account = await accountFor(viewer, accountId);
       const raw = await calendarClient(account).createEvent(contextOf(account), calendarId, input);
+      cache2.forget(`${account.id}:cal:events`);
       return toEvent(account, raw);
     },
     async updateEvent(viewer, eventId, input) {
@@ -82720,12 +82813,24 @@ function createBackends(store, clients2, tokenFor2) {
       if (targetAccount !== accountId) throw new HttpError(400, jaText("cannotMoveAccount"));
       const account = await accountFor(viewer, accountId);
       const raw = await calendarClient(account).updateEvent(contextOf(account), calendarId, rawId, input);
+      cache2.forget(`${account.id}:cal:events`);
       return toEvent(account, raw);
+    },
+    async setCalendarEnabled(viewer, calendarId, enabled) {
+      const [accountId, rawId] = splitId(calendarId, 1);
+      const account = await accountFor(viewer, accountId);
+      if (viewer.accountId === null || account.ownerId !== viewer.accountId)
+        throw new HttpError(403, jaText("calendarToggleOwnerOnly"));
+      await store.update(account.id, (current) => ({
+        ...current,
+        calendarChoices: { ...current.calendarChoices, [rawId]: enabled }
+      }));
     },
     async deleteEvent(viewer, eventId) {
       const [accountId, calendarId, rawId] = splitId(eventId, 2);
       const account = await accountFor(viewer, accountId);
       await calendarClient(account).deleteEvent(contextOf(account), calendarId, rawId);
+      cache2.forget(`${account.id}:cal:events`);
     }
   };
   async function mailAccounts(viewer, mailboxId) {
@@ -82739,7 +82844,11 @@ function createBackends(store, clients2, tokenFor2) {
       const boxes = await Promise.all(
         (await mailAccounts(viewer)).map(async (account) => {
           try {
-            const unread = await mailClient(account).unreadCount(contextOf(account));
+            const unread = await cache2.get(
+              `${account.id}:mail:unread`,
+              TTL.unread,
+              () => mailClient(account).unreadCount(contextOf(account))
+            );
             return {
               id: account.id,
               name: account.label,
@@ -82756,12 +82865,16 @@ function createBackends(store, clients2, tokenFor2) {
       );
       return { mailboxes: boxes.filter((b) => b !== null), errors: errors2 };
     },
-    async listMessages(viewer, { mailboxId, unreadOnly = false, limit }) {
+    async listMessages(viewer, { mailboxId, unreadOnly = false, limit, folder = "inbox" }) {
       const errors2 = [];
       const lists = await Promise.all(
         (await mailAccounts(viewer, mailboxId)).map(async (account) => {
           try {
-            const raws = await mailClient(account).listMessages(contextOf(account), { unreadOnly, limit });
+            const raws = await cache2.get(
+              `${account.id}:mail:list:${folder}:${unreadOnly}:${limit}`,
+              TTL.messages,
+              () => mailClient(account).listMessages(contextOf(account), { unreadOnly, limit, folder })
+            );
             return raws.map((raw) => ({ ...raw, id: `${account.id}.${encode(raw.id)}`, mailboxId: account.id }));
           } catch (err) {
             errors2.push({ source: account.label, message: message(err) });
@@ -82772,16 +82885,49 @@ function createBackends(store, clients2, tokenFor2) {
       const messages = lists.flat().sort((a, b) => (b.date ?? "").localeCompare(a.date ?? "")).slice(0, limit);
       return { messages, errors: errors2 };
     },
+    async listFolders(viewer, mailboxId) {
+      const errors2 = [];
+      const lists = await Promise.all(
+        (await mailAccounts(viewer, mailboxId)).map(async (account) => {
+          try {
+            const raws = await cache2.get(
+              `${account.id}:mail:folders`,
+              TTL.folders,
+              () => mailClient(account).listFolders(contextOf(account))
+            );
+            return raws.map(
+              (raw) => ({ id: `box:${raw.id}`, name: raw.path.at(-1) ?? raw.id, path: raw.path, mailboxId: account.id })
+            );
+          } catch (err) {
+            errors2.push({ source: account.label, message: message(err) });
+            return [];
+          }
+        })
+      );
+      return { folders: lists.flat(), errors: errors2 };
+    },
     async getMessage(viewer, id) {
       const [accountId, rawId] = splitId(id, 1);
       const account = await accountFor(viewer, accountId);
-      const raw = await mailClient(account).getMessage(contextOf(account), rawId);
+      const raw = await cache2.get(
+        `${account.id}:mail:message:${rawId}`,
+        TTL.message,
+        () => mailClient(account).getMessage(contextOf(account), rawId)
+      );
       return { ...raw, id, mailboxId: account.id };
     },
     async setRead(viewer, id, read) {
       const [accountId, rawId] = splitId(id, 1);
       const account = await accountFor(viewer, accountId);
       await mailClient(account).setRead(contextOf(account), rawId, read);
+      forgetMessages(account.id, rawId);
+    },
+    async move(viewer, id, target, from) {
+      const [accountId, rawId] = splitId(id, 1);
+      const account = await accountFor(viewer, accountId);
+      if (target === from) return;
+      await mailClient(account).move(contextOf(account), rawId, target, from);
+      forgetMessages(account.id, rawId);
     },
     async send(viewer, draft) {
       const account = await accountFor(viewer, draft.mailboxId);
@@ -82800,9 +82946,15 @@ function createBackends(store, clients2, tokenFor2) {
         text: draft.text,
         replyTo
       });
+      forgetMessages(account.id);
     }
   };
-  return { calendar, mail };
+  function forgetMessages(accountId, rawId) {
+    cache2.forget(`${accountId}:mail:list:`);
+    cache2.forget(`${accountId}:mail:unread`);
+    if (rawId) cache2.forget(`${accountId}:mail:message:${rawId}`);
+  }
+  return { calendar, mail, forget: (accountId) => cache2.forget(`${accountId}:`) };
 }
 
 // extensions/accounts/src/calendar/aggregate.ts
@@ -82870,6 +83022,11 @@ function aggregate(providers) {
       const [calendarProvider, calendarId] = providerOf(providers(), input.calendarId);
       if (calendarProvider.extensionId !== provider.extensionId) throw new HttpError(400, jaText("otherSource"));
       return prefixEvent(provider.extensionId, await provider.implementation.updateEvent(viewer, id, checkInput({ ...input, calendarId })));
+    },
+    async setCalendarEnabled(viewer, calendarId, enabled) {
+      const [provider, id] = providerOf(providers(), calendarId);
+      if (!provider.implementation.setCalendarEnabled) throw new HttpError(400, jaText("cannotToggleCalendar"));
+      await provider.implementation.setCalendarEnabled(viewer, id, enabled);
     },
     async deleteEvent(viewer, eventId) {
       const [provider, id] = providerOf(providers(), eventId);
@@ -82952,14 +83109,25 @@ function describeEvent(event, timeZone) {
 }
 
 // extensions/accounts/src/calendar/routes.ts
+var MAX_RANGE_MS = 400 * 24 * 60 * 60 * 1e3;
 var viewerOf = (account) => ({ accountId: account?.id ?? null });
 function registerCalendar(api, own) {
   const calendar = aggregate(() => [own, ...api.providers("calendar")]);
   const route = localizedRoute(api);
   const timeZone = () => String(api.settings.timeZone || "Asia/Tokyo");
   route("GET", "/calendar/calendars", ({ account }) => calendar.listCalendars(viewerOf(account)));
+  route("PUT", "/calendar/calendars/:id/enabled", async ({ account, params, body }) => {
+    const enabled = body?.enabled;
+    if (typeof enabled !== "boolean") throw new HttpError(400, jaText("badRequest"));
+    await calendar.setCalendarEnabled(viewerOf(account), params.id, enabled);
+    return { ok: true };
+  });
   route("GET", "/calendar/events", ({ account, query }) => {
     if (!query.from || !query.to) throw new HttpError(400, jaText("rangeRequired"));
+    const from = Date.parse(query.from);
+    const to = Date.parse(query.to);
+    if (!Number.isFinite(from) || !Number.isFinite(to) || to < from || to - from > MAX_RANGE_MS)
+      throw new HttpError(400, jaText("rangeInvalid"));
     return calendar.listEvents(viewerOf(account), { from: query.from, to: query.to });
   });
   route("POST", "/calendar/events", async ({ account, body }) => ({
@@ -82992,6 +83160,9 @@ function registerCalendar(api, own) {
       days: z.number().int().min(1).max(31).optional().describe("\u4F55\u65E5\u5206\uFF08\u65E2\u5B9A\u306F 1\uFF09")
     }),
     readOnly: true,
+    personal: true,
+    // 予定の名前・場所は、招待を送ってきた外の人が書いたものでもある
+    untrusted: true,
     handler: async ({ offsetDays, days }) => {
       const range = dayRange(timeZone(), offsetDays ?? 0, days ?? 1);
       const [{ calendars }, { events, errors: errors2 }] = await Promise.all([
@@ -83001,7 +83172,7 @@ function registerCalendar(api, own) {
       const names = new Map(calendars.map((c) => [c.id, c.name]));
       return {
         events: events.map((e) => brief(e, names)),
-        calendars: calendars.filter((c) => c.writable).map((c) => ({ id: c.id, name: c.name })),
+        calendars: calendars.filter((c) => c.writable && c.enabled !== false).map((c) => ({ id: c.id, name: c.name })),
         errors: errors2
       };
     }
@@ -83017,9 +83188,13 @@ function registerCalendar(api, own) {
       location: z.string().max(500).optional(),
       calendar: z.string().optional().describe("\u30AB\u30EC\u30F3\u30C0\u30FC\u306E\u540D\u524D\u304B id")
     }),
+    // 足すだけなら間違えても消せる
+    risk: "low",
+    personal: true,
+    describe: ({ title, start }) => `\u4E88\u5B9A\u300C${title}\u300D\uFF08${start}\uFF09\u3092\u30AB\u30EC\u30F3\u30C0\u30FC\u306B\u8DB3\u3059`,
     handler: async ({ title, start, end, allDay, location, calendar: wanted }) => {
       const { calendars } = await calendar.listCalendars(household);
-      const writable = calendars.filter((c) => c.writable);
+      const writable = calendars.filter((c) => c.writable && c.enabled !== false);
       const target = wanted ? writable.find((c) => c.id === wanted || c.name === wanted) : writable[0];
       if (!target)
         throw new HttpError(404, wanted ? `\u66F8\u3051\u308B\u30AB\u30EC\u30F3\u30C0\u30FC\u300C${wanted}\u300D\u304C\u3042\u308A\u307E\u305B\u3093` : "\u5BB6\u3067\u5171\u6709\u3057\u3066\u3044\u308B\u66F8\u3051\u308B\u30AB\u30EC\u30F3\u30C0\u30FC\u304C\u3042\u308A\u307E\u305B\u3093");
@@ -83046,6 +83221,9 @@ function registerCalendar(api, own) {
       allDay: z.boolean(),
       location: z.string().max(500).nullable().optional()
     }),
+    risk: "confirm",
+    personal: true,
+    describe: ({ title, start }) => `\u4E88\u5B9A\u300C${title}\u300D\u3092 ${start} \u304B\u3089\u306E\u5185\u5BB9\u306B\u5909\u3048\u308B`,
     handler: async ({ id, calendarId, title, start, end, allDay, location }) => {
       const event = await calendar.updateEvent(household, id, { calendarId, title, start, end, allDay, location: location ?? null });
       return { ok: true, event: brief(event, /* @__PURE__ */ new Map()) };
@@ -83053,8 +83231,11 @@ function registerCalendar(api, own) {
   });
   api.tool({
     name: "delete_event",
-    description: "\u5BB6\u3067\u5171\u6709\u3057\u3066\u3044\u308B\u30AB\u30EC\u30F3\u30C0\u30FC\u306E\u4E88\u5B9A\u3092\u6D88\u3059\u3002id \u306F list_events \u306E\u3082\u306E\u3002\u6D88\u3059\u524D\u306B\u3001\u3069\u306E\u4E88\u5B9A\u304B\u3092\u78BA\u304B\u3081\u3066\u304B\u3089\u547C\u3076\u3002",
-    inputSchema: (z) => ({ id: z.string() }),
+    description: "\u5BB6\u3067\u5171\u6709\u3057\u3066\u3044\u308B\u30AB\u30EC\u30F3\u30C0\u30FC\u306E\u4E88\u5B9A\u3092\u6D88\u3059\u3002id \u306F list_events \u306E\u3082\u306E\u3001title \u306B\u306F\u305D\u306E\u4E88\u5B9A\u306E\u540D\u524D\u3092\u5165\u308C\u308B\u3002",
+    inputSchema: (z) => ({ id: z.string(), title: z.string().optional().describe("\u6D88\u3059\u4E88\u5B9A\u306E\u540D\u524D\uFF08\u78BA\u304B\u3081\u306E\u753B\u9762\u306B\u51FA\u3059\uFF09") }),
+    risk: "confirm",
+    personal: true,
+    describe: ({ title }) => title ? `\u4E88\u5B9A\u300C${title}\u300D\u3092\u6D88\u3059` : "\u30AB\u30EC\u30F3\u30C0\u30FC\u306E\u4E88\u5B9A\u30921\u3064\u6D88\u3059",
     handler: async ({ id }) => {
       await calendar.deleteEvent(household, id);
       return { ok: true };
@@ -83070,6 +83251,63 @@ function defaultEnd(start, allDay) {
   const time = Date.parse(start);
   if (Number.isNaN(time)) throw new HttpError(400, "\u6642\u523B\u304C\u8AAD\u3081\u307E\u305B\u3093");
   return new Date(time + 60 * 60 * 1e3).toISOString();
+}
+
+// extensions/accounts/src/destination.ts
+import { lookup } from "node:dns/promises";
+import { isIP } from "node:net";
+function v4Parts(address2) {
+  const parts = address2.split(".").map(Number);
+  return parts.length === 4 && parts.every((p) => Number.isInteger(p) && p >= 0 && p <= 255) ? parts : null;
+}
+function isInternalV4([a, b]) {
+  return a === 0 || a === 10 || a === 127 || a === 100 && b >= 64 && b <= 127 || // CGNAT（Tailscale の 100.x も含む）
+  a === 169 && b === 254 || a === 172 && b >= 16 && b <= 31 || a === 192 && b === 168 || a === 198 && (b === 18 || b === 19) || // 機器の試験用
+  a >= 224;
+}
+function v6Words(address2) {
+  let text2 = address2.toLowerCase().replace(/%.*$/, "");
+  const tail = text2.match(/^(.*:)(\d+\.\d+\.\d+\.\d+)$/);
+  if (tail) {
+    const v4 = v4Parts(tail[2]);
+    if (!v4) return null;
+    text2 = `${tail[1]}${(v4[0] << 8 | v4[1]).toString(16)}:${(v4[2] << 8 | v4[3]).toString(16)}`;
+  }
+  const halves = text2.split("::");
+  if (halves.length > 2) return null;
+  const read = (part) => part ? part.split(":").map((w) => /^[0-9a-f]{1,4}$/.test(w) ? parseInt(w, 16) : NaN) : [];
+  const head = read(halves[0]);
+  const rest = halves.length === 2 ? read(halves[1]) : [];
+  const fill = halves.length === 2 ? 8 - head.length - rest.length : 0;
+  const words = [...head, ...new Array(Math.max(0, fill)).fill(0), ...rest];
+  return words.length === 8 && words.every((w) => Number.isInteger(w)) ? words : null;
+}
+function isInternalAddress(address2) {
+  const v4 = v4Parts(address2);
+  if (v4) return isInternalV4(v4);
+  const w = v6Words(address2);
+  if (!w) return true;
+  const v4Of = (hi, lo) => [hi >> 8, hi & 255, lo >> 8, lo & 255];
+  if (w.slice(0, 5).every((x) => x === 0) && (w[5] === 65535 || w[5] === 0)) {
+    if (w[5] === 0 && w[6] === 0 && w[7] <= 1) return true;
+    return isInternalV4(v4Of(w[6], w[7]));
+  }
+  if (w[0] === 100 && w[1] === 65435 && w.slice(2, 6).every((x) => x === 0)) return isInternalV4(v4Of(w[6], w[7]));
+  if (w[0] === 8194) return isInternalV4(v4Of(w[1], w[2]));
+  return (w[0] & 65024) === 64512 || // ユニークローカル fc00::/7
+  (w[0] & 65472) === 65152 || // リンクローカル fe80::/10
+  (w[0] & 65472) === 65216 || // サイトローカル（古い）
+  (w[0] & 65280) === 65280;
+}
+async function isPublicHost(host) {
+  const name2 = host.replace(/^\[|\]$/g, "");
+  if (/^localhost$/i.test(name2) || /\.(local|lan|home|internal|localhost)$/i.test(name2)) return false;
+  try {
+    const addresses3 = isIP(name2) ? [{ address: name2 }] : await lookup(name2, { all: true });
+    return addresses3.length > 0 && addresses3.every(({ address: address2 }) => !isInternalAddress(address2));
+  } catch {
+    return false;
+  }
 }
 
 // extensions/accounts/src/mail/aggregate.ts
@@ -83099,7 +83337,31 @@ function aggregate2(providers) {
       );
       return { mailboxes: results.flatMap((r) => r.mailboxes), errors: results.flatMap((r) => r.errors) };
     },
-    async listMessages(viewer, { mailboxId, unreadOnly, limit }) {
+    async listFolders(viewer, mailboxId) {
+      let targets = providers();
+      let inner;
+      if (mailboxId) {
+        const [provider, id] = providerOf2(targets, mailboxId);
+        targets = [provider];
+        inner = id;
+      }
+      const results = await Promise.all(
+        targets.map(async (p) => {
+          if (!p.implementation.listFolders) return { folders: [], errors: [] };
+          try {
+            const r = await p.implementation.listFolders(viewer, inner);
+            return {
+              folders: r.folders.map((f) => ({ ...f, mailboxId: `${p.extensionId}:${f.mailboxId}` })),
+              errors: r.errors
+            };
+          } catch (err) {
+            return { folders: [], errors: [failed2(p, err)] };
+          }
+        })
+      );
+      return { folders: results.flatMap((r) => r.folders), errors: results.flatMap((r) => r.errors) };
+    },
+    async listMessages(viewer, { mailboxId, unreadOnly, limit, folder }) {
       const count = Math.min(Math.max(Math.trunc(limit) || 20, 1), 50);
       let targets = providers();
       let inner;
@@ -83111,7 +83373,7 @@ function aggregate2(providers) {
       const results = await Promise.all(
         targets.map(async (p) => {
           try {
-            const r = await p.implementation.listMessages(viewer, { mailboxId: inner, unreadOnly, limit: count });
+            const r = await p.implementation.listMessages(viewer, { mailboxId: inner, unreadOnly, limit: count, folder });
             const prefix = (m) => ({
               ...m,
               id: `${p.extensionId}:${m.id}`,
@@ -83134,6 +83396,11 @@ function aggregate2(providers) {
     async setRead(viewer, id, read) {
       const [provider, inner] = providerOf2(providers(), id);
       await provider.implementation.setRead(viewer, inner, read);
+    },
+    async move(viewer, id, target, from) {
+      const [provider, inner] = providerOf2(providers(), id);
+      if (!provider.implementation.move) throw new HttpError(400, jaText("cannotMove"));
+      await provider.implementation.move(viewer, inner, target, from);
     },
     async send(viewer, draft) {
       const [provider, mailboxId] = providerOf2(providers(), draft.mailboxId);
@@ -83159,6 +83426,15 @@ function aggregate2(providers) {
   };
 }
 
+// extensions/accounts/src/mail/types.ts
+var MAIL_FOLDERS = ["inbox", "sent", "drafts", "junk", "trash"];
+function isFolderKey(value) {
+  return typeof value === "string" && MAIL_FOLDERS.includes(value) || typeof value === "string" && value.startsWith("box:") && value.length > 4 && value.length <= 500;
+}
+function isMoveTarget(value) {
+  return isFolderKey(value) && value !== "sent" && value !== "drafts";
+}
+
 // extensions/accounts/src/mail/routes.ts
 var viewerOf2 = (account) => ({ accountId: account?.id ?? null });
 function registerMail(api, own) {
@@ -83171,9 +83447,11 @@ function registerMail(api, own) {
     ({ account, query }) => mail.listMessages(viewerOf2(account), {
       mailboxId: query.mailbox || void 0,
       unreadOnly: query.unread === "true",
-      limit: Number(query.limit ?? 20)
+      limit: Number(query.limit ?? 20),
+      folder: isFolderKey(query.folder) ? query.folder : "inbox"
     })
   );
+  route("GET", "/mail/folders", ({ account, query }) => mail.listFolders(viewerOf2(account), query.mailbox || void 0));
   route("GET", "/mail/messages/:id", async ({ account, params }) => ({
     message: await mail.getMessage(viewerOf2(account), params.id)
   }));
@@ -83181,6 +83459,12 @@ function registerMail(api, own) {
     const read = body?.read;
     if (typeof read !== "boolean") throw new HttpError(400, "read must be a boolean");
     await mail.setRead(viewerOf2(account), params.id, read);
+    return { ok: true };
+  });
+  route("POST", "/mail/messages/:id/move", async ({ account, params, body }) => {
+    const { folder, from } = body ?? {};
+    if (!isMoveTarget(folder) || !isFolderKey(from)) throw new HttpError(400, jaText("badRequest"));
+    await mail.move(viewerOf2(account), params.id, folder, from);
     return { ok: true };
   });
   route("POST", "/mail/send", async ({ account, body }) => {
@@ -83197,6 +83481,9 @@ function registerMail(api, own) {
       limit: z.number().int().min(1).max(20).optional()
     }),
     readOnly: true,
+    personal: true,
+    // 件名・冒頭の文は、送ってきた外の人が書いたもの
+    untrusted: true,
     handler: async ({ unreadOnly, limit }) => {
       const [{ mailboxes }, { messages, errors: errors2 }] = await Promise.all([
         mail.listMailboxes(household),
@@ -83223,6 +83510,8 @@ function registerMail(api, own) {
     description: "\u30E1\u30FC\u30EB\u306E\u672C\u6587\u3092\u8AAD\u3080\uFF08id \u306F list_mail \u306E\u3082\u306E\uFF09\u3002\u9577\u3044\u3082\u306E\u306F\u982D\u3060\u3051\u3002\u65E2\u8AAD\u306B\u306F\u3057\u306A\u3044\u3002",
     inputSchema: (z) => ({ id: z.string() }),
     readOnly: true,
+    personal: true,
+    untrusted: true,
     handler: async ({ id }) => {
       const message2 = await mail.getMessage(household, id);
       return {
@@ -83236,21 +83525,23 @@ function registerMail(api, own) {
   });
   api.tool({
     name: "send_mail",
-    description: "\u5BB6\u3067\u5171\u6709\u3057\u3066\u3044\u308B\u53D7\u4FE1\u7BB1\u304B\u3089\u30E1\u30FC\u30EB\u3092\u9001\u308B\u30FB\u8FD4\u4FE1\u3059\u308B\u3002\u5FC5\u305A\u5148\u306B confirmed \u3092 false \u3067\u547C\u3073\u3001\u8FD4\u3063\u3066\u304D\u305F\u5B9B\u5148\u30FB\u4EF6\u540D\u30FB\u672C\u6587\u3092\u8AAD\u307F\u4E0A\u3052\u3066\u3001\u8A71\u3057\u3066\u3044\u308B\u4EBA\u306B\u300C\u9001\u3063\u3066\u3088\u3044\u304B\u300D\u3092\u78BA\u304B\u3081\u308B\u3002\u4E86\u627F\u3092\u3082\u3089\u3063\u3066\u304B\u3089\u3001\u540C\u3058\u4E2D\u8EAB\u3067 confirmed \u3092 true \u306B\u3057\u3066\u547C\u3076\u3002\u8FD4\u4FE1\u306A\u3089 replyTo \u306B list_mail \u306E id \u3092\u6E21\u3059\uFF08\u5B9B\u5148\u306F\u5143\u306E\u5DEE\u51FA\u4EBA\u306B\u3059\u308B\uFF09\u3002",
+    description: "\u5BB6\u3067\u5171\u6709\u3057\u3066\u3044\u308B\u53D7\u4FE1\u7BB1\u304B\u3089\u30E1\u30FC\u30EB\u3092\u9001\u308B\u30FB\u8FD4\u4FE1\u3059\u308B\u3002\u9001\u308B\u524D\u306B\u672C\u4F53\u304C\u8A71\u3057\u3066\u3044\u308B\u4EBA\u306E\u4E86\u627F\u3092\u6C42\u3081\u308B\u306E\u3067\u3001\u5B9B\u5148\u30FB\u4EF6\u540D\u30FB\u672C\u6587\u3092\u6C7A\u3081\u3066\u305D\u306E\u307E\u307E\u547C\u3076\u3002\u8FD4\u4FE1\u306A\u3089 replyTo \u306B list_mail \u306E id \u3092\u6E21\u3059\uFF08\u5B9B\u5148\u306F\u5143\u306E\u5DEE\u51FA\u4EBA\u306B\u3059\u308B\uFF09\u3002",
     inputSchema: (z) => ({
       mailboxId: z.string().optional().describe("\u9001\u308B\u53D7\u4FE1\u7BB1\uFF08list_mail \u306E mailboxes \u306E id\u3002\u7701\u304F\u3068\u9001\u308C\u308B\u6700\u521D\u306E\u3082\u306E\uFF09"),
       to: z.array(z.string()).min(1),
       subject: z.string().max(500),
       text: z.string().min(1).max(1e4),
-      replyTo: z.string().optional(),
-      confirmed: z.boolean()
+      replyTo: z.string().optional()
     }),
-    handler: async ({ mailboxId, to, subject, text: text2, replyTo, confirmed }) => {
+    // 家の外へ文を出すので、毎回了承を求める（Apple も、外へ持ち出す操作は確かめを勧めている）
+    risk: "confirm",
+    personal: true,
+    describe: ({ to, subject, text: text2 }) => `\u30E1\u30FC\u30EB\u3092\u9001\u308B\uFF08\u5B9B\u5148: ${to.join("\u3001")}\uFF0F\u4EF6\u540D: ${subject || "\u306A\u3057"}\uFF0F\u672C\u6587: ${text2.length > 80 ? `${text2.slice(0, 80)}\u2026` : text2}\uFF09`,
+    handler: async ({ mailboxId, to, subject, text: text2, replyTo }) => {
       const { mailboxes } = await mail.listMailboxes(household);
       const from = mailboxId ? mailboxes.find((m) => m.id === mailboxId) : mailboxes.find((m) => m.canSend);
       if (!from || !from.canSend) throw new HttpError(404, "\u9001\u308C\u308B\u53D7\u4FE1\u7BB1\u304C\u3042\u308A\u307E\u305B\u3093\uFF08\u5BB6\u3067\u5171\u6709\u3057\u3066\u3044\u308B\u53D7\u4FE1\u7BB1\u304B\u3089\u9001\u308A\u307E\u3059\uFF09");
       const preview = { from: from.address || from.name, to, subject, text: text2 };
-      if (!confirmed) return { needsConfirmation: true, preview, note: "\u8AAD\u307F\u4E0A\u3052\u3066\u4E86\u627F\u3092\u3082\u3089\u3063\u3066\u304B\u3089 confirmed: true \u3067\u547C\u3076" };
       await mail.send(household, { mailboxId: from.id, to, subject, text: text2, replyTo: replyTo ?? null });
       return { ok: true, sent: preview };
     }
@@ -83355,7 +83646,8 @@ async function finishOAuth(provider, query, ownerId, settings, store) {
   if (query.state) pending.delete(query.state);
   if (!entry || entry.provider !== provider || entry.expiresAt < Date.now() || !query.code)
     throw new HttpError(400, jaText("loginStale"));
-  if (!ownerId || entry.ownerId !== ownerId) throw new HttpError(403, jaText("loginWrongUser"));
+  if (ownerId !== null && entry.ownerId !== ownerId) throw new HttpError(403, jaText("loginWrongUser"));
+  const owner = entry.ownerId;
   const tokens = await requestToken(provider, settings, {
     grant_type: "authorization_code",
     code: query.code,
@@ -83363,6 +83655,9 @@ async function finishOAuth(provider, query, ownerId, settings, store) {
     code_verifier: entry.verifier
   });
   if (!tokens.refresh_token) throw new HttpError(502, jaText("noRefreshToken"));
+  const missing = missingScopes(provider, tokens.scope);
+  if (missing.length > 0)
+    throw new HttpError(403, jaText("scopesMissing", { provider: provider === "google" ? "Google" : "Microsoft" }));
   const credentials2 = {
     kind: "oauth",
     refreshToken: tokens.refresh_token,
@@ -83375,12 +83670,27 @@ async function finishOAuth(provider, query, ownerId, settings, store) {
     provider,
     label: email ?? (provider === "google" ? "Google" : "Microsoft"),
     email,
-    ownerId,
+    ownerId: owner,
     shared: false,
     services: { calendar: true, mail: true },
     credentials: credentials2,
     servers: {}
   });
+}
+function missingScopes(provider, granted) {
+  if (provider !== "google" || granted === void 0) return [];
+  const have = new Set(granted.split(/\s+/));
+  return SCOPES.google.filter((scope) => scope.startsWith("https://") && !have.has(scope));
+}
+function forbiddenText(reason, body) {
+  const text2 = `${reason ?? ""} ${JSON.stringify(body)}`;
+  if (/SERVICE_DISABLED|accessNotConfigured|has not been used in project/i.test(text2)) {
+    const api = /^(.+? API) has not been used/.exec(reason ?? "")?.[1] ?? "API";
+    return jaText("apiDisabled", { api });
+  }
+  if (/ACCESS_TOKEN_SCOPE_INSUFFICIENT|insufficient authentication scopes|insufficientPermissions/i.test(text2))
+    return jaText("scopesInsufficient");
+  return jaText("forbidden", { reason: reason ?? "403" });
 }
 function tokenFor(account, settings, store) {
   const credentials2 = account.credentials;
@@ -83427,7 +83737,7 @@ async function apiFetch(url, token, init = {}) {
   if (!res.ok) {
     const reason = typeof body.error === "string" ? body.error : body.error?.message;
     if (res.status === 401) throw new HttpError(401, jaText("loginExpired"));
-    if (res.status === 403) throw new HttpError(403, jaText("forbidden", { reason: reason ?? "403" }));
+    if (res.status === 403) throw new HttpError(403, forbiddenText(reason, body));
     if (res.status === 404) throw new HttpError(404, jaText("notFound"));
     throw new HttpError(502, jaText("serviceFailed", { reason: reason ?? res.status }));
   }
@@ -104970,7 +105280,8 @@ var googleCalendar = {
       id: item.id,
       name: item.summaryOverride || item.summary || jaText("calendarDefault"),
       color: item.backgroundColor ?? null,
-      writable: item.accessRole === "owner" || item.accessRole === "writer"
+      writable: item.accessRole === "owner" || item.accessRole === "writer",
+      selected: item.selected === true
     }));
   },
   async listEvents(ctx, calendarId, range) {
@@ -105015,18 +105326,21 @@ function parseFrom(value) {
   return match ? { name: match[1] || null, address: match[2] } : { name: null, address: value.trim() };
 }
 var decodeEntities = (text2) => text2.replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n))).replace(/&quot;/g, '"').replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
+var GMAIL_LABELS = { inbox: "INBOX", sent: "SENT", drafts: "DRAFT", junk: "SPAM", trash: "TRASH" };
 var gmail = {
   async unreadCount(ctx) {
     const label = await apiFetch(gmailUrl("/labels/INBOX"), await ctx.token());
     return label.messagesUnread ?? 0;
   },
-  async listMessages(ctx, { unreadOnly, limit }) {
+  async listMessages(ctx, { unreadOnly, limit, folder }) {
     const token = await ctx.token();
-    const params = new URLSearchParams({ labelIds: "INBOX", maxResults: String(limit) });
+    const labelId = folder.startsWith("box:") ? folder.slice(4) : GMAIL_LABELS[folder];
+    const params = new URLSearchParams({ labelIds: labelId, maxResults: String(limit) });
+    if (folder === "junk" || folder === "trash") params.set("includeSpamTrash", "true");
     if (unreadOnly) params.set("q", "is:unread");
     const list = await apiFetch(gmailUrl(`/messages?${params}`), token);
     const metadata = new URLSearchParams({ format: "metadata" });
-    for (const name2 of ["From", "Subject", "Date"]) metadata.append("metadataHeaders", name2);
+    for (const name2 of ["From", "To", "Subject", "Date"]) metadata.append("metadataHeaders", name2);
     const messages = await Promise.all(
       (list.messages ?? []).map((m) => apiFetch(gmailUrl(`/messages/${enc(m.id)}?${metadata}`), token))
     );
@@ -105035,12 +105349,17 @@ var gmail = {
       return {
         id: message2.id,
         from: parseFrom(header(message2, "From")),
+        to: (header(message2, "To") ?? "").split(",").map((part) => parseFrom(part)).filter((a) => a !== null),
         subject: header(message2, "Subject") || jaText("noSubject"),
         date: date && !Number.isNaN(Date.parse(date)) ? new Date(date).toISOString() : null,
         unread: message2.labelIds?.includes("UNREAD") ?? false,
         snippet: decodeEntities(message2.snippet ?? "")
       };
     });
+  },
+  async listFolders(ctx) {
+    const body = await apiFetch(gmailUrl("/labels"), await ctx.token());
+    return (body.labels ?? []).filter((label) => label.type === "user").map((label) => ({ id: label.id, path: label.name.split("/") })).sort((a, b) => a.path.join("/").localeCompare(b.path.join("/")));
   },
   async getMessage(ctx, id) {
     const message2 = await apiFetch(gmailUrl(`/messages/${enc(id)}?format=raw`), await ctx.token());
@@ -105052,6 +105371,23 @@ var gmail = {
     await apiFetch(gmailUrl(`/messages/${enc(id)}/modify`), await ctx.token(), {
       method: "POST",
       json: read ? { removeLabelIds: ["UNREAD"] } : { addLabelIds: ["UNREAD"] }
+    });
+  },
+  async move(ctx, id, target, from) {
+    const token = await ctx.token();
+    const url = (path3) => gmailUrl(`/messages/${enc(id)}${path3}`);
+    if (target === "trash") {
+      await apiFetch(url("/trash"), token, { method: "POST" });
+      return;
+    }
+    if (from === "trash") await apiFetch(url("/untrash"), token, { method: "POST" });
+    const labelOf = (folder) => folder.startsWith("box:") ? folder.slice(4) : GMAIL_LABELS[folder];
+    const remove = from === "inbox" || from === "junk" || from.startsWith("box:") ? [labelOf(from)] : [];
+    if (target === "junk") remove.push("INBOX");
+    if (target === "inbox") remove.push("SPAM");
+    await apiFetch(url("/modify"), token, {
+      method: "POST",
+      json: { addLabelIds: [labelOf(target)], removeLabelIds: [...new Set(remove)].filter((l) => l !== labelOf(target)) }
     });
   },
   async send(ctx, draft) {
@@ -105101,6 +105437,10 @@ async function cached(key, work) {
 function forgetMailCache(accountId) {
   for (const key of cache.keys()) if (key.startsWith(`${accountId}:`)) cache.delete(key);
 }
+function forgetImapAccount(accountId) {
+  forgetMailCache(accountId);
+  closeConnection(accountId);
+}
 function credentials(ctx) {
   if (ctx.account.credentials.kind !== "password") throw new HttpError(400, jaText("noCredentials"));
   return { user: ctx.account.credentials.username, pass: ctx.account.credentials.password };
@@ -105118,7 +105458,35 @@ function describeError2(err) {
     return jaText("imapLoginFailed");
   return jaText("imapConnectFailed", { detail: (response || message2).slice(0, 200) });
 }
-async function withImap(ctx, work) {
+var FOLDERS = {
+  sent: { use: "\\Sent", names: /^(sent|sent (messages|items|mail)|送信済み.*)$/i },
+  drafts: { use: "\\Drafts", names: /^(drafts?|下書き)$/i },
+  junk: { use: "\\Junk", names: /^(junk|spam|junk e-?mail|bulk mail|迷惑メール)$/i },
+  trash: { use: "\\Trash", names: /^(trash|deleted (messages|items)|bin|ゴミ箱|ごみ箱)$/i }
+};
+var SPECIAL_USES = /* @__PURE__ */ new Set(["\\Sent", "\\Drafts", "\\Junk", "\\Trash", "\\All", "\\Flagged", "\\Important"]);
+async function folderPath(client, folder) {
+  if (folder === "inbox") return MAILBOX;
+  if (folder.startsWith("box:")) return folder.slice(4);
+  const { use, names } = FOLDERS[folder];
+  const boxes = await client.list();
+  return (boxes.find((box) => box.specialUse === use) ?? boxes.find((box) => names.test(box.name)))?.path ?? null;
+}
+var IDLE_MS = 2 * 6e4;
+var connections = /* @__PURE__ */ new Map();
+function connectionKey(ctx) {
+  const { imap } = servers(ctx);
+  const { user, pass } = credentials(ctx);
+  return JSON.stringify([imap.host, imap.port, imap.secure, user, pass]);
+}
+function closeConnection(accountId) {
+  const connection = connections.get(accountId);
+  if (!connection) return;
+  connections.delete(accountId);
+  clearTimeout(connection.idle);
+  void connection.ready.then((client) => client.logout().catch(() => client.close())).catch(() => void 0);
+}
+function openConnection(ctx, key) {
   const client = new import_imapflow.ImapFlow({
     ...servers(ctx).imap,
     auth: credentials(ctx),
@@ -105126,37 +105494,91 @@ async function withImap(ctx, work) {
     greetingTimeout: TIMEOUT_MS,
     socketTimeout: TIMEOUT_MS * 2
   });
-  try {
-    await client.connect();
-  } catch (err) {
-    throw new HttpError(502, describeError2(err));
+  client.on("error", () => void 0);
+  client.on("close", () => {
+    if (connections.get(ctx.account.id)?.key === key) connections.delete(ctx.account.id);
+  });
+  const connection = {
+    key,
+    ready: client.connect().then(
+      () => client,
+      (err) => {
+        connections.delete(ctx.account.id);
+        throw new HttpError(502, describeError2(err));
+      }
+    ),
+    chain: Promise.resolve()
+  };
+  connections.set(ctx.account.id, connection);
+  return connection;
+}
+async function withImap(ctx, work, folder = "inbox", missing) {
+  const key = connectionKey(ctx);
+  let connection = connections.get(ctx.account.id);
+  if (connection && connection.key !== key) {
+    closeConnection(ctx.account.id);
+    connection = void 0;
   }
-  try {
-    const lock = await client.getMailboxLock(MAILBOX);
+  const current = connection ?? openConnection(ctx, key);
+  const task = current.chain.then(async () => {
+    clearTimeout(current.idle);
+    const client = await current.ready;
     try {
-      return await work(client);
+      const path3 = await folderPath(client, folder);
+      if (!path3) {
+        if (missing) return missing();
+        throw new HttpError(404, jaText("mailNotFound"));
+      }
+      const lock = await client.getMailboxLock(path3);
+      try {
+        return await work(client);
+      } finally {
+        lock.release();
+      }
+    } catch (err) {
+      if (!client.usable) closeConnection(ctx.account.id);
+      throw err;
     } finally {
-      lock.release();
+      if (connections.get(ctx.account.id) === current) {
+        current.idle = setTimeout(() => closeConnection(ctx.account.id), IDLE_MS);
+        current.idle.unref?.();
+      }
     }
-  } finally {
-    await client.logout().catch(() => client.close());
-  }
+  });
+  current.chain = task.catch(() => void 0);
+  return task;
 }
-function uidOf(id) {
-  const uid = Number(id);
+function parseId(id) {
+  const index = id.lastIndexOf(":");
+  const head = index < 0 ? "inbox" : id.slice(0, index);
+  const uid = Number(index < 0 ? id : id.slice(index + 1));
+  if (!isFolderKey(head)) throw new HttpError(400, jaText("badMailId"));
   if (!Number.isInteger(uid) || uid <= 0) throw new HttpError(400, jaText("badMailId"));
-  return uid;
+  return { folder: head, uid };
 }
+var idOf = (folder, uid) => folder === "inbox" ? String(uid) : `${folder}:${uid}`;
 var imapMail = {
+  listFolders(ctx) {
+    return cached(
+      `${ctx.account.id}:folders`,
+      () => withImap(ctx, async (client) => {
+        const boxes = await client.list();
+        const standard = (name2) => Object.values(FOLDERS).some((f) => f.names.test(name2));
+        return boxes.filter(
+          (box) => box.path.toUpperCase() !== MAILBOX && !box.flags?.has("\\Noselect") && !(box.specialUse && SPECIAL_USES.has(box.specialUse)) && !(!box.specialUse && standard(box.name))
+        ).map((box) => ({ id: box.path, path: box.delimiter ? box.path.split(box.delimiter) : [box.path] })).sort((a, b) => a.path.join("/").localeCompare(b.path.join("/")));
+      })
+    );
+  },
   unreadCount(ctx) {
     return cached(
       `${ctx.account.id}:unread`,
       () => withImap(ctx, async (client) => (await client.status(MAILBOX, { unseen: true })).unseen ?? 0)
     );
   },
-  listMessages(ctx, { unreadOnly, limit }) {
+  listMessages(ctx, { unreadOnly, limit, folder }) {
     return cached(
-      `${ctx.account.id}:list:${unreadOnly}:${limit}`,
+      `${ctx.account.id}:list:${folder}:${unreadOnly}:${limit}`,
       () => withImap(ctx, async (client) => {
         const found = await client.search(unreadOnly ? { seen: false } : { all: true }, { uid: true });
         const uids = (found || []).sort((a, b) => b - a).slice(0, limit);
@@ -105172,32 +105594,42 @@ var imapMail = {
           const envelope = message2.envelope;
           const from = envelope?.from?.[0];
           out.push({
-            id: String(message2.uid),
+            id: idOf(folder, message2.uid),
             from: from?.address ? { name: from.name || null, address: from.address } : parsed?.from ?? null,
+            to: (envelope?.to ?? []).filter((a) => a.address).map((a) => ({ name: a.name || null, address: a.address })),
             subject: envelope?.subject || parsed?.subject || jaText("noSubject"),
             date: envelope?.date ? new Date(envelope.date).toISOString() : parsed?.date ?? null,
             unread,
             snippet: parsed ? snippetOf(parsed.text) : ""
           });
         }
-        return out.sort((a, b) => Number(b.id) - Number(a.id));
-      })
+        return out.sort((a, b) => parseId(b.id).uid - parseId(a.id).uid);
+      }, folder, () => [])
     );
   },
   getMessage(ctx, id) {
-    const uid = uidOf(id);
+    const { folder, uid } = parseId(id);
     return withImap(ctx, async (client) => {
       const message2 = await client.fetchOne(String(uid), { uid: true, flags: true, source: true }, { uid: true });
       if (!message2 || !message2.source) throw new HttpError(404, jaText("mailNotFound"));
       return parseMessage(message2.source, id, !message2.flags?.has("\\Seen"));
-    });
+    }, folder);
   },
   async setRead(ctx, id, read) {
-    const uid = uidOf(id);
+    const { folder, uid } = parseId(id);
     await withImap(ctx, async (client) => {
       if (read) await client.messageFlagsAdd([uid], ["\\Seen"], { uid: true });
       else await client.messageFlagsRemove([uid], ["\\Seen"], { uid: true });
-    });
+    }, folder);
+    forgetMailCache(ctx.account.id);
+  },
+  async move(ctx, id, target) {
+    const { folder, uid } = parseId(id);
+    await withImap(ctx, async (client) => {
+      const destination = await folderPath(client, target);
+      if (!destination) throw new HttpError(404, jaText("moveTargetMissing"));
+      await client.messageMove([uid], destination, { uid: true });
+    }, folder);
     forgetMailCache(ctx.account.id);
   },
   async send(ctx, draft) {
@@ -105323,22 +105755,52 @@ function addresses2(list) {
     throw new HttpError(400, err instanceof Error ? err.message : String(err));
   }
 }
+var GRAPH_FOLDERS = {
+  inbox: "inbox",
+  sent: "sentitems",
+  drafts: "drafts",
+  junk: "junkemail",
+  trash: "deleteditems"
+};
+var HIDDEN_FOLDERS = [...Object.values(GRAPH_FOLDERS), "outbox", "conversationhistory", "syncissues", "scheduled"];
 var outlookMail = {
+  async listFolders(ctx) {
+    const token = await ctx.token();
+    const select = "$top=100&$select=id,displayName,isHidden,childFolderCount";
+    const walk = async (url, parents, depth) => {
+      const body = await apiFetch(url, token);
+      const here = (body.value ?? []).filter((f) => !f.isHidden).map((folder) => ({ folder, path: [...parents, folder.displayName || folder.id] }));
+      const nested = await Promise.all(
+        here.filter(({ folder }) => depth < 4 && (folder.childFolderCount ?? 0) > 0).map(({ folder, path: path3 }) => walk(graphUrl(`/me/mailFolders/${enc2(folder.id)}/childFolders?${select}`), path3, depth + 1))
+      );
+      return [...here, ...nested.flat()];
+    };
+    const [list, ...known] = await Promise.all([
+      walk(graphUrl(`/me/mailFolders?${select}`), [], 1),
+      // 決まったフォルダーの id（名前は言語で変わるので、id で見分ける）。無いものは飛ばす
+      ...HIDDEN_FOLDERS.map(
+        (name2) => apiFetch(graphUrl(`/me/mailFolders/${name2}?$select=id`), token).catch(() => null)
+      )
+    ]);
+    const hidden = new Set(known.filter((f) => f !== null).map((f) => f.id));
+    return list.filter(({ folder }) => !hidden.has(folder.id)).map(({ folder, path: path3 }) => ({ id: folder.id, path: path3 })).sort((a, b) => a.path.join("/").localeCompare(b.path.join("/")));
+  },
   async unreadCount(ctx) {
     const folder = await apiFetch(graphUrl("/me/mailFolders/inbox"), await ctx.token());
     return folder.unreadItemCount ?? 0;
   },
-  async listMessages(ctx, { unreadOnly, limit }) {
+  async listMessages(ctx, { unreadOnly, limit, folder }) {
     const params = new URLSearchParams({
       $top: String(limit),
-      $select: "id,subject,from,receivedDateTime,isRead,bodyPreview",
+      $select: "id,subject,from,toRecipients,receivedDateTime,isRead,bodyPreview",
       $orderby: "receivedDateTime desc"
     });
     if (unreadOnly) params.set("$filter", "isRead eq false");
-    const body = await apiFetch(graphUrl(`/me/mailFolders/inbox/messages?${params}`), await ctx.token());
+    const body = await apiFetch(graphUrl(`/me/mailFolders/${folder.startsWith("box:") ? enc2(folder.slice(4)) : GRAPH_FOLDERS[folder]}/messages?${params}`), await ctx.token());
     return (body.value ?? []).map((m) => ({
       id: m.id,
       from: address(m.from),
+      to: recipients(m.toRecipients),
       subject: m.subject || jaText("noSubject"),
       date: m.receivedDateTime ? new Date(m.receivedDateTime).toISOString() : null,
       unread: !m.isRead,
@@ -105368,6 +105830,10 @@ var outlookMail = {
   },
   async setRead(ctx, id, read) {
     await apiFetch(graphUrl(`/me/messages/${enc2(id)}`), await ctx.token(), { method: "PATCH", json: { isRead: read } });
+  },
+  async move(ctx, id, target) {
+    const destinationId = target.startsWith("box:") ? target.slice(4) : GRAPH_FOLDERS[target];
+    await apiFetch(graphUrl(`/me/messages/${enc2(id)}/move`), await ctx.token(), { method: "POST", json: { destinationId } });
   },
   async send(ctx, draft) {
     const token = await ctx.token();
@@ -105445,6 +105911,17 @@ function passwordAccount(body) {
   const email = text(body.email, 320) || (username.includes("@") ? username : null);
   return { provider, credentials: { kind: "password", username, password }, servers: servers2, email };
 }
+async function requirePublicDestinations(servers2, locale) {
+  const hosts = [servers2.imap?.host, servers2.smtp?.host];
+  if (servers2.calendarUrl) {
+    const url = new URL(servers2.calendarUrl.replace(/^webcal:\/\//, "https://"));
+    if (url.protocol !== "https:") throw new HttpError(400, serverMessages.t(locale, "httpsOnly"));
+    hosts.push(url.hostname);
+  }
+  for (const host of hosts) {
+    if (host && !await isPublicHost(host)) throw new HttpError(400, serverMessages.t(locale, "internalHost", { host }));
+  }
+}
 var server_default = defineServerExtension({
   register(api) {
     const store = new AccountStore(api.dataDir);
@@ -105454,8 +105931,9 @@ var server_default = defineServerExtension({
     registerCalendar(api, { ...own, implementation: backends.calendar });
     registerMail(api, { ...own, implementation: backends.mail });
     const forget = (id) => {
+      backends.forget(id);
       forgetCaldavClient(id);
-      forgetMailCache(id);
+      forgetImapAccount(id);
     };
     async function check(account, locale) {
       const ctx = { account, token: () => tokenFor(account, api.settings, store) };
@@ -105484,9 +105962,11 @@ var server_default = defineServerExtension({
       const user = requireUser(account);
       const input = body ?? {};
       const parsed = passwordAccount(input);
+      if (user.role !== "admin") await requirePublicDestinations(parsed.servers, locale);
       const supports = supportsOf(parsed);
       const draft = {
-        id: "draft",
+        // 確かめの間の覚え（未読数・CalDAV の接続）が、ほかの人の確かめと混ざらないよう、毎回ちがう id にする
+        id: `draft-${randomUUID3()}`,
         createdAt: "",
         ...parsed,
         label: text(input.label, 40) || parsed.email || defaultLabel(parsed, locale),
@@ -105498,6 +105978,8 @@ var server_default = defineServerExtension({
         await check(draft, locale);
       } catch (err) {
         throw new HttpError(400, errorText(err));
+      } finally {
+        forget(draft.id);
       }
       const { id: _id, createdAt: _createdAt, ...rest } = draft;
       return { account: toInfo(await store.add(rest), user) };
@@ -105547,16 +106029,22 @@ var server_default = defineServerExtension({
         const reauth = query.account ? (await store.owned(query.account, user)).id : null;
         return { url: startOAuth(provider, user.id, api.settings, reauth) };
       });
-      route("GET", `/auth/${provider}/callback`, async ({ account, query, locale }) => {
-        try {
-          const added = await finishOAuth(provider, query, account?.id ?? null, api.settings, store);
-          forget(added.id);
-          return api.redirect(`/?settings=account&added=${encodeURIComponent(added.label)}`);
-        } catch (err) {
-          const message2 = localize(errorText(err), locale);
-          return api.redirect(`/?settings=account&error=${encodeURIComponent(message2)}`);
-        }
-      });
+      route(
+        "GET",
+        `/auth/${provider}/callback`,
+        async ({ account, query, locale }) => {
+          const signedOut = account ? "" : "&signedOut=1";
+          try {
+            const added = await finishOAuth(provider, query, account?.id ?? null, api.settings, store);
+            forget(added.id);
+            return api.redirect(`/?settings=account&added=${encodeURIComponent(added.label)}${signedOut}`);
+          } catch (err) {
+            const message2 = localize(errorText(err), locale);
+            return api.redirect(`/?settings=account&error=${encodeURIComponent(message2)}${signedOut}`);
+          }
+        },
+        { public: true }
+      );
     }
     void migrateLegacyMail(api, store);
   }

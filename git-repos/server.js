@@ -20,6 +20,24 @@ function defineServerMessages(dicts) {
 function defineServerExtension(extension) {
   return extension;
 }
+function cachedLoader(ttlMs) {
+  const values = /* @__PURE__ */ new Map();
+  const pending = /* @__PURE__ */ new Map();
+  function load(key, task) {
+    const hit = values.get(key);
+    if (hit && hit.expiresAt > Date.now()) return Promise.resolve(hit.value);
+    const running = pending.get(key);
+    if (running) return running;
+    const promise = task().then((value) => {
+      values.set(key, { value, expiresAt: Date.now() + ttlMs });
+      return value;
+    }).finally(() => pending.delete(key));
+    pending.set(key, promise);
+    return promise;
+  }
+  load.clear = () => values.clear();
+  return load;
+}
 
 // extensions/git-repos/src/server.ts
 var messages = defineServerMessages({
@@ -28,7 +46,15 @@ var messages = defineServerMessages({
 });
 var settings = {};
 var execFileAsync = promisify(execFile);
-var GIT_BASE_ARGS = ["--no-optional-locks", "-c", "safe.directory=*"];
+var GIT_BASE_ARGS = [
+  "--no-optional-locks",
+  "-c",
+  "safe.directory=*",
+  "-c",
+  "core.fsmonitor=false",
+  "-c",
+  "core.hooksPath=/dev/null"
+];
 var GIT_TIMEOUT_MS = 5e3;
 var FIELD_SEP = "";
 async function git(repoPath, args) {
@@ -114,6 +140,7 @@ async function findRepos(root) {
   }
   return repos.sort((a, b) => a.name.localeCompare(b.name));
 }
+var repoStatus = cachedLoader(3e4);
 var server_default = defineServerExtension({
   register(api) {
     settings = api.settings;
@@ -128,7 +155,7 @@ var server_default = defineServerExtension({
           reason: messages.t(ctx.locale, "cannotRead", { root, error: err.message })
         };
       }
-      const statuses = await Promise.all(repos.map((r) => readRepo(r.name, r.path)));
+      const statuses = await repoStatus(root, () => Promise.all(repos.map((r) => readRepo(r.name, r.path))));
       return {
         configured: true,
         root,
