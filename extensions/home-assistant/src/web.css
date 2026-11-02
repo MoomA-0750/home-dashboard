@@ -1,7 +1,61 @@
 /* --- Home Control --- */
 
-.home-control__area + .home-control__area {
-  margin-top: 1.25rem;
+/*
+ * 部屋の空気（センサー）は上に横並びの帯、横長の画面では左に縦並び。照明・鍵・空調は右（下）のます目
+ */
+.home-control {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.home-control__sensors {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.home-sensor {
+  flex: 0 0 auto;
+  min-width: 150px;
+  gap: 0.4rem;
+  padding: 14px 18px;
+  border-radius: 22px;
+}
+
+.home-sensor .ui-stat__label {
+  white-space: nowrap;
+}
+
+.home-sensor .ui-stat__value {
+  font-size: clamp(24px, 1.9vw, 34px);
+}
+
+@media (min-aspect-ratio: 4/3) and (min-width: 900px) {
+  .home-control.has-sensors {
+    display: grid;
+    grid-template-columns: clamp(170px, 15vw, 250px) minmax(0, 1fr);
+    align-items: start;
+    gap: clamp(20px, 2vw, 32px);
+  }
+
+  .home-control__sensors {
+    flex-direction: column;
+    overflow: visible;
+  }
+
+  .home-sensor {
+    min-width: 0;
+  }
+}
+
+.home-control__tiles {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-width: 0;
 }
 
 .home-control__area-name {
@@ -10,163 +64,69 @@
   font-weight: 600;
 }
 
-.home-control__sensors {
+.home-control__arrange {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 44px;
+}
+
+.home-control__arrange .fluent-icon {
+  width: 20px;
+  height: 20px;
+}
+
+/*
+ * ます目。1ますは正方形（--u）で、照明の四角が 2x2。列の数は入れ物の幅で決め、ますの大きさは幅いっぱいに割る。
+ * タイルは並び順に左上から詰め、空いたところには後ろの小さいタイルを入れる（dense）
+ */
+.home-grid {
+  --cols: 4;
+  --gap: 10px;
+  --u: calc((100cqi - (var(--cols) - 1) * var(--gap)) / var(--cols));
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(var(--cols), var(--u));
+  grid-auto-rows: var(--u);
+  grid-auto-flow: row dense;
+  gap: var(--gap);
 }
 
-.home-control__locks,
-.home-control__climates {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-  gap: 14px;
+@container (min-width: 520px) {
+  .home-grid {
+    --cols: 6;
+    --gap: 12px;
+  }
 }
 
-.home-lock {
+@container (min-width: 720px) {
+  .home-grid {
+    --cols: 8;
+  }
+}
+
+@container (min-width: 980px) {
+  .home-grid {
+    --cols: 10;
+    --gap: 14px;
+  }
+}
+
+@container (min-width: 1240px) {
+  .home-grid {
+    --cols: 12;
+  }
+}
+
+/* タイル。大きさはます目で決まり、中身（明るさのバーの有無など）では変わらない */
+.home-tile {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
-  /* 角の丸みを中のボタン（高さ 52px・丸み 26px）とそろえる（カードの丸み ＝ 26px ＋ この余白） */
-  padding: calc(var(--card-radius) - 26px);
-  border-radius: var(--card-radius);
-  /* 縁の線の下に光沢・背景を敷かない（敷くと、光沢の濃淡で線が所々暗く見える） */
-}
-
-.home-lock--unlocked {
-  border-color: rgba(251, 191, 36, 0.55);
-  background: linear-gradient(0deg, rgba(120, 72, 0, 0.2), rgba(120, 72, 0, 0.32));
-}
-
-.home-lock--jammed {
-  border-color: rgba(248, 113, 113, 0.6);
-}
-
-.home-lock__status {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.home-lock__status > div {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-
-.home-lock__icon {
-  width: 44px;
-  height: 44px;
-}
-
-.home-lock--unlocked .home-lock__icon {
-  color: var(--accent-warn);
-}
-
-.home-lock__name {
-  font-size: var(--font-title);
-  font-weight: 600;
-}
-
-.home-lock__state {
-  color: var(--text-secondary);
-}
-
-.home-lock__actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-}
-
-.home-lock__note {
-  color: var(--text-secondary);
-  font-size: var(--font-note);
-}
-
-.home-climate {
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-  /* 角の丸みを中のボタン（高さ 52px・丸み 26px）とそろえる（カードの丸み ＝ 26px ＋ この余白） */
-  padding: calc(var(--card-radius) - 26px);
-  border-radius: var(--card-radius);
-  font-variant-numeric: tabular-nums;
-  /* 縁の線の下に光沢・背景を敷かない（敷くと、光沢の濃淡で線が所々暗く見える） */
-}
-
-.home-climate--off {
-  opacity: 0.85;
-}
-
-.home-climate__head {
-  display: flex;
-  align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-}
-
-.home-climate__name {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  font-size: var(--font-title);
-  font-weight: 600;
-}
-
-.home-climate__name small {
-  color: var(--text-secondary);
-  font-size: var(--font-caption);
-  font-weight: 400;
-}
-
-.home-climate__temps {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.home-climate__current {
-  color: var(--text-secondary);
-}
-
-.home-climate__target {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.home-climate__target-value {
-  min-width: 4.5ch;
-  font-size: clamp(32px, 2.6vw, 44px);
-  font-weight: 600;
-  text-align: center;
-}
-
-.home-climate__target-value small,
-.home-climate__current small {
-  font-size: 0.45em;
-  font-weight: 400;
-}
-
-.home-climate__modes {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.home-control__toggles {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-  gap: 14px;
-}
-
-.home-toggle {
-  display: flex;
-  flex-direction: column;
-  border-radius: var(--card-radius);
+  min-width: 0;
+  min-height: 0;
   overflow: hidden;
+  border-radius: clamp(20px, calc(var(--u) * 0.3), 34px);
   /* 縁の線の下に光沢・背景を敷かない（敷くと、光沢の濃淡で線が所々暗く見える） */
   transition:
     background-color var(--motion-base) var(--ease-standard),
@@ -174,20 +134,23 @@
     color var(--motion-base) var(--ease-standard);
 }
 
-/* オンは明るい黄色。縁も付けて、タイルの形が背景に溶けないようにする（ウィジェットの .ha-entity--on と同じ） */
-.home-toggle--on {
-  border-color: rgba(232, 184, 76, 0.9);
-  background: rgba(255, 236, 179, 0.92);
-  color: #3b2a00;
+/* つけている・動いているときは、タイルの色（詳細で変える）を地にする */
+.home-tile.is-on {
+  border-color: color-mix(in srgb, var(--tile-color) 70%, #000);
+  background: var(--tile-color);
+  color: var(--tile-ink);
 }
 
-.home-toggle__button {
+.home-tile__main {
   display: flex;
+  flex: 1;
   flex-direction: column;
   align-items: flex-start;
-  gap: 0.5rem;
+  justify-content: space-between;
+  gap: 0.4rem;
   width: 100%;
-  padding: 20px 22px;
+  min-height: 0;
+  padding: 16px 18px;
   border: 0;
   background: transparent;
   color: inherit;
@@ -195,31 +158,493 @@
   cursor: pointer;
 }
 
-.home-toggle__button:disabled {
+.home-tile__main:disabled {
   cursor: default;
   opacity: 0.6;
 }
 
-.home-toggle__icon {
-  width: 30px;
-  height: 30px;
+.home-tile__main--static {
+  flex: 0 1 auto;
+  justify-content: flex-start;
+  cursor: default;
 }
 
-.home-toggle__name {
+.home-tile__icon {
+  flex: none;
+  width: 28px;
+  height: 28px;
+}
+
+.home-tile__text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.home-tile__name {
+  display: -webkit-box;
+  overflow: hidden;
   font-weight: 600;
-  line-height: 1.3;
+  line-height: 1.25;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
-.home-toggle__state {
+.home-tile__state {
+  overflow: hidden;
+  font-size: var(--font-note);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  opacity: 0.75;
+}
+
+/* 詳細を開く「>」（右上） */
+.home-tile__more {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: color-mix(in srgb, currentColor 10%, transparent);
+  color: inherit;
+  opacity: 0.8;
+  cursor: pointer;
+}
+
+.home-tile__more .fluent-icon {
+  width: 18px;
+  height: 18px;
+}
+
+/* 明るさのバー（widget-sdk の Slider）。点いているときはタイルの地の上なので、文字の色に寄せる */
+.home-tile__slider {
+  flex: none;
+  margin: 0 18px 14px;
+}
+
+.home-tile.is-on .home-tile__slider {
+  --slider-color: color-mix(in srgb, var(--tile-ink) 70%, var(--tile-color));
+  --slider-track: color-mix(in srgb, var(--tile-ink) 18%, transparent);
+}
+
+/* 色の付いた地の上の丸いボタンは、文字の色の薄い地にして馴染ませる */
+.home-tile.is-on .home-icon-button:not(.home-icon-button--on) {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--tile-ink) 12%, transparent);
+  color: var(--tile-ink);
+}
+
+.home-tile__actions {
+  display: flex;
+  flex: none;
+  gap: 8px;
+  padding: 0 14px 14px;
+}
+
+.home-tile__action {
+  flex: 1;
+  min-height: 44px;
+  padding: 0 0.8rem;
+}
+
+.home-tile__note {
   font-size: var(--font-note);
   opacity: 0.75;
 }
 
-/* 明るさのバー（widget-sdk の Slider）。点いている明るい地の上なので、濃い琥珀色にする */
-.home-toggle__slider {
-  margin: 0 22px 12px;
-  --slider-color: #8a5a00;
-  --slider-track: rgba(59, 42, 0, 0.18);
+/* 鍵: 解錠中は注意の色、詰まったら赤い縁。施錠中はアイコンをタイルの色にする */
+.home-tile--lock:not(.home-tile--alert) .home-tile__icon {
+  color: var(--tile-color);
+}
+
+.home-tile--alert {
+  border-color: rgba(251, 191, 36, 0.55);
+  background: linear-gradient(0deg, rgba(120, 72, 0, 0.2), rgba(120, 72, 0, 0.32));
+}
+
+.home-tile--alert .home-tile__icon {
+  color: var(--accent-warn);
+}
+
+.home-tile--error {
+  border-color: rgba(248, 113, 113, 0.6);
+}
+
+/* 空調: 下に設定温度、右上（「>」の隣）に電源 */
+.home-tile__climate {
+  display: flex;
+  flex: none;
+  align-items: center;
+  padding: 0 12px 12px;
+}
+
+.home-tile__climate > .home-tile__power {
+  position: absolute;
+  top: 8px;
+  right: 48px;
+}
+
+.home-tile__power {
+  width: 40px;
+  height: 40px;
+}
+
+.home-tile__target {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.home-tile__target .home-icon-button {
+  width: 40px;
+  height: 40px;
+}
+
+.home-tile__target-value {
+  min-width: 3.6ch;
+  font-size: clamp(22px, calc(var(--u, 90px) * 0.3), 40px);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  text-align: center;
+}
+
+.home-tile__target-value small {
+  font-size: 0.5em;
+  font-weight: 400;
+}
+
+.home-tile__modes {
+  display: flex;
+  flex: none;
+  gap: 6px;
+  padding: 0 12px 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.home-tile__modes .home-chip {
+  flex: none;
+}
+
+/* 2x1: 横に並べて背を低くする。明るさのバーは出さない */
+.home-tile--2x1 {
+  flex-direction: row;
+  align-items: center;
+}
+
+.home-tile--2x1 .home-tile__main {
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.7rem;
+  min-width: 0;
+  padding: 0 4px 0 14px;
+}
+
+.home-tile--2x1 .home-tile__name {
+  -webkit-line-clamp: 1;
+}
+
+.home-tile--2x1 .home-tile__actions {
+  padding: 0 4px 0 0;
+}
+
+.home-tile--2x1 .home-tile__action {
+  flex: none;
+  min-height: 40px;
+}
+
+.home-tile--2x1 .home-tile__more {
+  position: static;
+  flex: none;
+  margin-right: 8px;
+}
+
+/* 4x4: 大きいタイルは文字とアイコンも大きく */
+.home-tile--4x4 .home-tile__icon {
+  width: 44px;
+  height: 44px;
+}
+
+.home-tile--4x4 .home-tile__name {
+  font-size: var(--font-title);
+}
+
+.home-tile--4x4 .home-tile__main {
+  padding: 24px 26px;
+}
+
+/* 並べ替えの間は、タイルの上に重ねて押せなくする（押すと選ぶ、引くと並べ替える） */
+.home-tile__edit {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border: 2px dashed rgba(255, 255, 255, 0.4);
+  border-radius: inherit;
+  background: rgba(0, 0, 0, 0.22);
+  color: #fff;
+  font-weight: 600;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.home-tile__edit.is-selected {
+  border: 3px solid var(--fill);
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.home-tile__edit .fluent-icon {
+  width: 22px;
+  height: 22px;
+}
+
+.home-arrange {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  padding: 12px 16px;
+  border-radius: 30px;
+}
+
+.home-arrange__name {
+  font-weight: 600;
+}
+
+.home-arrange__hint {
+  color: var(--text-secondary);
+  font-size: var(--font-small);
+}
+
+.home-arrange__sizes,
+.home-arrange__moves {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.home-arrange .home-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.home-arrange .fluent-icon {
+  width: 18px;
+  height: 18px;
+}
+
+/* --- タイルの詳細 --- */
+
+.tile-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  width: min(560px, 100%);
+}
+
+.tile-detail__hero {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.tile-detail__hero > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.tile-detail__power {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.tile-detail__power.is-on {
+  border-color: transparent;
+  background: var(--light, #ffecb3);
+  color: #2b2200;
+}
+
+.tile-detail__power.is-alert {
+  background: rgba(251, 191, 36, 0.22);
+  color: var(--accent-warn);
+}
+
+.tile-detail__power:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.tile-detail__power .fluent-icon {
+  width: 32px;
+  height: 32px;
+}
+
+.tile-detail__state {
+  font-size: var(--font-title);
+  font-weight: 600;
+}
+
+.tile-detail__hint {
+  color: var(--text-secondary);
+  font-size: var(--font-note);
+}
+
+.tile-detail__title {
+  margin: 0.4rem 0 0;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--text-secondary);
+  font-size: var(--font-small);
+  font-weight: 600;
+}
+
+.tile-detail__row {
+  display: grid;
+  grid-template-columns: 9.5rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.6rem 1rem;
+}
+
+.tile-detail__row--top {
+  align-items: start;
+}
+
+.tile-detail__row--top > .tile-detail__label {
+  padding-top: 0.6rem;
+}
+
+.tile-detail__label {
+  color: var(--text-secondary);
+  font-size: var(--font-small);
+}
+
+.tile-detail__chips,
+.tile-detail__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tile-detail__chips .home-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+/* 大きさの選択肢に添える、形の小さな絵 */
+.tile-detail__size-icon {
+  display: inline-block;
+  border: 2px solid currentColor;
+  border-radius: 3px;
+}
+
+.tile-detail__size-icon--2x1 {
+  width: 16px;
+  height: 8px;
+}
+
+.tile-detail__size-icon--2x2 {
+  width: 12px;
+  height: 12px;
+}
+
+.tile-detail__size-icon--4x2 {
+  width: 20px;
+  height: 10px;
+}
+
+.tile-detail__size-icon--4x4 {
+  width: 16px;
+  height: 16px;
+}
+
+.tile-detail__swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.tile-detail__swatch {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  border-radius: 50%;
+  background: var(--swatch);
+  color: #2b2200;
+  cursor: pointer;
+}
+
+.tile-detail__swatch.is-on {
+  outline: 3px solid var(--text-primary);
+  outline-offset: 2px;
+}
+
+.tile-detail__swatch:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.tile-detail__swatch .fluent-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.tile-detail__kelvin {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.tile-detail__kelvin small {
+  color: var(--text-secondary);
+  font-size: var(--font-caption);
+}
+
+.tile-detail__slider {
+  flex: 1;
+}
+
+.tile-detail__note {
+  margin: 0.5rem 0 0;
+  color: var(--text-secondary);
+  font-size: var(--font-note);
+}
+
+@media (max-width: 620px) {
+  .tile-detail__row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tile-detail__row--top > .tile-detail__label {
+    padding-top: 0;
+  }
 }
 
 /* --- Home Assistant 家電操作 --- */
@@ -358,18 +783,6 @@
   margin: 0 0 0.75rem;
 }
 
-@media (max-width: 620px) {
-  .home-control__locks,
-  .home-control__climates {
-    grid-template-columns: 1fr;
-  }
-
-  .home-control__sensors,
-  .home-control__toggles {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
 /* --- 部屋の空気の詳細（センサーごとの値と推移のグラフ） --- */
 
 .sensor-detail {
@@ -480,87 +893,6 @@
   .sensor-detail__range {
     display: none;
   }
-}
-
-/*
- * 横長で背の低い画面（もともと想定している横長のディスプレイなど）。
- * 節を「部屋の空気」「空調と鍵」「照明・スイッチ」の3列に並べ、カードを小さくして画面の高さに収める
- */
-@media (min-aspect-ratio: 2/1) and (max-height: 820px) {
-  .home-control__columns {
-    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr);
-    grid-template-areas:
-      "air climate toggles"
-      "air locks toggles";
-    grid-template-rows: auto 1fr;
-    gap: 0 clamp(20px, 2vw, 36px);
-    align-items: start;
-  }
-
-  /* 左右2つに分けていた入れ物をほどき、節を直接3列に置く */
-  .home-control__columns > div {
-    display: contents;
-  }
-
-  .home-section--air {
-    grid-area: air;
-  }
-
-  .home-section--climate {
-    grid-area: climate;
-  }
-
-  .home-section--locks {
-    grid-area: locks;
-  }
-
-  .home-section--toggles {
-    grid-area: toggles;
-  }
-
-  .home-control__sensors {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 10px;
-  }
-
-  .home-sensor {
-    gap: 0.45rem;
-    padding: 14px 18px;
-    border-radius: 22px;
-  }
-
-  .home-sensor .ui-stat__value {
-    font-size: clamp(24px, 1.9vw, 34px);
-  }
-
-  .home-control__toggles {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 10px;
-  }
-
-  /* 中のボタン（丸み 26px）とそろえる: 丸み 38px ＝ 26px ＋ 余白 12px */
-  .home-lock,
-  .home-climate {
-    gap: 0.9rem;
-    padding: 12px;
-    border-radius: 38px;
-  }
-
-  .home-control__area + .home-control__area {
-    margin-top: 0.75rem;
-  }
-
-  /* 鍵は名前とボタンを横に並べて、背を低くする */
-  .home-lock {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-  }
-}
-
-/* 空調のカードの切り替え（冷房・暖房など）は、ほかのボタンと同じ高さにして、カードの角の丸みとそろえる */
-.home-climate .home-chip {
-  min-height: 52px;
 }
 
 /* 設定画面の「計測に使うセンサー」 */

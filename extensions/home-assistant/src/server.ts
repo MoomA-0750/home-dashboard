@@ -12,6 +12,7 @@ import {
   setSensorEnabled,
   testConnection,
 } from "./homeassistant";
+import { registerLayout } from "./layout";
 import { registerNightWatch } from "./nightWatch";
 
 /**
@@ -74,6 +75,8 @@ export default defineServerExtension({
     haSettings.dataDir = api.dataDir;
     // 夜の表示の条件（照度・照明・時間帯）を見張り、満たしたら本体へ知らせる
     registerNightWatch(api);
+    // Home Control のます目の並び・大きさ・タイルの色
+    registerLayout(api);
 
     // allowUnlock は「この画面から解錠できるか」。ログインしていれば true になる
     api.route("GET", "/controls", ({ account, locale }) =>

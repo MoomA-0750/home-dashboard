@@ -1,53 +1,39 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import {
   defineMessages,
   Icon,
   PillMenu,
   ScreenFrame,
-  Slider,
+  StatTile,
   textFor,
   useLocale,
   usePolledResource,
   type IconName,
   type LocalizedText,
   type ScreenProps,
-  StatTile,
 } from "@home-dashboard/widget-sdk";
+import {
+  DEFAULT_SIZE,
+  fetchLayout,
+  moveId,
+  orderTiles,
+  saveLayout,
+  TILE_SIZES,
+  type HaEntity,
+  type HomeLayout,
+  type Overview,
+  type Tile,
+  type TileSize,
+} from "./homeTypes";
 import { SensorDetail } from "./SensorDetail";
+import { TileDetail } from "./TileDetail";
+import { ClimateTile, HVAC_LABELS, LockTile, ToggleTile } from "./tiles";
 import { localizeState } from "./units";
 
-interface HaEntity {
-  entityId: string;
-  domain: string;
-  name: string;
-  state: string;
-  unit: string | null;
-  deviceClass: string | null;
-  area: string | null;
-}
-
-interface Climate extends HaEntity {
-  currentTemperature: number | null;
-  targetTemperature: number | null;
-  minTemperature: number | null;
-  maxTemperature: number | null;
-  step: number | null;
-  hvacModes: string[];
-}
-
-interface Toggle extends HaEntity {
-  brightnessPct: number | null;
-  dimmable: boolean;
-}
-
-interface Overview {
-  configured: boolean;
-  canUnlock: boolean;
-  sensors: HaEntity[];
-  locks: HaEntity[];
-  climates: Climate[];
-  toggles: Toggle[];
-}
+/**
+ * Home Control の画面。部屋の空気（センサー）は上の帯（横長の画面では左の列）に並べ、照明・スイッチ・鍵・空調は
+ * 同じ大きさのます目（照明の四角 ＝ 2x2）に並べる。並び・大きさ・タイルの色は「並べ替え」で変え、全部の端末で同じ
+ */
 
 async function fetchOverview(apiBaseUrl: string): Promise<Overview> {
   const res = await fetch(`${apiBaseUrl}/api/ext/home-assistant/overview`);
@@ -56,7 +42,7 @@ async function fetchOverview(apiBaseUrl: string): Promise<Overview> {
   return { ...overview, sensors: (overview.sensors ?? []).map(localizeState) };
 }
 
-async function callService(apiBaseUrl: string, entityId: string, service: string, data?: Record<string, unknown>) {
+export async function callService(apiBaseUrl: string, entityId: string, service: string, data?: Record<string, unknown>) {
   const res = await fetch(`${apiBaseUrl}/api/ext/home-assistant/call`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -76,16 +62,6 @@ const SENSOR_META: Record<string, { label: LocalizedText; icon: IconName }> = {
   illuminance: { label: { ja: "明るさ", en: "Brightness" }, icon: "weather-sunny" },
 };
 
-const HVAC_LABELS: Record<string, LocalizedText> = {
-  off: { ja: "停止", en: "Off" },
-  heat: { ja: "暖房", en: "Heat" },
-  cool: { ja: "冷房", en: "Cool" },
-  heat_cool: { ja: "冷暖房", en: "Heat/Cool" },
-  auto: { ja: "自動", en: "Auto" },
-  dry: { ja: "除湿", en: "Dry" },
-  fan_only: { ja: "送風", en: "Fan" },
-};
-
 const messages = defineMessages({
   ja: {
     apiError: "home assistant API error: {status}",
@@ -100,31 +76,16 @@ const messages = defineMessages({
     air: "部屋の空気",
     inArea: "{area}の{label}",
     sensorAria: "{label} {value}（詳しく見る）",
-    locks: "鍵",
-    climate: "空調",
-    toggles: "照明・スイッチ",
     nothingHere: "この部屋に出せるものはありません。",
-    locked: "施錠中",
-    unlocked: "解錠中",
-    locking: "施錠しています…",
-    unlocking: "解錠しています…",
-    jammed: "詰まっています",
-    open: "開いています",
-    unknownState: "状態不明",
-    lock: "施錠",
-    unlockConfirm: "もう一度押して解錠",
-    unlock: "解錠",
-    cannotUnlock: "この画面からは解錠できません",
-    turnOn: "{name}をつける",
-    turnOff: "{name}を止める",
-    roomTemp: "室温 {value}",
-    lowerTemp: "設定温度を下げる",
-    raiseTemp: "設定温度を上げる",
-    hvacMode: "運転モード",
-    noResponse: "応答なし",
-    on: "オン",
-    off: "オフ",
-    brightnessOf: "{name}の明るさ",
+    arrange: "並べ替え",
+    done: "完了",
+    arrangeHint: "タイルを押して選び、大きさを変えます。引くと並べ替えられます。",
+    size: "大きさ",
+    sizeOf: "{name}の大きさ",
+    moveBefore: "前へ",
+    moveAfter: "後ろへ",
+    openDetail: "詳細",
+    saveFailed: "並びを保存できませんでした（{error}）",
   },
   en: {
     apiError: "home assistant API error: {status}",
@@ -139,31 +100,16 @@ const messages = defineMessages({
     air: "Air",
     inArea: "{area} {label}",
     sensorAria: "{label} {value} (show details)",
-    locks: "Locks",
-    climate: "Climate",
-    toggles: "Lights & switches",
     nothingHere: "Nothing to show in this room.",
-    locked: "Locked",
-    unlocked: "Unlocked",
-    locking: "Locking…",
-    unlocking: "Unlocking…",
-    jammed: "Jammed",
-    open: "Open",
-    unknownState: "Unknown",
-    lock: "Lock",
-    unlockConfirm: "Press again to unlock",
-    unlock: "Unlock",
-    cannotUnlock: "Can't unlock from this screen",
-    turnOn: "Turn on {name}",
-    turnOff: "Turn off {name}",
-    roomTemp: "Room {value}",
-    lowerTemp: "Lower target temperature",
-    raiseTemp: "Raise target temperature",
-    hvacMode: "Mode",
-    noResponse: "No response",
-    on: "On",
-    off: "Off",
-    brightnessOf: "{name} brightness",
+    arrange: "Arrange",
+    done: "Done",
+    arrangeHint: "Tap a tile to select it and change its size. Drag to reorder.",
+    size: "Size",
+    sizeOf: "Size of {name}",
+    moveBefore: "Earlier",
+    moveAfter: "Later",
+    openDetail: "Details",
+    saveFailed: "Couldn't save the layout ({error})",
   },
 });
 
@@ -234,14 +180,18 @@ function formatMergedValue(merged: MergedSensor): string {
 }
 
 /** 部屋（エリア）ごとにまとめる。エリアの分からないものは最後に「そのほか」でまとめる */
-function groupByArea<T extends HaEntity>(entities: T[]): [string, T[]][] {
+function groupByArea<T>(items: T[], areaOf: (item: T) => string | null): [string, T[]][] {
   const groups = new Map<string, T[]>();
-  for (const entity of entities) {
-    const key = entity.area ?? "";
-    groups.set(key, [...(groups.get(key) ?? []), entity]);
+  for (const item of items) {
+    const key = areaOf(item) ?? "";
+    groups.set(key, [...(groups.get(key) ?? []), item]);
   }
   return [...groups.entries()].sort(([a], [b]) => (a === "" ? 1 : b === "" ? -1 : 0));
 }
+
+const SCREEN_TITLE = { ja: "ホームコントロール", en: "Home Control" };
+/** これだけ指が動いたら、押したのではなく引いている */
+const DRAG_THRESHOLD_PX = 8;
 
 export function HomeControlScreen({ ctx }: ScreenProps) {
   const t = messages.useT();
@@ -254,13 +204,24 @@ export function HomeControlScreen({ ctx }: ScreenProps) {
   const [busy, setBusy] = useState<string | null>(null);
   // 出す部屋。null は「すべての部屋」（既定。開くたびにすべての部屋から始める）
   const [room, setRoom] = useState<string | null>(null);
-  const [detail, setDetail] = useState<{ area: string; merged: MergedSensor } | null>(null);
+  const [sensorDetail, setSensorDetail] = useState<{ area: string; merged: MergedSensor } | null>(null);
+  const [tileDetail, setTileDetail] = useState<string | null>(null);
+  const [layout, setLayout] = useState<HomeLayout>({ order: [], tiles: {} });
+  const [editing, setEditing] = useState(false);
+  const [selected, setSelected] = useState<string | null>(null);
+  const drag = useRef<{ id: string; x: number; y: number; moved: boolean } | null>(null);
 
-  const run = async (entityId: string, service: string, data?: Record<string, unknown>) => {
+  useEffect(() => {
+    fetchLayout(apiBaseUrl)
+      .then(setLayout)
+      .catch(() => undefined);
+  }, [apiBaseUrl]);
+
+  const run = async (entityId: string, service: string, payload?: Record<string, unknown>) => {
     setBusy(entityId);
     setFailure(null);
     try {
-      await callService(apiBaseUrl, entityId, service, data);
+      await callService(apiBaseUrl, entityId, service, payload);
       // HA が状態を反映するまで少しかかるので、すぐと少し後の2回読み直す
       await refresh();
       setTimeout(refresh, 1200);
@@ -271,19 +232,26 @@ export function HomeControlScreen({ ctx }: ScreenProps) {
     }
   };
 
-  if (loading) {
-    return <ScreenFrame title={{ ja: "ホームコントロール", en: "Home Control" }}>{t("loading")}</ScreenFrame>;
-  }
+  const persist = async (next: HomeLayout) => {
+    setLayout(next);
+    try {
+      setLayout(await saveLayout(apiBaseUrl, next));
+    } catch (err) {
+      setFailure(t("saveFailed", { error: err instanceof Error ? err.message : String(err) }));
+    }
+  };
+
+  if (loading) return <ScreenFrame title={SCREEN_TITLE}>{t("loading")}</ScreenFrame>;
   if (error || !data) {
     return (
-      <ScreenFrame title={{ ja: "ホームコントロール", en: "Home Control" }}>
+      <ScreenFrame title={SCREEN_TITLE}>
         <p className="screen__notice">{t("unreachable")}</p>
       </ScreenFrame>
     );
   }
   if (!data.configured) {
     return (
-      <ScreenFrame title={{ ja: "ホームコントロール", en: "Home Control" }}>
+      <ScreenFrame title={SCREEN_TITLE}>
         <p className="screen__notice">{t("notConfigured")}</p>
       </ScreenFrame>
     );
@@ -295,364 +263,279 @@ export function HomeControlScreen({ ctx }: ScreenProps) {
     a === "" ? 1 : b === "" ? -1 : a.localeCompare(b, "ja"),
   );
   const shownRoom = room !== null && areas.includes(room) ? room : null;
-  const inRoom = <T extends HaEntity>(entities: T[]) =>
-    shownRoom === null ? entities : entities.filter((e) => (e.area ?? "") === shownRoom);
-  const sensors = inRoom(data.sensors);
-  const locks = inRoom(data.locks);
-  const climates = inRoom(data.climates);
-  const toggles = inRoom(data.toggles);
+  const inRoom = (entity: HaEntity) => shownRoom === null || (entity.area ?? "") === shownRoom;
   const roomLabel = (area: string) => area || t("otherRoom");
 
-  const roomPicker =
-    areas.length > 1 ? (
-      <PillMenu
-        label={shownRoom === null ? t("allRooms") : roomLabel(shownRoom)}
-        icon="home"
-        ariaLabel={t("roomPicker", { room: shownRoom === null ? t("allRooms") : roomLabel(shownRoom) })}
-        items={[
-          { id: "*", label: t("allRooms"), selected: shownRoom === null },
-          ...areas.map((area) => ({ id: `room:${area}`, label: roomLabel(area), selected: shownRoom === area })),
-        ]}
-        onSelect={(id) => setRoom(id === "*" ? null : id.slice("room:".length))}
+  // ます目に並べるもの。はじめの並びは鍵・空調・照明とスイッチの順で、保存した並びがあればそれに従う
+  const allTiles = orderTiles(
+    [
+      ...data.locks.map((entity): Tile => ({ kind: "lock", entity })),
+      ...data.climates.map((entity): Tile => ({ kind: "climate", entity })),
+      ...data.toggles.map((entity): Tile => ({ kind: "toggle", entity })),
+    ],
+    layout.order,
+  );
+  const allIds = allTiles.map((tile) => tile.entity.entityId);
+  const tiles = allTiles.filter((tile) => inRoom(tile.entity));
+  const sensors = data.sensors.filter(inRoom);
+  const sizeFor = (id: string): TileSize => layout.tiles[id]?.size ?? DEFAULT_SIZE;
+  const modeLabel = (mode: string) => (HVAC_LABELS[mode] ? textFor(HVAC_LABELS[mode], locale) : mode);
+
+  const setTile = (id: string, patch: { size?: TileSize; color?: string | null }) => {
+    const current = { ...layout.tiles[id] };
+    if (patch.size) current.size = patch.size;
+    if (patch.color === null) delete current.color;
+    else if (patch.color) current.color = patch.color;
+    void persist({ order: allIds, tiles: { ...layout.tiles, [id]: current } });
+  };
+  const moveBy = (id: string, delta: number) => {
+    // 同じ部屋の中で隣のものと入れ替える（すべての部屋を出しているときも、部屋の見出しをまたがない）
+    const tile = tiles.find((x) => x.entity.entityId === id);
+    if (!tile) return;
+    const neighbors = tiles.filter((x) => (x.entity.area ?? "") === (tile.entity.area ?? "")).map((x) => x.entity.entityId);
+    const target = neighbors[neighbors.indexOf(id) + delta];
+    if (target) void persist({ ...layout, order: moveId(allIds, id, target) });
+  };
+
+  // 並べ替え: 押して離せば選ぶ、引けば指の下のタイルの位置へ動かす（同じ部屋の中だけ）
+  const onEditPointerDown = (id: string) => (event: ReactPointerEvent<HTMLDivElement>) => {
+    event.currentTarget.setPointerCapture(event.pointerId);
+    drag.current = { id, x: event.clientX, y: event.clientY, moved: false };
+  };
+  const onEditPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const current = drag.current;
+    if (!current) return;
+    if (!current.moved && Math.hypot(event.clientX - current.x, event.clientY - current.y) < DRAG_THRESHOLD_PX) return;
+    current.moved = true;
+    const under = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-tile-id]");
+    const target = under?.dataset.tileId;
+    const from = event.currentTarget.closest<HTMLElement>("[data-area]")?.dataset.area;
+    if (!target || target === current.id || under?.closest<HTMLElement>("[data-area]")?.dataset.area !== from) return;
+    setLayout((prev) => ({ ...prev, order: moveId(orderTiles(allTiles, prev.order).map((x) => x.entity.entityId), current.id, target) }));
+  };
+  const onEditPointerUp = () => {
+    const current = drag.current;
+    drag.current = null;
+    if (!current) return;
+    if (current.moved) void persist({ ...layout, order: orderTiles(allTiles, layout.order).map((x) => x.entity.entityId) });
+    else setSelected((prev) => (prev === current.id ? null : current.id));
+  };
+
+  const renderTile = (tile: Tile) => {
+    const id = tile.entity.entityId;
+    const frame = {
+      tile,
+      size: sizeFor(id),
+      color: layout.tiles[id]?.color,
+      onDetail: () => setTileDetail(id),
+      editOverlay: editing ? (
+        <div
+          className={`home-tile__edit${selected === id ? " is-selected" : ""}`}
+          role="button"
+          tabIndex={0}
+          aria-pressed={selected === id}
+          aria-label={tile.entity.name}
+          onPointerDown={onEditPointerDown(id)}
+          onPointerMove={onEditPointerMove}
+          onPointerUp={onEditPointerUp}
+          onPointerCancel={() => (drag.current = null)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") setSelected((prev) => (prev === id ? null : id));
+            if (event.key === "ArrowLeft" || event.key === "ArrowUp") moveBy(id, -1);
+            if (event.key === "ArrowRight" || event.key === "ArrowDown") moveBy(id, 1);
+          }}
+        >
+          <Icon name="grip" />
+          <span>{sizeFor(id).replace("x", "×")}</span>
+        </div>
+      ) : undefined,
+    };
+    if (tile.kind === "toggle") {
+      return (
+        <ToggleTile
+          key={id}
+          {...frame}
+          toggle={tile.entity}
+          busy={busy === id}
+          onToggle={() => run(id, "toggle")}
+          onBrightness={(pct) => run(id, "turn_on", { brightness_pct: pct })}
+        />
+      );
+    }
+    if (tile.kind === "lock") {
+      return (
+        <LockTile
+          key={id}
+          {...frame}
+          lock={tile.entity}
+          canUnlock={data.canUnlock}
+          busy={busy === id}
+          onLock={() => run(id, "lock")}
+          onUnlock={() => run(id, "unlock")}
+        />
+      );
+    }
+    return (
+      <ClimateTile
+        key={id}
+        {...frame}
+        climate={tile.entity}
+        busy={busy === id}
+        modeLabel={modeLabel}
+        onCall={(service, payload) => run(id, service, payload)}
       />
-    ) : undefined;
+    );
+  };
+
+  const selectedTile = editing ? tiles.find((tile) => tile.entity.entityId === selected) : undefined;
+  const detailTile = allTiles.find((tile) => tile.entity.entityId === tileDetail);
+
+  const actions = (
+    <>
+      {areas.length > 1 && (
+        <PillMenu
+          label={shownRoom === null ? t("allRooms") : roomLabel(shownRoom)}
+          icon="home"
+          ariaLabel={t("roomPicker", { room: shownRoom === null ? t("allRooms") : roomLabel(shownRoom) })}
+          items={[
+            { id: "*", label: t("allRooms"), selected: shownRoom === null },
+            ...areas.map((area) => ({ id: `room:${area}`, label: roomLabel(area), selected: shownRoom === area })),
+          ]}
+          onSelect={(id) => setRoom(id === "*" ? null : id.slice("room:".length))}
+        />
+      )}
+      {allTiles.length > 0 && (
+        <button
+          type="button"
+          className={`home-button${editing ? " home-button--primary" : " home-button--ghost"} home-control__arrange`}
+          aria-pressed={editing}
+          onClick={() => {
+            setEditing((prev) => !prev);
+            setSelected(null);
+          }}
+        >
+          <Icon name={editing ? "checkmark" : "grid"} />
+          {editing ? t("done") : t("arrange")}
+        </button>
+      )}
+    </>
+  );
 
   return (
-    <ScreenFrame title={{ ja: "ホームコントロール", en: "Home Control" }} actions={roomPicker}>
+    <ScreenFrame title={SCREEN_TITLE} actions={actions}>
       {failure && (
         <p className="screen__error" role="alert">
           {failure}
         </p>
       )}
 
-      <div className="screen__columns home-control__columns">
-        <div>
-          {sensors.length > 0 && (
-            <section className="screen__section home-section--air">
-              <h2 className="screen__section-title">{t("air")}</h2>
-              {groupByArea(sensors).map(([area, sensors]) => (
-                <div key={area} className="home-control__area">
-                  {area && shownRoom === null && <h3 className="home-control__area-name">{area}</h3>}
-                  <div className="home-control__sensors">
-                    {mergeSensors(sensors).map((merged) => {
-                      const known = SENSOR_META[merged.deviceClass ?? ""];
-                      const meta = {
-                        label: known ? textFor(known.label, locale) : merged.sensors[0].name,
-                        icon: known?.icon ?? ("unknown" as const),
-                      };
-                      // 押すと、センサーごとの値と推移を出す詳細を開く
-                      return (
-                        <StatTile
-                          key={merged.key}
-                          className="home-sensor"
-                          icon={meta.icon}
-                          label={meta.label}
-                          value={formatMergedValue(merged)}
-                          unit={merged.unit ?? undefined}
-                          tone={merged.level === "ok" ? undefined : merged.level}
-                          ariaLabel={t("sensorAria", {
-                            label: sensorTitle(area, meta.label, t),
-                            value: `${formatMergedValue(merged)}${merged.unit ?? ""}`,
-                          })}
-                          onClick={() => setDetail({ area, merged })}
-                        />
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </section>
-          )}
-
-          {locks.length > 0 && (
-            <section className="screen__section home-section--locks">
-              <h2 className="screen__section-title">{t("locks")}</h2>
-              <div className="home-control__locks">
-                {locks.map((lock) => (
-                  <LockCard
-                    key={lock.entityId}
-                    lock={lock}
-                    canUnlock={data.canUnlock}
-                    busy={busy === lock.entityId}
-                    onLock={() => run(lock.entityId, "lock")}
-                    onUnlock={() => run(lock.entityId, "unlock")}
+      <div className={`home-control${sensors.length > 0 ? " has-sensors" : ""}`}>
+        {sensors.length > 0 && (
+          <section className="home-control__sensors" aria-label={t("air")}>
+            {groupByArea(sensors, (s) => s.area).flatMap(([area, group]) =>
+              mergeSensors(group).map((merged) => {
+                const known = SENSOR_META[merged.deviceClass ?? ""];
+                const label = known ? textFor(known.label, locale) : merged.sensors[0].name;
+                // すべての部屋を出しているときは、どの部屋の値か分かるよう部屋の名前を添える
+                const shownLabel = shownRoom === null ? sensorTitle(area, label, t) : label;
+                const value = formatMergedValue(merged);
+                return (
+                  <StatTile
+                    key={`${area}:${merged.key}`}
+                    className="home-sensor"
+                    icon={known?.icon ?? "unknown"}
+                    label={shownLabel}
+                    value={value}
+                    unit={merged.unit ?? undefined}
+                    tone={merged.level === "ok" ? undefined : merged.level}
+                    ariaLabel={t("sensorAria", { label: sensorTitle(area, label, t), value: `${value}${merged.unit ?? ""}` })}
+                    onClick={() => setSensorDetail({ area, merged })}
                   />
-                ))}
-              </div>
-            </section>
-          )}
-        </div>
-        <div>
-          {climates.length > 0 && (
-            <section className="screen__section home-section--climate">
-              <h2 className="screen__section-title">{t("climate")}</h2>
-              <div className="home-control__climates">
-                {climates.map((climate) => (
-                  <ClimateCard
-                    key={climate.entityId}
-                    climate={climate}
-                    busy={busy === climate.entityId}
-                    onCall={(service, payload) => run(climate.entityId, service, payload)}
-                  />
-                ))}
-              </div>
-            </section>
-          )}
+                );
+              }),
+            )}
+          </section>
+        )}
 
-          {toggles.length > 0 && (
-            <section className="screen__section home-section--toggles">
-              <h2 className="screen__section-title">{t("toggles")}</h2>
-              {groupByArea(toggles).map(([area, toggles]) => (
-                <div key={area} className="home-control__area">
-                  {area && shownRoom === null && <h3 className="home-control__area-name">{area}</h3>}
-                  <div className="home-control__toggles">
-                    {toggles.map((toggle) => (
-                      <ToggleTile
-                        key={toggle.entityId}
-                        toggle={toggle}
-                        busy={busy === toggle.entityId}
-                        onToggle={() => run(toggle.entityId, "toggle")}
-                        onBrightness={(pct) => run(toggle.entityId, "turn_on", { brightness_pct: pct })}
-                      />
+        <div className="home-control__tiles">
+          {editing && (
+            <div className="ui-glass home-arrange" role="toolbar" aria-label={t("arrange")}>
+              {selectedTile ? (
+                <>
+                  <span className="home-arrange__name">{selectedTile.entity.name}</span>
+                  <div className="home-arrange__sizes" role="group" aria-label={t("sizeOf", { name: selectedTile.entity.name })}>
+                    {TILE_SIZES.map((size) => (
+                      <button
+                        key={size}
+                        type="button"
+                        className={`home-chip${sizeFor(selectedTile.entity.entityId) === size ? " home-chip--on" : ""}`}
+                        aria-pressed={sizeFor(selectedTile.entity.entityId) === size}
+                        onClick={() => setTile(selectedTile.entity.entityId, { size })}
+                      >
+                        {size.replace("x", "×")}
+                      </button>
                     ))}
                   </div>
-                </div>
-              ))}
-            </section>
+                  <div className="home-arrange__moves">
+                    <button type="button" className="home-chip" onClick={() => moveBy(selectedTile.entity.entityId, -1)}>
+                      <Icon name="chevron-left" />
+                      {t("moveBefore")}
+                    </button>
+                    <button type="button" className="home-chip" onClick={() => moveBy(selectedTile.entity.entityId, 1)}>
+                      {t("moveAfter")}
+                      <Icon name="chevron-right" />
+                    </button>
+                    <button type="button" className="home-chip" onClick={() => setTileDetail(selectedTile.entity.entityId)}>
+                      {t("openDetail")}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <span className="home-arrange__hint">{t("arrangeHint")}</span>
+              )}
+            </div>
           )}
+          {groupByArea(tiles, (tile) => tile.entity.area).map(([area, group]) => (
+            <section key={area} className="home-control__area">
+              {shownRoom === null && areas.length > 1 && <h2 className="home-control__area-name">{roomLabel(area)}</h2>}
+              <div className={`home-grid${editing ? " is-editing" : ""}`} data-area={area}>
+                {group.map(renderTile)}
+              </div>
+            </section>
+          ))}
         </div>
       </div>
-      {sensors.length + locks.length + climates.length + toggles.length === 0 && (
-        <p className="screen__notice">{t("nothingHere")}</p>
-      )}
-      {detail && (
+
+      {sensors.length + tiles.length === 0 && <p className="screen__notice">{t("nothingHere")}</p>}
+      {sensorDetail && (
         <SensorDetail
           apiBaseUrl={apiBaseUrl}
           title={sensorTitle(
-            detail.area,
-            SENSOR_META[detail.merged.deviceClass ?? ""]
-              ? textFor(SENSOR_META[detail.merged.deviceClass ?? ""].label, locale)
-              : detail.merged.sensors[0].name,
+            sensorDetail.area,
+            SENSOR_META[sensorDetail.merged.deviceClass ?? ""]
+              ? textFor(SENSOR_META[sensorDetail.merged.deviceClass ?? ""].label, locale)
+              : sensorDetail.merged.sensors[0].name,
             t,
           )}
-          icon={(SENSOR_META[detail.merged.deviceClass ?? ""] ?? { icon: "unknown" as const }).icon}
-          sensors={detail.merged.sensors}
-          digits={detail.merged.deviceClass === "temperature" ? 1 : 0}
-          onClose={() => setDetail(null)}
+          icon={(SENSOR_META[sensorDetail.merged.deviceClass ?? ""] ?? { icon: "unknown" as const }).icon}
+          sensors={sensorDetail.merged.sensors}
+          digits={sensorDetail.merged.deviceClass === "temperature" ? 1 : 0}
+          onClose={() => setSensorDetail(null)}
+        />
+      )}
+      {detailTile && (
+        <TileDetail
+          tile={detailTile}
+          size={sizeFor(detailTile.entity.entityId)}
+          color={layout.tiles[detailTile.entity.entityId]?.color}
+          canUnlock={data.canUnlock}
+          busy={busy === detailTile.entity.entityId}
+          modeLabel={modeLabel}
+          onCall={(service, payload) => run(detailTile.entity.entityId, service, payload)}
+          onLayout={(patch) => setTile(detailTile.entity.entityId, patch)}
+          onClose={() => setTileDetail(null)}
         />
       )}
     </ScreenFrame>
-  );
-}
-
-const UNLOCK_CONFIRM_MS = 4000;
-
-function LockCard({
-  lock,
-  canUnlock,
-  busy,
-  onLock,
-  onUnlock,
-}: {
-  lock: HaEntity;
-  canUnlock: boolean;
-  busy: boolean;
-  onLock: () => void;
-  onUnlock: () => void;
-}) {
-  const t = messages.useT();
-  // 解錠はうっかり押しても開かないよう、もう一度押して確かめる
-  const [confirming, setConfirming] = useState(false);
-  useEffect(() => {
-    if (!confirming) return;
-    const timer = setTimeout(() => setConfirming(false), UNLOCK_CONFIRM_MS);
-    return () => clearTimeout(timer);
-  }, [confirming]);
-
-  const locked = lock.state === "locked";
-  const unlocked = lock.state === "unlocked" || lock.state === "open";
-  const stateKey = (["locked", "unlocked", "locking", "unlocking", "jammed", "open"] as const).find(
-    (key) => key === lock.state,
-  );
-  const stateLabel = t(stateKey ?? "unknownState");
-
-  return (
-    <div
-      className={`ui-glass home-lock${unlocked ? " home-lock--unlocked" : ""}${lock.state === "jammed" ? " home-lock--jammed" : ""}`}
-    >
-      <div className="home-lock__status">
-        <Icon name={unlocked ? "lock-open" : "lock-closed"} className="home-lock__icon" />
-        <div>
-          <span className="home-lock__name">{lock.name}</span>
-          <span className="home-lock__state">{stateLabel}</span>
-        </div>
-      </div>
-      <div className="home-lock__actions">
-        <button type="button" className="home-button" disabled={busy || locked} onClick={onLock}>
-          {t("lock")}
-        </button>
-        {canUnlock ? (
-          <button
-            type="button"
-            className={`home-button${confirming ? " home-button--danger" : ""}`}
-            disabled={busy || unlocked}
-            onClick={() => {
-              if (!confirming) return setConfirming(true);
-              setConfirming(false);
-              onUnlock();
-            }}
-          >
-            {confirming ? t("unlockConfirm") : t("unlock")}
-          </button>
-        ) : (
-          <span className="home-lock__note">{t("cannotUnlock")}</span>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function ClimateCard({
-  climate,
-  busy,
-  onCall,
-}: {
-  climate: Climate;
-  busy: boolean;
-  onCall: (service: string, data?: Record<string, unknown>) => void;
-}) {
-  const t = messages.useT();
-  const locale = useLocale();
-  const step = climate.step ?? 0.5;
-  const target = climate.targetTemperature;
-  const off = climate.state === "off";
-  const clamp = (value: number) =>
-    Math.min(climate.maxTemperature ?? 30, Math.max(climate.minTemperature ?? 16, Math.round(value / step) * step));
-  const modes = climate.hvacModes.filter((mode) => mode !== "off");
-
-  return (
-    <div className={`ui-glass home-climate${off ? " home-climate--off" : ""}`}>
-      <div className="home-climate__head">
-        <span className="home-climate__name">
-          {climate.name}
-          {climate.area && <small>{climate.area}</small>}
-        </span>
-        <button
-          type="button"
-          className={`home-icon-button${off ? "" : " home-icon-button--on"}`}
-          aria-label={t(off ? "turnOn" : "turnOff", { name: climate.name })}
-          aria-pressed={!off}
-          disabled={busy}
-          onClick={() => onCall(off ? "turn_on" : "turn_off")}
-        >
-          <Icon name="power" />
-        </button>
-      </div>
-      <div className="home-climate__temps">
-        <span className="home-climate__current">
-          {t("roomTemp", { value: climate.currentTemperature ?? "—" })}
-          <small>℃</small>
-        </span>
-        <div className="home-climate__target">
-          <button
-            type="button"
-            className="home-icon-button"
-            aria-label={t("lowerTemp")}
-            disabled={busy || off || target === null}
-            onClick={() => target !== null && onCall("set_temperature", { temperature: clamp(target - step) })}
-          >
-            <Icon name="chevron-down" />
-          </button>
-          <span className="home-climate__target-value">
-            {off ? "—" : (target ?? "—")}
-            <small>℃</small>
-          </span>
-          <button
-            type="button"
-            className="home-icon-button"
-            aria-label={t("raiseTemp")}
-            disabled={busy || off || target === null}
-            onClick={() => target !== null && onCall("set_temperature", { temperature: clamp(target + step) })}
-          >
-            <Icon name="chevron-up" />
-          </button>
-        </div>
-      </div>
-      {modes.length > 0 && (
-        <div className="home-climate__modes" role="group" aria-label={t("hvacMode")}>
-          {modes.map((mode) => (
-            <button
-              key={mode}
-              type="button"
-              className={`home-chip${climate.state === mode ? " home-chip--on" : ""}`}
-              aria-pressed={climate.state === mode}
-              disabled={busy}
-              onClick={() => onCall("set_hvac_mode", { hvac_mode: mode })}
-            >
-              {HVAC_LABELS[mode] ? textFor(HVAC_LABELS[mode], locale) : mode}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function ToggleTile({
-  toggle,
-  busy,
-  onToggle,
-  onBrightness,
-}: {
-  toggle: Toggle;
-  busy: boolean;
-  onToggle: () => void;
-  onBrightness: (pct: number) => void;
-}) {
-  const t = messages.useT();
-  const on = toggle.state === "on";
-  const unavailable = toggle.state === "unavailable";
-  const [draft, setDraft] = useState<number | null>(null);
-  const icon: IconName = toggle.domain === "light" ? "lightbulb" : toggle.domain === "fan" ? "arrow-sync" : "plug";
-
-  return (
-    <div className={`ui-glass home-toggle${on ? " home-toggle--on" : ""}`}>
-      <button
-        type="button"
-        className="home-toggle__button"
-        aria-pressed={on}
-        disabled={busy || unavailable}
-        onClick={onToggle}
-      >
-        <Icon name={icon} className="home-toggle__icon" />
-        <span className="home-toggle__name">{toggle.name}</span>
-        <span className="home-toggle__state">
-          {unavailable
-            ? t("noResponse")
-            : on
-              ? toggle.brightnessPct !== null
-                ? `${toggle.brightnessPct}%`
-                : t("on")
-              : t("off")}
-        </span>
-      </button>
-      {toggle.dimmable && on && (
-        <Slider
-          className="home-toggle__slider"
-          value={draft ?? toggle.brightnessPct ?? 100}
-          min={1}
-          max={100}
-          step={1}
-          label={t("brightnessOf", { name: toggle.name })}
-          valueText={`${draft ?? toggle.brightnessPct ?? 100}%`}
-          onInput={setDraft}
-          // 動かしている間は送らず、指を離したときに一度だけ送る（HA への呼び出しを詰まらせない）
-          onCommit={(value) => {
-            onBrightness(value);
-            setDraft(null);
-          }}
-        />
-      )}
-    </div>
   );
 }

@@ -79,7 +79,20 @@ const ALLOWED_SERVICES: Record<string, string[]> = {
  * 何でも通すと entity_id を上書きして別の機器を動かせてしまうので、要るものだけを通す。
  */
 const ALLOWED_DATA: Record<string, Record<string, (value: unknown) => boolean>> = {
-  "light.turn_on": { brightness_pct: (v) => typeof v === "number" && v >= 0 && v <= 100 },
+  "light.turn_on": {
+    brightness_pct: (v) => typeof v === "number" && v >= 0 && v <= 100,
+    // 色（色相 0〜360・彩度 0〜100）と、白の色温度（ケルビン）
+    hs_color: (v) =>
+      Array.isArray(v) &&
+      v.length === 2 &&
+      typeof v[0] === "number" &&
+      typeof v[1] === "number" &&
+      v[0] >= 0 &&
+      v[0] <= 360 &&
+      v[1] >= 0 &&
+      v[1] <= 100,
+    color_temp_kelvin: (v) => typeof v === "number" && Number.isInteger(v) && v >= 1000 && v <= 12000,
+  },
   "climate.set_temperature": { temperature: (v) => typeof v === "number" && v >= 5 && v <= 40 },
   "climate.set_hvac_mode": {
     hvac_mode: (v) =>
@@ -409,12 +422,24 @@ export async function getOverview(loggedIn: boolean) {
   const toggles = [...byDomain("light"), ...byDomain("switch"), ...byDomain("fan")].map((s) => {
     const brightness = numberAttr(s, "brightness");
     const modes = s.attributes.supported_color_modes;
-    const dimmable = Array.isArray(modes) && modes.some((mode) => mode !== "onoff");
+    const isLight = s.entity_id.startsWith("light.");
+    const colorModes = isLight && Array.isArray(modes) ? (modes as string[]) : [];
+    const hs = s.attributes.hs_color;
     return {
       ...withArea(s),
       // HA の brightness は 0〜255。画面では % で扱う
       brightnessPct: brightness === null ? null : Math.round((brightness / 255) * 100),
-      dimmable: s.entity_id.startsWith("light.") && dimmable,
+      dimmable: colorModes.some((mode) => mode !== "onoff"),
+      // 色を変えられるか（hs・rgb など）と、白の色温度を変えられるか
+      colorable: colorModes.some((mode) => ["hs", "xy", "rgb", "rgbw", "rgbww"].includes(mode)),
+      colorTemp: colorModes.includes("color_temp"),
+      hsColor:
+        Array.isArray(hs) && hs.length === 2 && hs.every((v) => typeof v === "number")
+          ? ([hs[0], hs[1]] as [number, number])
+          : null,
+      colorTempKelvin: numberAttr(s, "color_temp_kelvin"),
+      minKelvin: numberAttr(s, "min_color_temp_kelvin"),
+      maxKelvin: numberAttr(s, "max_color_temp_kelvin"),
     };
   });
 
