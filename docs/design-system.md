@@ -34,6 +34,7 @@
 | 影 | `shadow-widget`・`text-shadow-halo`（`halo` と同じ） | |
 | 動きの曲線 | `ease-out`（出てくる）・`ease-in`（消える）・`ease-standard`（その場で変わる）。時間は `duration-(--motion-fast)` など | |
 | 出る・消える動き | `animate-enter`・`animate-enter-slow`・`animate-fade`・`animate-pop`・`animate-drop`・`animate-fade-out`・`animate-exit`・`animate-pop-out`・`animate-drop-out`・`animate-reveal`・`animate-spin` | `closing:animate-fade-out` |
+| 入れ物の幅の区切り | 入れ物に `@container` を付け、中で `@tile:`（26rem 以上） | `hidden @tile:flex` |
 | 画面の区切り | `phone:`（≤620px）・`tablet:`（≤900px）・`narrow:`（≤1100px）・`wide:`（≥1100px）・`triple:`（≥1500px。メールだけ）・`wall:`（壁掛けの横長で背の低い画面） | `phone:flex-col` |
 | 状態 | `lite:`（軽い表示）・`night:`（夜の表示）・`closing:`（閉じる動きの間。`.is-closing`）・`motion-reduce:`、選んでいるものは `aria-pressed:`・`aria-selected:`・`data-[…]:` | `aria-pressed:fill-bright` |
 

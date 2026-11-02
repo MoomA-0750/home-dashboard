@@ -25,6 +25,9 @@
   --leading-*: initial;
   --tracking-*: initial;
 
+  /* 入れ物の幅で出し分ける区切り（@container を付けた入れ物の中で @tile: と書く）。Home Control の広いタイル */
+  --container-tile: 26rem;
+
   --font-sans: Murecho, "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
 
   /* 太さは4つ（本文 400・小さな薄い文字 500・見出しと数値 600・時計とカードの見出し 700） */

@@ -208,7 +208,7 @@ function TileFrame({
     // タイルの大きさはます目で決まり、中身（明るさのバーの有無など）では変わらない
     <div
       className={cx(
-        "glass home-tile-radius home-tile-state change relative flex min-h-0 min-w-0 flex-col justify-between overflow-hidden",
+        "glass home-tile-radius home-tile-state change @container relative flex min-h-0 min-w-0 flex-col justify-between overflow-hidden",
         SIZE_CLASSES[size].frame,
       )}
       style={style}
@@ -490,7 +490,8 @@ export function ClimateTile({
       {short ? (
         <div className={cx("flex flex-none gap-2 px-3.5 pb-3.5", sz.actions)}>{power}</div>
       ) : (
-        // 下に設定温度。広いタイルは、その右に運転モードを並べる（入りきらなければ折り返す）
+        // 下に設定温度。広いタイルは、その右に運転モードを並べる（入りきらなければ折り返す）。
+        // 4x2 でもスマホのように幅が足りないときは運転モードを出さない（電源と重なるため。詳細で変える）
         <div className="flex flex-none items-center gap-3 px-3 pb-3">
           {power}
           <TargetControl climate={climate} busy={busy} onCall={onCall} onTile={!off} />
@@ -502,7 +503,7 @@ export function ClimateTile({
               label={t("hvacMode")}
               modeLabel={modeLabel}
               onCall={onCall}
-              className="min-w-0 flex-1 justify-end gap-1.5"
+              className="hidden min-w-0 flex-1 justify-end gap-1.5 @tile:flex"
               chipClass={ON_TILE_SELECTED}
             />
           )}
