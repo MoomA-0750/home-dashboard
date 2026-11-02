@@ -2,7 +2,7 @@ import { mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
-import type { RouteContext, RouteHandler, ServerExtensionApi, ToolDefinition } from "@home-dashboard/extension-sdk";
+import type { RouteContext, RouteHandler, ServerExtensionApi, StateSource, ToolDefinition } from "@home-dashboard/extension-sdk";
 import extension from "./server";
 import { distanceM, parseWatched, selectPlaces, updatePresence, type PresenceState, type RawDevice } from "./places";
 
@@ -57,6 +57,7 @@ async function host(settings: Record<string, unknown>) {
   const tools = new Map<string, ToolDefinition>();
   const broadcasts: { type: string; payload: unknown }[] = [];
   const disposers: (() => void)[] = [];
+  let states: StateSource | null = null;
   const api = {
     dataDir: "/nonexistent",
     settings: { homeRadius: 150, watchMinutes: 0, ...settings },
@@ -68,12 +69,15 @@ async function host(settings: Record<string, unknown>) {
     route: (method: string, path: string, handler: RouteHandler) => routes.set(`${method} ${path}`, handler),
     tool: (definition: ToolDefinition) => tools.set(definition.name, definition),
     broadcast: (type: string, payload: unknown) => broadcasts.push({ type, payload }),
+    provideStates: (source: StateSource) => {
+      states = source;
+    },
     log: { info() {}, warn() {}, error() {} },
   } as unknown as ServerExtensionApi;
   await extension.register(api);
   const call = async (key: string, ctx: Partial<RouteContext> = {}) =>
     routes.get(key)!({ params: {}, query: {}, body: null, account: null, fromAgent: false, bearer: null, locale: "ja", ...ctx });
-  return { api, call, tools, broadcasts, dispose: () => disposers.forEach((fn) => fn()) };
+  return { api, call, tools, broadcasts, states: () => states, dispose: () => disposers.forEach((fn) => fn()) };
 }
 
 test("見る端末は 登録名=呼び名 を読み、’ や空白の入った名前を切らない", () => {
@@ -209,6 +213,15 @@ test("見張り: 家を出たら画面へ知らせ、Webhook に座標なしで 
     assert.equal(event.label, "自分");
     assert.equal(event.latitude, undefined);
     assert.deepEqual(h.broadcasts.map((b) => b.type), ["presence"]);
+    // 本体が読める家の状態の値（夜の表示の条件など）にも出る。座標は渡さない
+    const readings = await h.states()!.read(["anyone-home", "home:iPhone"]);
+    assert.deepEqual(
+      readings.map((r) => [r.id, r.name, r.value]),
+      [
+        ["anyone-home", "だれかの端末が家にある", false],
+        ["home:iPhone", "自分が家にいる", false],
+      ],
+    );
   } finally {
     mock.timers.reset();
     h.dispose();

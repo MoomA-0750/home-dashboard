@@ -17,6 +17,9 @@ interface NightSettingsProps {
   onChange: (state: NightState) => void;
 }
 
+/** 本体の条件で立つ知らせの名前（apps/server/src/nightMode.ts の CONDITIONS_SOURCE） */
+const CONDITIONS_SOURCE = "@conditions";
+
 const messages = defineMessages({
   ja: {
     note: "部屋が暗い・電気が消えているときに、ダッシュボードの背景と文字をぐっと暗くします。全部の端末で同じです。",
@@ -31,6 +34,7 @@ const messages = defineMessages({
     activeNow: "夜の表示です",
     inactiveNow: "夜の表示ではありません",
     because: "満たしている条件: {reason}",
+    conditionsMet: "下の条件を満たしています",
     darkness: "暗さ {value}%",
     darknessLabel: "夜のときの暗さ",
     darknessNote: "夜のとき、画面全体に重ねる暗さです。壁紙はさらに暗くします。",
@@ -50,6 +54,7 @@ const messages = defineMessages({
     activeNow: "Night display is on",
     inactiveNow: "Night display is off",
     because: "Conditions met: {reason}",
+    conditionsMet: "The conditions below are met",
     darkness: "Darkness {value}%",
     darknessLabel: "Darkness at night",
     darknessNote: "How dark the whole screen gets at night. The wallpaper gets darker still.",
@@ -90,7 +95,11 @@ export function NightSettings({ apiBaseUrl, night, isAdmin, onChange }: NightSet
     { id: "off", label: t("off"), detail: t("offDetail") },
   ] as const;
   const mode = night?.mode ?? "auto";
-  const reasons = (night?.signals ?? []).map((s) => s.reason).filter(Boolean);
+  // 本体の条件（@conditions）の理由はサーバーが日本語で作るので出さず、画面の言語で「満たしている」とだけ出す
+  // （どれを満たしているかは、下の条件の一覧に画面の言語で出る）。拡張機能が自分で知らせた理由はそのまま出す
+  const signals = night?.signals ?? [];
+  const conditionsMet = signals.some((s) => s.source === CONDITIONS_SOURCE);
+  const reasons = signals.filter((s) => s.source !== CONDITIONS_SOURCE).map((s) => s.reason).filter(Boolean);
 
   return (
     <section className={STACK}>
@@ -100,6 +109,7 @@ export function NightSettings({ apiBaseUrl, night, isAdmin, onChange }: NightSet
         <Icon name="weather-moon" />
         <span>{night?.active ? t("activeNow") : t("inactiveNow")}</span>
       </p>
+      {conditionsMet && <Note>{t("conditionsMet")}</Note>}
       {reasons.length > 0 && <Note>{t("because", { reason: reasons.join(" / ") })}</Note>}
       <SectionTitle>{t("when")}</SectionTitle>
       <List boxed label={t("when")}>

@@ -5,6 +5,7 @@ import {
   HttpError,
   type Locale,
   type ServerExtensionApi,
+  type StateReading,
 } from "@home-dashboard/extension-sdk";
 import {
   parseHome,
@@ -164,6 +165,26 @@ export default defineServerExtension({
       if (timer) clearInterval(timer);
     });
     schedule();
+
+    // 本体が読める家の状態の値（夜の表示の条件など）。在宅の見張りが分かっている間だけ値があり、見張っていない・
+    // まだ分からないときは null（条件を満たさない扱い）。座標は渡さない
+    const presenceReadings = (): StateReading[] => {
+      const known = watched().map((w) => ({ id: `home:${w.name}`, name: `${w.label}が家にいる`, state: presence.get(w.name) }));
+      const states = known.map((k) => k.state).filter((state): state is PresenceState => state !== undefined);
+      return [
+        {
+          id: "anyone-home",
+          name: "だれかの端末が家にある",
+          kind: "onoff",
+          value: states.length === 0 ? null : states.some((state) => state.atHome),
+        },
+        ...known.map(({ id, name, state }): StateReading => ({ id, name, kind: "onoff", value: state ? state.atHome : null })),
+      ];
+    };
+    api.provideStates({
+      list: async () => presenceReadings(),
+      read: async (ids) => presenceReadings().filter((reading) => ids.includes(reading.id)),
+    });
 
     const presenceView = () => {
       const labels = new Map(watched().map((w) => [w.name, w.label]));

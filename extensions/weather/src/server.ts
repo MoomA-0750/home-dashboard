@@ -1,4 +1,4 @@
-import { defineServerExtension } from "@home-dashboard/extension-sdk";
+import { cachedLoader, defineServerExtension, type StateReading } from "@home-dashboard/extension-sdk";
 import { getForecast } from "./forecast";
 import { messages, PlaceStore, parsePlace, placeName, searchPlaces } from "./places";
 
@@ -7,6 +7,7 @@ import { messages, PlaceStore, parsePlace, placeName, searchPlaces } from "./pla
  * - /current … ホームの時刻の横の天気・天気ウィジェット・音声アシスタントの get_weather
  * - /forecast?place=<id> … Weather 画面の詳しい天気（./forecast）。place を省くと家の地点
  * - /places … Weather 画面で選べる場所（家の地点と、足した場所。./places）。/places/search・/places/name で地名を探す
+ * - 家の状態の値（api.provideStates）… 「日が出ている」と外の気温。夜の表示の条件に使える（日の入りで暗くするなど）
  */
 
 interface Place {
@@ -116,6 +117,21 @@ export default defineServerExtension({
     });
 
     api.route("GET", "/current", () => getWeather(place()));
+
+    // 本体が読める家の状態の値（夜の表示の条件など）。本体は30秒ごとに読むので、天気は10分覚えて引き直しを減らす
+    const current = cachedLoader(10 * 60_000);
+    const readings = async (): Promise<StateReading[]> => {
+      const at = place();
+      const weather = await current(`${at.lat},${at.lon}`, () => getWeather(at));
+      return [
+        { id: "daytime", name: `日が出ている（${at.name}）`, kind: "onoff", value: weather.current.isDay },
+        { id: "outside-temperature", name: `外の気温（${at.name}）`, kind: "number", value: weather.current.temperatureC, unit: "℃" },
+      ];
+    };
+    api.provideStates({
+      list: readings,
+      read: async (ids) => (await readings()).filter((reading) => ids.includes(reading.id)),
+    });
     const places = new PlaceStore(api.dataDir);
     const HOME = "home";
 
