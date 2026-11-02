@@ -118,6 +118,28 @@ export interface FeatureProvider<T> {
   implementation: T;
 }
 
+/**
+ * 本体が読める「家の状態」の値（api.provideStates で差し出す）。夜の表示の条件など、本体が連携先を問わずに使う。
+ * number は数値（照度・室温など。未満・より上で比べる）、onoff はついている・消えている（照明・スイッチなど）
+ */
+export interface StateReading {
+  /** 差し出す拡張機能の中で一意な id（Home Assistant なら entity_id） */
+  id: string;
+  name: string;
+  kind: "number" | "onoff";
+  /** 今の値。読めない（応答なし・不明）ときは null */
+  value: number | boolean | null;
+  /** number の単位（lx・℃ など） */
+  unit?: string | null;
+}
+
+export interface StateSource {
+  /** 選べる値の一覧（設定画面で条件を足すときに出す。並べたい順に返す） */
+  list(): Promise<StateReading[]>;
+  /** 決めた id の今の値（見つからないものは返さなくてよい） */
+  read(ids: string[]): Promise<StateReading[]>;
+}
+
 /** ログインしている人 */
 export interface ExtensionAccount {
   id: string;
@@ -225,6 +247,11 @@ export interface ServerExtensionApi {
   providers<T>(feature: string): FeatureProvider<T>[];
   /** つないでいるすべての画面に知らせる（WebSocket）。type には自動で "ext:<id>:" を付ける */
   broadcast(type: string, payload?: unknown): void;
+  /**
+   * 本体が読める「家の状態」の値を差し出す（照度・室温・照明のオンオフなど）。夜の表示の条件は、本体の設定画面で
+   * これらの値から決める（連携先が Home Assistant でもほかのものでも同じ）。1つの拡張機能につき1つ
+   */
+  provideStates(source: StateSource): void;
   /**
    * 夜の表示（画面をぐっと暗くする）に入る条件を満たしたか・満たさなくなったかを本体へ知らせる。reason は設定画面に出す一言
    * （「リビングの照度が 5 lx 未満」など）。設定の夜の表示が「自動」なら、どれかの拡張機能が満たしている間だけ夜にする。

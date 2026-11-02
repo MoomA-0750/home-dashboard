@@ -1,6 +1,6 @@
-import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { defineMessages, Icon, Slider, type IconName } from "@home-dashboard/widget-sdk";
-import { DEFAULT_COLORS, sizeOf, textOn, type Climate, type HaEntity, type Tile, type TileSize, type Toggle } from "./homeTypes";
+import { DEFAULT_COLORS, sizeOf, textOn, type Climate, type HaEntity, type Placement, type Tile, type TileSize, type Toggle } from "./homeTypes";
 
 /**
  * Home Control のます目に並べるタイル（照明・スイッチ・鍵・空調）。大きさ（2x1・2x2・4x2・4x4）はます目の数で決まり、
@@ -98,19 +98,61 @@ export interface TileFrameProps {
   tile: Tile;
   size: TileSize;
   color?: string;
+  /** ます目のどこに置くか（packTiles で決める）。無ければ並び順に流す */
+  place?: Placement;
   /** 並べ替え・大きさを変えている間は、中身を押せないようにして上に重ねたものを出す */
   editOverlay?: ReactNode;
   onDetail: () => void;
 }
 
+/** 字を小さくするのはここまで（もとの 70%） */
+const MIN_FIT = 0.7;
+
+/**
+ * 名前や状態がタイルに収まらないとき、字を少しずつ小さくして収める（切らない）。
+ * タイルの大きさ・名前・状態が変わるたびに、もとの大きさから測り直す
+ */
+function useFitText(tile: HTMLDivElement | null, key: string) {
+  useLayoutEffect(() => {
+    if (!tile) return;
+    const fit = () => {
+      const overflows = () =>
+        Array.from(tile.querySelectorAll<HTMLElement>(".home-tile__main")).some(
+          (main) => main.scrollHeight > main.clientHeight + 1 || main.scrollWidth > main.clientWidth + 1,
+        );
+      let scale = 1;
+      tile.style.setProperty("--fit", "1");
+      while (overflows() && scale > MIN_FIT) {
+        scale = Math.round((scale - 0.05) * 100) / 100;
+        tile.style.setProperty("--fit", String(scale));
+      }
+    };
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(tile);
+    return () => observer.disconnect();
+  }, [tile, key]);
+}
+
 /** タイルの外枠。ます目の数・色・「オン」の地・詳細を開くボタン */
-function TileFrame({ tile, size, color, editOverlay, onDetail, className, children }: TileFrameProps & { className?: string; children: ReactNode }) {
+function TileFrame({
+  tile,
+  size,
+  color,
+  place,
+  editOverlay,
+  onDetail,
+  className,
+  children,
+}: TileFrameProps & { className?: string; children: ReactNode }) {
   const t = tileMessages.useT();
+  const [box, setBox] = useState<HTMLDivElement | null>(null);
+  useFitText(box, `${size}:${tile.entity.name}:${tile.entity.state}`);
   const { w, h } = sizeOf(size);
   const tint = color ?? DEFAULT_COLORS[tile.kind];
   const style = {
-    gridColumn: `span ${w}`,
-    gridRow: `span ${h}`,
+    gridColumn: place ? `${place.col + 1} / span ${place.w}` : `span ${w}`,
+    gridRow: place ? `${place.row + 1} / span ${h}` : `span ${h}`,
     "--tile-color": tint,
     "--tile-ink": textOn(tint),
   } as CSSProperties;
@@ -118,6 +160,7 @@ function TileFrame({ tile, size, color, editOverlay, onDetail, className, childr
     <div
       className={`ui-glass home-tile home-tile--${size} home-tile--${tile.kind}${tileIsOn(tile) ? " is-on" : ""}${className ? ` ${className}` : ""}`}
       style={style}
+      ref={setBox}
       data-tile-id={tile.entity.entityId}
     >
       {children}
@@ -340,22 +383,23 @@ export function ClimateTile({
               <Icon name="chevron-up" />
             </button>
           </div>
-        </div>
-      )}
-      {wide && modes.length > 0 && (
-        <div className="home-tile__modes" role="group" aria-label={t("hvacMode")}>
-          {modes.map((mode) => (
-            <button
-              key={mode}
-              type="button"
-              className={`home-chip${climate.state === mode ? " home-chip--on" : ""}`}
-              aria-pressed={climate.state === mode}
-              disabled={busy}
-              onClick={() => onCall("set_hvac_mode", { hvac_mode: mode })}
-            >
-              {modeLabel(mode)}
-            </button>
-          ))}
+          {/* 広いタイルは、設定温度の右に運転モードを並べる（入りきらなければ折り返す） */}
+          {wide && modes.length > 0 && (
+            <div className="home-tile__modes" role="group" aria-label={t("hvacMode")}>
+              {modes.map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  className={`home-chip${climate.state === mode ? " home-chip--on" : ""}`}
+                  aria-pressed={climate.state === mode}
+                  disabled={busy}
+                  onClick={() => onCall("set_hvac_mode", { hvac_mode: mode })}
+                >
+                  {modeLabel(mode)}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </TileFrame>

@@ -281,6 +281,10 @@ test("持ち込んだ拡張機能は別のプロセスで動き、自分の置�
               handler: (args, context) => ({ doubled: args.n * 2, by: context.approvedBy?.username ?? null }),
             });
             api.provide("notice", { text: async () => "別のプロセスから" });
+            api.provideStates({
+              list: async () => [{ id: "lux", name: "照度", kind: "number", value: 4, unit: "lx" }],
+              read: async (ids) => ids.map((id) => ({ id, name: "照度", kind: "number", value: 4, unit: "lx" })),
+            });
           },
         };`,
     }),
@@ -319,6 +323,9 @@ test("持ち込んだ拡張機能は別のプロセスで動き、自分の置�
   // 機能の口に入ったものは、口を持つ本体の拡張機能から呼べる（返り値は Promise）
   const provider = host.featureProviders<{ text: () => Promise<string> }>("notice").find((p) => p.extensionId === "probe")!;
   assert.equal(await provider.implementation.text(), "別のプロセスから");
+  // 家の状態の値（夜の表示の条件に使う）も、別のプロセスから差し出せる
+  const states = host.stateSources().find((s) => s.extensionId === "probe")!;
+  assert.deepEqual(await states.source.read(["lux"]), [{ id: "lux", name: "照度", kind: "number", value: 4, unit: "lx" }]);
 
   // 管理者が信頼すると、本体と同じプロセスで動く（秘密も読める）
   assert.equal((await host.setExtensionTrusted("probe", true)).sandboxed, false);

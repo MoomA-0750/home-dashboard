@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
-import type { RouteContext, ServerExtensionApi, ToolDefinition, ToolRisk } from "@home-dashboard/extension-sdk";
+import type { RouteContext, ServerExtensionApi, StateSource, ToolDefinition, ToolRisk } from "@home-dashboard/extension-sdk";
 import type { CallKind, FromChild, SerializedError, SerializedRouteResult, ToChild } from "./sandboxRunner.js";
 
 /**
@@ -18,6 +18,8 @@ import type { CallKind, FromChild, SerializedError, SerializedRouteResult, ToChi
  */
 
 const here = dirname(fileURLToPath(import.meta.url));
+/** 家の状態の値（provideStates）が届くときの口の名前（host.ts の STATES_PROVISION と同じ） */
+const STATES_PROVISION = "@states";
 // 本番ではビルドした .js、開発では .ts のまま起動する（Node 22 は型を消して読める。tsx は使わない。
 // tsx は読み込むファイルの上の階層の package.json などを探すので、データの置き場の外を読もうとして止められる）
 const RUNNER = existsSync(join(here, "sandboxRunner.js")) ? join(here, "sandboxRunner.js") : join(here, "sandboxRunner.ts");
@@ -150,7 +152,8 @@ export async function startSandbox(
         const implementation = Object.fromEntries(
           message.methods.map((method) => [method, (...args: unknown[]) => call("provision", message.ref, args, method)]),
         );
-        api.provide(message.feature, implementation);
+        if (message.feature === STATES_PROVISION) api.provideStates(implementation as unknown as StateSource);
+        else api.provide(message.feature, implementation);
         return;
       }
       case "broadcast":

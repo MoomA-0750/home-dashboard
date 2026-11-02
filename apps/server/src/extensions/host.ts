@@ -8,6 +8,7 @@ import { unzipSync } from "fflate";
 import type {
   ExtensionManifest,
   FeatureProvider,
+  StateSource,
   HttpMethod,
   RouteContext,
   RouteHandler,
@@ -292,6 +293,10 @@ function makeApi(ext: Extension): ServerExtensionApi {
       ext.provisions.set(feature, implementation);
     },
     providers: <T>(feature: string) => featureProviders<T>(feature),
+    // 家の状態の値は、機能の口とは別の決まった名前で持つ（manifest の provides には書かない）
+    provideStates: (source) => {
+      ext.provisions.set(STATES_PROVISION, source);
+    },
     broadcast: (type, payload) => broadcast({ type: `ext:${manifest.id}:${type}`, payload }),
     setNightSignal: (active, reason) => setNightSignal(manifest.id, active, reason),
     error: (statusCode, message) => new ServiceError(statusCode, message),
@@ -788,6 +793,21 @@ export async function dispatchExtensionRoute(
     console.error(`[ext:${id}] ${method} ${subpath} で失敗しました:`, err);
     return { kind: "json", statusCode: 500, body: { error: "internal error" } };
   }
+}
+
+/** 家の状態の値（api.provideStates）を持つ名前。拡張機能の id や口の id には使えない文字で始める */
+export const STATES_PROVISION = "@states";
+
+/** 家の状態の値を差し出している、動いている拡張機能（夜の表示の条件に使う） */
+export function stateSources(): { extensionId: string; name: string; source: StateSource }[] {
+  return listExtensions()
+    .map((info) => extensions.get(info.id)!)
+    .filter((ext) => ext.active && ext.provisions.has(STATES_PROVISION))
+    .map((ext) => ({
+      extensionId: ext.manifest.id,
+      name: ext.manifest.name,
+      source: ext.provisions.get(STATES_PROVISION) as StateSource,
+    }));
 }
 
 /** 機能の口に入っているもの（動いている拡張機能のもの。拡張機能の並びの順） */

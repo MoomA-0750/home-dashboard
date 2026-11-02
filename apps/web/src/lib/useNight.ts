@@ -13,11 +13,32 @@ export interface NightSignal {
   since: string;
 }
 
+/** 夜の表示の条件（apps/server/src/nightRules.ts と同じ形）。source は値を差し出す拡張機能の id */
+export type NightCondition =
+  | { kind: "below" | "above"; source: string; id: string; value: number }
+  | { kind: "off" | "on"; source: string; id: string }
+  | { kind: "time"; from: string; to: string };
+
+export interface NightRules {
+  match: "all" | "any";
+  conditions: NightCondition[];
+  holdMinutes: number;
+}
+
+export interface NightEvaluation {
+  met: boolean;
+  results: { condition: NightCondition; met: boolean; current: string | null; label: string }[];
+  reason: string | null;
+}
+
 export interface NightState {
   mode: "auto" | "on" | "off";
   darkness: number;
+  rules: NightRules;
   active: boolean;
   signals: NightSignal[];
+  /** 最後に条件を確かめた結果（条件が無ければ null） */
+  evaluation: NightEvaluation | null;
 }
 
 export function useNight(ctx: WidgetRuntimeContext) {

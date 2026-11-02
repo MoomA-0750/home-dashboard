@@ -58,6 +58,9 @@ export type FromChild =
   | { t: "call"; id: number; kind: "updateSettings"; args: unknown[] }
   | { t: "result"; id: number; ok: boolean; value?: unknown; error?: SerializedError };
 
+/** 家の状態の値（provideStates）を送るときの口の名前（host.ts の STATES_PROVISION と同じ） */
+const STATES_PROVISION = "@states";
+
 export type CallKind = "route" | "tool" | "risk" | "describe" | "description" | "provision";
 
 export interface SerializedError {
@@ -209,6 +212,13 @@ function makeApi(init: Extract<ToChild, { t: "init" }>): ServerExtensionApi {
       const target = implementation as Record<string, unknown>;
       provisions.set(ref, target);
       send({ t: "provide", ref, feature, methods: methodNames(target) });
+    },
+    // 家の状態の値は、機能の口と同じ仕組みで本体から呼ぶ（本体の側で provideStates に入れ直す）
+    provideStates: (source) => {
+      const ref = nextRef++;
+      const target = source as unknown as Record<string, unknown>;
+      provisions.set(ref, target);
+      send({ t: "provide", ref, feature: STATES_PROVISION, methods: methodNames(target) });
     },
     // ほかの拡張機能の機能の口は使えない（入っている拡張機能の秘密を、本体を通して読み出させないため）。
     // 機能の口を「持つ」側（provide）にはなれる

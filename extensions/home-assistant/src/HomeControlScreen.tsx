@@ -1,5 +1,7 @@
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import {
+  Button,
+  ButtonRow,
   defineMessages,
   Icon,
   PillMenu,
@@ -15,13 +17,16 @@ import {
 import {
   DEFAULT_SIZE,
   fetchLayout,
+  gridMetrics,
   moveId,
   orderTiles,
+  packTiles,
   saveLayout,
   TILE_SIZES,
   type HaEntity,
   type HomeLayout,
   type Overview,
+  type Placement,
   type Tile,
   type TileSize,
 } from "./homeTypes";
@@ -210,6 +215,16 @@ export function HomeControlScreen({ ctx }: ScreenProps) {
   const [editing, setEditing] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const drag = useRef<{ id: string; x: number; y: number; moved: boolean } | null>(null);
+  // ます目の入れ物の幅。列の数を決め、タイルの置き場所（packTiles）を計算する
+  const [tilesBox, setTilesBox] = useState<HTMLDivElement | null>(null);
+  const [gridWidth, setGridWidth] = useState(0);
+  useLayoutEffect(() => {
+    if (!tilesBox) return;
+    setGridWidth(tilesBox.clientWidth);
+    const observer = new ResizeObserver(() => setGridWidth(tilesBox.clientWidth));
+    observer.observe(tilesBox);
+    return () => observer.disconnect();
+  }, [tilesBox]);
 
   useEffect(() => {
     fetchLayout(apiBaseUrl)
@@ -321,10 +336,12 @@ export function HomeControlScreen({ ctx }: ScreenProps) {
     else setSelected((prev) => (prev === current.id ? null : current.id));
   };
 
-  const renderTile = (tile: Tile) => {
+  const metrics = gridMetrics(gridWidth);
+  const renderTile = (tile: Tile, place: Placement) => {
     const id = tile.entity.entityId;
     const frame = {
       tile,
+      place,
       size: sizeFor(id),
       color: layout.tiles[id]?.color,
       onDetail: () => setTileDetail(id),
@@ -390,8 +407,9 @@ export function HomeControlScreen({ ctx }: ScreenProps) {
   const selectedTile = editing ? tiles.find((tile) => tile.entity.entityId === selected) : undefined;
   const detailTile = allTiles.find((tile) => tile.entity.entityId === tileDetail);
 
+  // ほかの画面と同じく、見出しの右にまとめて置く
   const actions = (
-    <>
+    <ButtonRow>
       {areas.length > 1 && (
         <PillMenu
           label={shownRoom === null ? t("allRooms") : roomLabel(shownRoom)}
@@ -405,20 +423,19 @@ export function HomeControlScreen({ ctx }: ScreenProps) {
         />
       )}
       {allTiles.length > 0 && (
-        <button
-          type="button"
-          className={`home-button${editing ? " home-button--primary" : " home-button--ghost"} home-control__arrange`}
+        <Button
+          variant={editing ? "primary" : "default"}
+          icon={editing ? "checkmark" : "grid"}
           aria-pressed={editing}
           onClick={() => {
             setEditing((prev) => !prev);
             setSelected(null);
           }}
         >
-          <Icon name={editing ? "checkmark" : "grid"} />
           {editing ? t("done") : t("arrange")}
-        </button>
+        </Button>
       )}
-    </>
+    </ButtonRow>
   );
 
   return (
@@ -457,7 +474,7 @@ export function HomeControlScreen({ ctx }: ScreenProps) {
           </section>
         )}
 
-        <div className="home-control__tiles">
+        <div className="home-control__tiles" ref={setTilesBox}>
           {editing && (
             <div className="ui-glass home-arrange" role="toolbar" aria-label={t("arrange")}>
               {selectedTile ? (
@@ -498,8 +515,18 @@ export function HomeControlScreen({ ctx }: ScreenProps) {
           {groupByArea(tiles, (tile) => tile.entity.area).map(([area, group]) => (
             <section key={area} className="home-control__area">
               {shownRoom === null && areas.length > 1 && <h2 className="home-control__area-name">{roomLabel(area)}</h2>}
-              <div className={`home-grid${editing ? " is-editing" : ""}`} data-area={area}>
-                {group.map(renderTile)}
+              <div
+                className={`home-grid${editing ? " is-editing" : ""}`}
+                data-area={area}
+                style={{ "--cols": metrics.cols, "--gap": `${metrics.gap}px` } as CSSProperties}
+              >
+                {(() => {
+                  const places = packTiles(
+                    group.map((tile) => sizeFor(tile.entity.entityId)),
+                    metrics.cols,
+                  );
+                  return group.map((tile, index) => renderTile(tile, places[index]));
+                })()}
               </div>
             </section>
           ))}

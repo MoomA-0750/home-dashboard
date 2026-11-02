@@ -39,3 +39,31 @@ test("いつも夜・使わないは知らせに関わらず決まり、設定�
   await assert.rejects(night.setNightSettings({ mode: "dark" }), { statusCode: 400 });
   await assert.rejects(night.setNightSettings({ darkness: 1.2 }), { statusCode: 400 });
 });
+
+test("条件は、家の状態を差し出す拡張機能の値で確かめ、満たしたら夜にする", async () => {
+  night.resetNightForTest();
+  await night.loadNightSettings();
+  await night.setNightSettings({ mode: "auto" });
+  let lux = 3;
+  night.startNightWatch(() => [
+    {
+      extensionId: "other-hub",
+      name: "Other Hub",
+      source: {
+        list: async () => [{ id: "lux", name: "照度", kind: "number", value: lux, unit: "lx" }],
+        read: async (ids) => ids.map((id) => ({ id, name: "照度", kind: "number" as const, value: lux, unit: "lx" })),
+      },
+    },
+  ]);
+  const state = await night.setNightSettings({
+    rules: { match: "all", holdMinutes: 0, conditions: [{ kind: "below", source: "other-hub", id: "lux", value: 10 }] },
+  });
+  assert.equal(state.active, true);
+  assert.equal(state.evaluation?.reason, "照度が 10 lx 未満");
+  assert.deepEqual((await night.listStateReadings()).map((s) => [s.source, s.readings.length]), [["other-hub", 1]]);
+
+  lux = 200;
+  await night.checkConditions();
+  assert.equal(night.nightState().active, false);
+  night.resetNightForTest();
+});

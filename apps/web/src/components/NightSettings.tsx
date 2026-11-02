@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import { Button, defineMessages, List, ListItem, Note, openSettings, Slider } from "@home-dashboard/widget-sdk";
+import { defineMessages, List, ListItem, Note, Slider } from "@home-dashboard/widget-sdk";
 import { Icon } from "./Icon";
+import { NightConditions } from "./NightConditions";
 import type { NightState } from "../lib/useNight";
 
 /**
  * 設定画面の「夜の表示」。いつ夜にするか（条件で・いつも・使わない）と、夜のときの暗さ。全部の端末で同じで、変えるのは管理者だけ。
- * 条件そのもの（照度・照明・時間帯）は、その状態を知っている拡張機能（Home Assistant）の設定で決める
+ * 条件（照度・照明・時間帯）もここで決める（値は、家の状態を差し出している拡張機能から本体が読む）
  */
 
 interface NightSettingsProps {
@@ -29,8 +30,6 @@ const messages = defineMessages({
     activeNow: "夜の表示です",
     inactiveNow: "夜の表示ではありません",
     because: "満たしている条件: {reason}",
-    conditionsWhere: "条件は、拡張機能の Home Assistant の設定にある「夜の表示の条件」で決めます。",
-    openConditions: "条件を決める",
     darkness: "暗さ {value}%",
     darknessLabel: "夜のときの暗さ",
     darknessNote: "夜のとき、画面全体に重ねる暗さです。壁紙はさらに暗くします。",
@@ -50,8 +49,6 @@ const messages = defineMessages({
     activeNow: "Night display is on",
     inactiveNow: "Night display is off",
     because: "Conditions met: {reason}",
-    conditionsWhere: "Set the conditions under “Night display conditions” in the Home Assistant extension settings.",
-    openConditions: "Set conditions",
     darkness: "Darkness {value}%",
     darknessLabel: "Darkness at night",
     darknessNote: "How dark the whole screen gets at night. The wallpaper gets darker still.",
@@ -117,12 +114,7 @@ export function NightSettings({ apiBaseUrl, night, isAdmin, onChange }: NightSet
           />
         ))}
       </List>
-      {mode === "auto" && (
-        <div className="night-settings__conditions">
-          <Note>{t("conditionsWhere")}</Note>
-          <Button onClick={() => openSettings({ page: "extensions", extension: "home-assistant" })}>{t("openConditions")}</Button>
-        </div>
-      )}
+      {mode === "auto" && night && <NightConditions apiBaseUrl={apiBaseUrl} night={night} isAdmin={isAdmin} onChange={onChange} />}
       <h4 className="settings-detail__subtitle">{t("darknessLabel")}</h4>
       <Note>{t("darknessNote")}</Note>
       <div className="wallpaper-dim__strength">

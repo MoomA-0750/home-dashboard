@@ -1,6 +1,6 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { cachedLoader, defineServerMessages, HttpError, type Locale, type SettingValue } from "@home-dashboard/extension-sdk";
+import { cachedLoader, defineServerMessages, HttpError, type Locale, type SettingValue, type StateReading } from "@home-dashboard/extension-sdk";
 
 /** 画面に返す文（音声アシスタントへの答えは日本語のまま） */
 export const messages = defineServerMessages({
@@ -531,43 +531,50 @@ export async function testConnection(locale: Locale = "ja"): Promise<{ ok: boole
   }
 }
 
-// --- 夜の表示の条件（night.ts）に使う ---
+// --- 家の状態の値（本体の夜の表示の条件などに使う。api.provideStates） ---
 
-/** 夜の条件に選べる機器の種類。数値で比べるもの（照度などのセンサー）と、ついている・消えているで見るもの */
-const NIGHT_SWITCH_DOMAINS = ["light", "switch", "fan", "binary_sensor", "input_boolean", "media_player"];
+/** ついている・消えているで見る機器の種類。数値はセンサー（単位のあるもの）だけ */
+const ONOFF_DOMAINS = ["light", "switch", "fan", "binary_sensor", "input_boolean", "media_player"];
 
-export interface NightCandidate {
-  entityId: string;
-  name: string;
-  state: string;
-  unit: string | null;
-  deviceClass: string | null;
-  /** "number" は未満・より上で、"switch" はついている・消えているで比べる */
-  type: "number" | "switch";
+/** 照明・スイッチなどが「ついている」か。読めない（unavailable・unknown）ときは null */
+function isOn(state: string): boolean | null {
+  if (state === "unavailable" || state === "unknown") return null;
+  return ["on", "open", "playing", "home", "heat", "cool", "auto"].includes(state);
 }
 
-/** 夜の条件に選べる機器（照度のセンサーを先に、照明、ほかのスイッチの順） */
-export async function nightCandidates(): Promise<{ configured: boolean; entities: NightCandidate[] }> {
-  if (!isConfigured()) return { configured: false, entities: [] };
-  const states = await fetchStates();
-  const rank = (e: NightCandidate) =>
-    e.deviceClass === "illuminance" ? 0 : e.entityId.startsWith("light.") ? 1 : e.type === "number" ? 3 : 2;
-  const entities = states
-    .flatMap((s): NightCandidate[] => {
-      const domain = s.entity_id.split(".")[0];
-      const base = toEntity(s);
-      if (domain === "sensor" && Number.isFinite(Number(s.state)) && s.attributes.unit_of_measurement)
-        return [{ ...base, type: "number" }];
-      if (NIGHT_SWITCH_DOMAINS.includes(domain)) return [{ ...base, type: "switch" }];
-      return [];
-    })
-    .sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name));
-  return { configured: true, entities };
+/** HA の状態を、本体が読める値にする。数値のセンサーと、オンオフの機器だけ（ほかは null） */
+function toReading(s: HaState): (StateReading & { rank: number }) | null {
+  const domain = s.entity_id.split(".")[0];
+  const name = (s.attributes.friendly_name as string) ?? s.entity_id;
+  const unit = (s.attributes.unit_of_measurement as string) ?? null;
+  if (domain === "sensor" && unit) {
+    const value = Number(s.state);
+    const rank = s.attributes.device_class === "illuminance" ? 0 : 3;
+    return { id: s.entity_id, name, kind: "number", value: s.state.trim() !== "" && Number.isFinite(value) ? value : null, unit, rank };
+  }
+  if (ONOFF_DOMAINS.includes(domain)) {
+    return { id: s.entity_id, name, kind: "onoff", value: isOn(s.state), rank: domain === "light" ? 1 : 2 };
+  }
+  return null;
 }
 
-/** 決めた機器の今の状態 */
-export async function readEntityStates(entityIds: string[]) {
-  if (!isConfigured() || entityIds.length === 0) return new Map<string, ReturnType<typeof toEntity>>();
-  const wanted = new Set(entityIds);
-  return new Map((await fetchStates()).filter((s) => wanted.has(s.entity_id)).map((s) => [s.entity_id, toEntity(s)]));
+/** 選べる値の一覧（照度のセンサーを先に、照明、ほかのスイッチ、ほかのセンサーの順） */
+export async function listStateReadings(): Promise<StateReading[]> {
+  if (!isConfigured()) return [];
+  return (await fetchStates())
+    .map(toReading)
+    .filter((r): r is StateReading & { rank: number } => r !== null)
+    .sort((a, b) => a.rank - b.rank || a.name.localeCompare(b.name))
+    .map(({ rank: _rank, ...reading }) => reading);
+}
+
+/** 決めた値の今の値 */
+export async function readStateReadings(ids: string[]): Promise<StateReading[]> {
+  if (!isConfigured() || ids.length === 0) return [];
+  const wanted = new Set(ids);
+  return (await fetchStates())
+    .filter((s) => wanted.has(s.entity_id))
+    .map(toReading)
+    .filter((r): r is StateReading & { rank: number } => r !== null)
+    .map(({ rank: _rank, ...reading }) => reading);
 }

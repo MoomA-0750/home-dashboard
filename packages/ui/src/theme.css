@@ -481,6 +481,11 @@ body.is-resizing {
   margin-bottom: 2rem;
 }
 
+/* 見出しの右の操作（ButtonRow など）は、狭い画面で次の行に回っても右に寄せる */
+.screen__header > :not(h1):last-child {
+  margin-left: auto;
+}
+
 .screen__header h1 {
   margin: 0;
   font-size: clamp(28px, 2.6vw, 44px);
@@ -3591,11 +3596,42 @@ label.ui-field {
   color: var(--accent);
 }
 
-.night-settings__conditions {
+/* 夜の表示の条件（並べた条件・足す欄・満たし方） */
+.night-conditions {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  flex-direction: column;
   gap: 0.75rem;
+}
+
+.night-conditions .ui-field {
+  margin-bottom: 0;
+}
+
+.night-conditions__add {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem;
+  border-radius: var(--group-radius);
+  background: var(--surface-input);
+}
+
+.night-conditions__add > .ui-field {
+  width: 100%;
+}
+
+.night-conditions__row,
+.night-conditions__options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.night-conditions__actions {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .wallpaper-dim__strength {

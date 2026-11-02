@@ -122,3 +122,40 @@ export function sizeOf(size: TileSize): { w: number; h: number } {
   const [w, h] = size.split("x").map(Number);
   return { w, h };
 }
+
+/** ます目の列の数と間の幅。入れ物の幅で決める（狭い画面は 4 列 ＝ 2x2 が 2 つ並ぶ） */
+export function gridMetrics(width: number): { cols: number; gap: number } {
+  const cols = width >= 1240 ? 12 : width >= 980 ? 10 : width >= 720 ? 8 : width >= 520 ? 6 : 4;
+  return { cols, gap: width >= 980 ? 14 : width >= 520 ? 12 : 10 };
+}
+
+export interface Placement {
+  col: number;
+  row: number;
+  w: number;
+}
+
+/**
+ * タイルを並び順にます目へ置く。2行ずつの帯（照明の四角 2x2 の高さ）ごとに、左の列から、上・下の順に空きを探すので、
+ * 2x1 は横に並ぶ前に上下に重なる（2x1 が2つで 2x2 の場所を埋める）。背が2以上のものは帯の頭（偶数行）からだけ置く
+ */
+export function packTiles(sizes: TileSize[], cols: number): Placement[] {
+  const used = new Set<string>();
+  const free = (col: number, row: number, w: number, h: number) => {
+    for (let r = row; r < row + h; r++) for (let c = col; c < col + w; c++) if (used.has(`${c}:${r}`)) return false;
+    return true;
+  };
+  return sizes.map((size) => {
+    const { h } = sizeOf(size);
+    const w = Math.min(sizeOf(size).w, cols);
+    for (let band = 0; ; band++) {
+      for (let col = 0; col + w <= cols; col++) {
+        for (const row of h === 1 ? [band * 2, band * 2 + 1] : [band * 2]) {
+          if (!free(col, row, w, h)) continue;
+          for (let r = row; r < row + h; r++) for (let c = col; c < col + w; c++) used.add(`${c}:${r}`);
+          return { col, row, w };
+        }
+      }
+    }
+  });
+}

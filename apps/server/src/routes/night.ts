@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyReply } from "fastify";
 import { ServiceError } from "../serviceError.js";
-import { loadNightSettings, nightState, onNightChange, setNightSettings } from "../nightMode.js";
+import { listStateReadings, loadNightSettings, nightState, onNightChange, setNightSettings, startNightWatch } from "../nightMode.js";
+import { stateSources } from "../extensions/host.js";
 import { broadcast } from "../ws.js";
 import { requireAdmin } from "./auth.js";
 import { requestLocale } from "../locale.js";
@@ -19,8 +20,12 @@ async function respond<T>(reply: FastifyReply, work: () => Promise<T>) {
 export async function registerNightRoutes(app: FastifyInstance): Promise<void> {
   await loadNightSettings();
   onNightChange((state) => broadcast({ type: "night-updated", ...state }));
+  // 条件（照度・照明・時間帯）を、家の状態を差し出している拡張機能の値で確かめ続ける
+  startNightWatch(stateSources);
 
   app.get("/api/night", () => nightState());
+  // 条件に選べる値（Home Assistant など、家の状態を差し出している拡張機能ごと）
+  app.get("/api/night/readings", async () => ({ sources: await listStateReadings() }));
 
   app.put<{ Body: unknown }>("/api/night", (request, reply) =>
     respond(reply, async () => {
