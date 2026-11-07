@@ -35,6 +35,8 @@
   --container-dialog-wide: 44rem;
   /* 設定の左の項目の列（w-side-nav）。字と一緒に伸び縮みし、項目の名前が切れないようにする */
   --container-side-nav: 15rem;
+  /* 付箋を貼る小窓の見本の列（w-note-preview） */
+  --container-note-preview: 13rem;
 
   --font-sans: Murecho, "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
 

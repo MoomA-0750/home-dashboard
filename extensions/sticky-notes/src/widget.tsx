@@ -585,7 +585,7 @@ function NoteForm({ ctx, t }: { ctx: WidgetRuntimeContext; t: T }) {
         </div>
         {/* 背の低い壁掛けの画面では小窓の中をスクロールするので、見本は見えるところに残す（1 列のときは下の付箋に重ならないよう貼り付けない） */}
         <div
-          className="sticky top-0 flex w-52 shrink-0 flex-col gap-3 self-start phone:static phone:w-auto phone:self-stretch"
+          className="sticky top-0 flex w-note-preview shrink-0 flex-col gap-3 self-start phone:static phone:w-auto phone:self-stretch"
           aria-label={t("preview")}
         >
           <span className="text-note text-muted">{t("preview")}</span>

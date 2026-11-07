@@ -53,7 +53,7 @@ const merge = extendTailwindMerge<"layer" | "tap" | "surface">({
       h: [{ h: ["screen-phone"] }],
       "max-h": [{ "max-h": ["dialog", "menu"] }],
       "max-w": [{ "max-w": ["dialog", "dialog-wide"] }],
-      w: [{ w: ["side-nav"] }],
+      w: [{ w: ["side-nav", "note-preview"] }],
       "min-w": [{ "min-w": ["dialog"] }],
       rounded: [{ rounded: ["nested"] }],
       "font-size": [{ text: ["unit", (value: string) => value.startsWith("fit-")] }],
