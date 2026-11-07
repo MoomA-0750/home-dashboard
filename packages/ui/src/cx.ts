@@ -48,6 +48,15 @@ const merge = extendTailwindMerge<"layer" | "tap" | "surface">({
       layer: [{ layer: ["base", "handle", "tabbar", "launcher", "popover", "bar", "snackbar", "modal", "voice", "guard"] }],
       tap: ["tap", "tap-lg", "tap-xl"],
       surface: ["glass", "raised", "fill-bright"],
+      // Tailwind のクラスと同じものを替える自前のクラス。教えないと両方が残り、CSS の並び順で部品の既定（Icon の size-6 など）が勝つ
+      size: [{ size: ["cap", (value: string) => value.startsWith("rem-")] }],
+      h: [{ h: ["screen-phone"] }],
+      "max-h": [{ "max-h": ["dialog", "menu"] }],
+      "max-w": [{ "max-w": ["dialog", "dialog-wide"] }],
+      w: [{ w: ["side-nav"] }],
+      rounded: [{ rounded: ["nested"] }],
+      "font-size": [{ text: ["unit", (value: string) => value.startsWith("fit-")] }],
+      "text-color": [{ text: ["voice-accent"] }],
     },
   },
 });

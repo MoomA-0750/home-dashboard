@@ -3,7 +3,8 @@
  *
  * Tailwind の既定の色・字の大きさ・角丸・影・太さ・ブレークポイントは消し、ここに書いたものだけを選べるようにする。
  * 決まりに無い値は、クラスを書いても何も出ない（pnpm lint:style が「効かないクラス」として知らせる）。
- * 余白（p-4・gap-3 など）は Tailwind の既定（0.25rem 刻み）が、設計図の --space-* の段と同じなので、そのまま使う。
+ * 余白と大きさ（p-4・gap-3・size-6・h-11 など）は 4px 刻み。設計図の寸法は px なので、rem（画面の幅で 14〜20px に変わる
+ * :root の字の大きさ）に乗せると、アイコンやボタンだけが壁掛けで大きく・スマホで小さくなり、字との釣り合いが崩れる。
  *
  * 色の多くは、壁紙に合わせて実行中に差し替える :root の変数（styles/tokens.css）を指す（inline で、その場で読む）。
  */
@@ -25,8 +26,15 @@
   --leading-*: initial;
   --tracking-*: initial;
 
+  --spacing: 4px;
+
   /* 入れ物の幅で出し分ける区切り（@container を付けた入れ物の中で @tile: と書く）。Home Control の広いタイル */
   --container-tile: 26rem;
+  /* 小窓の幅の上限（max-w-dialog・max-w-dialog-wide）。字と一緒に伸び縮みする */
+  --container-dialog: 36rem;
+  --container-dialog-wide: 44rem;
+  /* 設定の左の項目の列（w-side-nav）。字と一緒に伸び縮みし、項目の名前が切れないようにする */
+  --container-side-nav: 15rem;
 
   --font-sans: Murecho, "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
 
@@ -183,9 +191,10 @@
  * phone: スマホ / tablet: タブレット / narrow・wide: チャットの会話一覧・天気の横並び / triple: メールの3つ並び /
  * wall: 壁掛けの横長で背の低い画面
  */
-@custom-variant phone (@media (max-width: 620px));
-@custom-variant tablet (@media (max-width: 900px));
+/* 書いた順に CSS の後へ並ぶ（後のものが勝つ）。狭い区切りほど後に置く（スマホはタブレットの幅にも入るので、phone: を tablet: より後に） */
 @custom-variant narrow (@media (max-width: 1100px));
+@custom-variant tablet (@media (max-width: 900px));
+@custom-variant phone (@media (max-width: 620px));
 @custom-variant wide (@media (min-width: 1100px));
 @custom-variant triple (@media (min-width: 1500px));
 @custom-variant wall (@media (min-aspect-ratio: 2/1) and (max-height: 820px));
@@ -194,6 +203,16 @@
 @custom-variant night (&:where(:root[data-night] *));
 /* 閉じる動きの間（usePresence・useClosing が付ける） */
 @custom-variant closing (&.is-closing);
+
+/*
+ * 字と一緒に伸び縮みする大きさ（0.25rem 刻み。size-rem-8 ＝ 2rem）。:root の字の大きさは画面の幅で 14〜20px に変わる。
+ * 字の横に並ぶもの（リストのアイコンの台・アバター・天気のアイコン）に使い、字との釣り合いを保つ。押す所・アイコンだけの
+ * ボタン・タブは size-*（px）のまま
+ */
+@utility size-rem-* {
+  width: calc(--value(number) * 0.25rem);
+  height: calc(--value(number) * 0.25rem);
+}
 
 /* ガラスの中のガラス・ほぼ不透明な塗りは、後ろをぼかさない（見た目はほぼ同じで、描く手間だけ減る） */
 @utility no-blur {

@@ -45,8 +45,8 @@ interface ButtonOwnProps {
 /** ボタンの見た目（Button と、リンクをボタンの形にする ButtonLink・PillMenu で同じものを使う） */
 export function buttonClass(variant: ButtonVariant = "default", size: ButtonSize = "md") {
   return cx(
-    "press inline-flex items-center justify-center gap-2 rounded-full px-4 font-semibold leading-none whitespace-nowrap text-shadow-none no-underline cursor-pointer",
-    "disabled:cursor-default disabled:opacity-50 [&_.fluent-icon]:size-5",
+    "press inline-flex items-center justify-center gap-2 rounded-full px-4 font-normal leading-none whitespace-nowrap text-shadow-none no-underline cursor-pointer",
+    "disabled:cursor-default disabled:opacity-50",
     size === "lg" ? "tap-xl px-6 text-body" : "tap text-label",
     // ガラス（glass）は地と縁をまとめて決め、bg-*・border-* より後に効くので、塗りのボタンには付けない
     variant === "primary"
@@ -219,22 +219,26 @@ export function Group({
   return <section className={cx("glass mb-3 rounded-group p-4 text-shadow-none", className)}>{children}</section>;
 }
 
-/** List の形（ListItem が行の形を合わせる）。boxed: 1つの入れ物の中の行 / chevron: 押せる行の右の矢印を出すか */
-const ListContext = createContext<{ boxed: boolean; chevron: boolean }>({ boxed: false, chevron: true });
+/**
+ * List の形（ListItem が行の形を合わせる）。boxed: 1つの入れ物の中の行 / chevron: 押せる行の右の矢印を出すか /
+ * nav: 右に中身を出す左の欄の項目（詰めて並べ、右に中身が並ぶ広い画面では矢印を出さない）
+ */
+const ListContext = createContext<{ boxed: boolean; chevron: boolean; nav: boolean }>({ boxed: false, chevron: true, nav: false });
 
 /**
  * 線で区切った一覧の入れ物。中に ListItem を並べる。
  * boxed: 並べて読み比べるもの（天気の日ごと・予定・メール）を、1つのガラスの入れ物に入れて線で区切る。
  * 無し: 左の欄で選ぶもの（会話・受信箱・設定の項目）。入れ物の枠は無く、行ごとに角の丸い行が並び、選んでいる行だけガラスになる
  */
-export function List({ children, label, boxed }: { children: ReactNode; label?: string; boxed?: boolean }) {
+export function List({ children, label, boxed, nav }: { children: ReactNode; label?: string; boxed?: boolean; nav?: boolean }) {
   const parent = useContext(ListContext);
   return (
-    <ListContext.Provider value={{ boxed: Boolean(boxed), chevron: parent.chevron }}>
+    <ListContext.Provider value={{ boxed: Boolean(boxed), chevron: parent.chevron, nav: Boolean(nav) }}>
       <ul
         className={cx(
           "mb-3 flex list-none flex-col gap-1.5 p-0",
           boxed && "glass gap-0 divide-y divide-line overflow-hidden rounded-group text-shadow-none",
+          nav && "gap-0.5",
         )}
         aria-label={label}
       >
@@ -307,13 +311,15 @@ export function ListItem({
           "flex cursor-default items-center gap-3.5 text-left",
           list.boxed
             ? cx(
-                "px-4 py-3",
+                // 入れ物の中の行の余白は、字と一緒に伸び縮みする段（--group-*。rem）
+                "px-(--group-padding) py-(--group-row-padding)",
                 onClick && "press-wide cursor-pointer hover:bg-tint/6 focus-visible:bg-tint/6 focus-visible:outline-none",
                 selected && "bg-tint/6",
               )
             : cx(
                 // 左のアイコンの丸と角丸をそろえるため、左と上下の余白を同じにする
-                "rounded-inner border border-transparent p-3 pr-3.5",
+                "rounded-inner border border-transparent",
+                list.nav ? "p-(--nav-item-padding)" : "p-(--list-item-padding) pr-(--field-padding-x)",
                 onClick && "press-wide cursor-pointer",
                 selected
                   ? "glass text-shadow-none"
@@ -327,8 +333,9 @@ export function ListItem({
       >
         {icon && <ListIcon icon={icon} />}
         {leading}
-        <span className={cx("flex min-w-0 flex-1 flex-col gap-1.5", off && "opacity-60")}>
-          <span className="flex min-w-0 items-baseline gap-2 text-body">
+        <span className={cx("flex min-w-0 flex-1 flex-col gap-1", off && "opacity-60")}>
+          {/* 名前の行の高さは字に近く（leading-tight）。… で切る行は字の上下を詰めないので、行間のぶんだけ行が高くなる */}
+          <span className="flex min-w-0 items-baseline gap-2 text-body leading-tight">
             {/* 名前は1行に収め、入りきらなければ … で切る（壁紙の上では、文字の影が切れないよう余白を取る） */}
             <span className={cx("ellipsis min-w-0", !list.boxed && !selected && "halo-room")}>{title}</span>
             {badge && <small className="shrink-0 text-micro text-muted">{badge}</small>}
@@ -346,7 +353,9 @@ export function ListItem({
           )}
         </span>
         {trailing}
-        {onClick && chevron && list.chevron && <Icon name="chevron-right" className="opacity-50" />}
+        {onClick && chevron && list.chevron && (
+          <Icon name="chevron-right" className={cx("opacity-50", list.nav && "hidden tablet:inline-block")} />
+        )}
       </div>
     </li>
   );
@@ -357,7 +366,7 @@ export function ListIcon({ icon, className }: { icon: IconName; className?: stri
   return (
     <span
       className={cx(
-        "grid size-8 shrink-0 place-items-center rounded-nav bg-accent-soft/18 [&_.fluent-icon]:size-5",
+        "grid size-rem-8 shrink-0 place-items-center rounded-nav bg-accent-soft/18",
         className,
       )}
     >

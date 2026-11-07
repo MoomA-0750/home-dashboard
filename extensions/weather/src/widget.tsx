@@ -44,7 +44,7 @@ function WeatherView({ ctx, config, openDetail }: WidgetProps<WeatherConfig>) {
       {Boolean(error) && <WidgetHint tone="error">{t("fetchFailed")}</WidgetHint>}
       {data && (
         <>
-          <Icon name={weatherIcon(data.current.code, data.current.isDay)} className="size-8" />
+          <Icon name={weatherIcon(data.current.code, data.current.isDay)} className="size-rem-8" />
           <span className="text-heading font-semibold">{temperature(data.current.temperatureC, { unit: true })}</span>
           <span className="text-muted">{conditionText(data.current.code, data.current.condition, locale)}</span>
         </>
@@ -65,7 +65,7 @@ function WeatherDetail({ ctx, config }: WidgetDetailProps<WeatherConfig>) {
   return (
     <DetailFrame title={t("weatherIn", { place: data.location.name })}>
       <div className="mb-4 flex items-center gap-3">
-        <Icon name={weatherIcon(data.current.code, data.current.isDay)} className="size-8" />
+        <Icon name={weatherIcon(data.current.code, data.current.isDay)} className="size-rem-8" />
         <span className="text-heading font-semibold">{temperature(data.current.temperatureC, { unit: true })}</span>
         <span>{conditionText(data.current.code, data.current.condition, locale)}</span>
       </div>

@@ -216,19 +216,15 @@ export function SettingsLayout({
       <div className="flex min-h-0 flex-1 gap-7">
         {/* 左: 大きな項目の一覧（macOS の設定のように、選ぶと右に中身が出る） */}
         <nav
-          className={cx("min-h-0 w-60 shrink-0 overflow-y-auto pr-1 tablet:w-full", pageOpen && "tablet:hidden")}
+          className={cx("min-h-0 w-side-nav shrink-0 overflow-y-auto pr-1 tablet:w-full", pageOpen && "tablet:hidden")}
           aria-label={navLabel}
         >
-          <List>
+          <List nav>
             {items.map((item) => (
               <ListItem
                 key={item.id}
                 title={item.label}
-                leading={
-                  <span className="grid size-8 shrink-0 place-items-center rounded-nav bg-accent-soft/20 text-title">
-                    <Icon name={item.icon} />
-                  </span>
-                }
+                icon={item.icon}
                 selected={item.id === page}
                 onClick={() => onSelect(item.id)}
               />

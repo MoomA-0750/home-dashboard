@@ -150,7 +150,7 @@ export const WidgetHost = memo(function WidgetHost({
       </ErrorBoundary>
       {/* 詳細と設定は小窓（Dialog）。Dialog は body の直下に出すので、react-grid-layout の transform の中でも画面全体に重なる */}
       {DetailComponent && detailOpen && (
-        <Dialog label={name} onClose={() => setDetailOpen(false)}>
+        <Dialog label={name} size="fit" onClose={() => setDetailOpen(false)}>
           <ErrorBoundary name={name}>
             <DetailComponent
               instanceId={instance.instanceId}

@@ -38,10 +38,10 @@ const messages = defineMessages({
  */
 
 const AVATAR_SIZES = {
-  small: "size-5 text-micro",
-  medium: "size-8 text-small",
-  large: "size-10 text-title",
-  xlarge: "size-24 text-heading",
+  small: "size-rem-5 text-micro",
+  medium: "size-rem-8 text-small",
+  large: "size-rem-10 text-title",
+  xlarge: "size-rem-24 text-heading",
 } as const;
 
 /** 丸い顔（写真か、無ければ名前の頭文字）。hue を渡すと頭文字の丸をその色にする */
@@ -239,7 +239,7 @@ export function ChatImage({ src, alt }: { src: string; alt: string }) {
 /** やり取りに添えた、画像でないファイル。href があれば押して開く・保存する */
 export function ChatFile({ name, href, icon = "attach" }: { name: string; href?: string; icon?: IconName }) {
   const className =
-    "inline-flex max-w-full items-center gap-1.5 rounded-full border border-glass-border px-3 py-1.5 text-note text-muted no-underline [&_.fluent-icon]:size-4";
+    "inline-flex max-w-full items-center gap-1.5 rounded-full border border-glass-border px-3 py-1.5 text-note text-muted no-underline [&_.fluent-icon]:size-rem-4";
   const body = (
     <>
       <Icon name={icon} />

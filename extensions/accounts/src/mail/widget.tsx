@@ -90,7 +90,7 @@ function MailInboxView({ ctx, config, openDetail }: WidgetProps<MailInboxConfig>
   return (
     <WidgetCard className="items-stretch justify-start gap-1.5" onClick={openDetail} label={t("cardLabel", { n: data.unread })}>
       <span className="flex items-baseline gap-1.5">
-        <Icon name="mail" className="size-5.5 self-center text-muted" />
+        <Icon name="mail" className="size-rem-5.5 self-center text-muted" />
         <span className="text-stat leading-none font-semibold tabular-nums">{data.unread}</span>
         <span className="text-caption font-medium text-muted">{t("unread")}</span>
       </span>

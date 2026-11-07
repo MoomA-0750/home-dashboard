@@ -104,9 +104,12 @@
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.32);
 }
 
-/* 入力欄・選ぶ欄（Field の中の input・select・textarea） */
+/*
+ * 入力欄・選ぶ欄（Field の中の input・select・textarea）。:where で強さを 0 にし、欄に書いたクラス（w-auto・w-60 など）を勝たせる
+ * （強いままだと、中の欄の幅がどれも 100% になる）
+ */
 @utility fields {
-  & :is(input:not([type="checkbox"], [type="radio"], [type="file"], [type="range"]), select, textarea) {
+  :where(&) :where(input:not([type="checkbox"], [type="radio"], [type="file"], [type="range"]), select, textarea) {
     width: 100%;
     min-height: 44px;
     padding: 0 var(--field-padding-x);
@@ -118,13 +121,13 @@
     font-size: var(--font-small);
     text-shadow: none;
   }
-  & textarea {
+  :where(&) :where(textarea) {
     padding-block: 0.6rem;
   }
-  & :is(input, textarea)::placeholder {
+  :where(&) :where(input, textarea)::placeholder {
     color: var(--text-secondary);
   }
-  & option {
+  :where(&) :where(option) {
     background: var(--surface-raised);
   }
 }

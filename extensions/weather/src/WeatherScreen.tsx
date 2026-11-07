@@ -219,7 +219,7 @@ export function WeatherScreen({ ctx }: ScreenProps) {
       <div className="grid grid-cols-1 gap-x-8 wide:grid-cols-3">
       <ScreenSection className="mb-3.5 min-w-0 wide:flex wide:flex-col">
         <Group className="flex min-w-0 items-center gap-4 wide:flex-1">
-          <Icon name={weatherIcon(current.code, current.isDay)} className="size-12" />
+          <Icon name={weatherIcon(current.code, current.isDay)} className="size-rem-12" />
           <span className="text-stat leading-none font-semibold">{deg(current.temperatureC)}</span>
           <span className="flex min-w-0 flex-col gap-1.5 text-label leading-tight text-muted">
             <strong className="text-title leading-tight text-text">{conditionText(current.code, current.condition, locale)}</strong>
@@ -238,7 +238,7 @@ export function WeatherScreen({ ctx }: ScreenProps) {
             {hourly.map((hour, i) => (
               <li key={hour.time} className="flex shrink-0 grow basis-14 snap-start flex-col items-center gap-1 leading-tight tabular-nums">
                 <span className="text-note text-muted">{i === 0 ? t("now") : t("hour", { h: new Date(hour.time).getHours() })}</span>
-                <Icon name={weatherIcon(hour.code, hour.isDay)} className="my-0.5 size-6.5" />
+                <Icon name={weatherIcon(hour.code, hour.isDay)} className="my-0.5 size-rem-6.5" />
                 <span className="weather-rain h-4 text-caption">{hour.precipitationProbability >= 20 ? `${hour.precipitationProbability}%` : ""}</span>
                 <span className="font-semibold">{deg(hour.temperatureC)}</span>
               </li>
@@ -255,7 +255,7 @@ export function WeatherScreen({ ctx }: ScreenProps) {
             {daily.map((day, i) => (
               <ListItem
                 key={day.date}
-                leading={<Icon name={weatherIcon(day.code, true)} className="size-6" />}
+                leading={<Icon name={weatherIcon(day.code, true)} className="size-rem-6" />}
                 title={dayName(day.date, i, t, locale)}
                 detail={[
                   conditionText(day.code, day.condition, locale),

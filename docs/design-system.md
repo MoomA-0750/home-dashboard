@@ -29,7 +29,7 @@
 | 地・縁の色 | `bg-*`・`border-*` に同じ名前。ほかに `bg-raised`（浮かせる面）・`bg-input`（入力欄）・`bg-fill`・`bg-backdrop`（小窓の後ろ）・`border-line`・`border-glass-border`・`bg-shade`・`bg-tint`。不透明度は `/40` | `bg-tint/10` |
 | 字の大きさ | `text-micro`・`text-caption`・`text-note`・`text-label`・`text-small`・`text-body`・`text-title`・`text-heading`、画面の見出し `text-screen`・大きな数値 `text-stat`・カードの見出し `text-card` | `text-caption` |
 | 太さ・行間 | `font-normal`（400）・`font-medium`（500）・`font-semibold`（600）・`font-bold`（700）／`leading-none`（1）・`leading-tight`（1.3）・`leading-normal`（1.5） | |
-| 余白 | Tailwind の既定（0.25rem 刻み。`p-4` ＝ 1rem）。入れ物の内側は `p-4`、入れ物のあいだは `gap-3` | `px-4 py-3` |
+| 余白・大きさ | 4px 刻み（`p-4` ＝ 16px・`size-6` ＝ 24px）。設計図の寸法は px なので、画面の幅で変わらない。入れ物の内側は `p-4`、入れ物のあいだは `gap-3`。字の横に並ぶもの（リストのアイコンの台・アバター・字と並ぶ天気のアイコン）は `size-rem-*`（0.25rem 刻み。字と一緒に壁掛けで大きく・スマホで小さくなる） | `px-4 py-3`・`size-rem-8` |
 | 角丸 | `rounded-card`（45px）・`rounded-inner`（15px）・`rounded-group`・`rounded-nav`・`rounded-art`（12px。小さな写真）・`rounded-full`（丸・ピル） | |
 | 影 | `shadow-widget`・`text-shadow-halo`（`halo` と同じ） | |
 | 動きの曲線 | `ease-out`（出てくる）・`ease-in`（消える）・`ease-standard`（その場で変わる）。時間は `duration-(--motion-fast)` など | |
