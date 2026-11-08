@@ -1,0 +1,15 @@
+{
+  "id": "claude-code",
+  "name": "Claude Code",
+  "version": "0.1.0",
+  "description": "この機械や SSH でつなぐ機械の Claude Code のセッションを、左に一覧・右にやり取りの画面で見る。Herdr が入っていれば、指示を送る・止める・確認に答える・新しく始めることもできる。管理者のアカウントだけが使える",
+  "apiVersion": 1,
+  "settingsNote": "機械ごとに、仲介のスクリプト（下の「スクリプトを保存」）を ~/.local/bin に置き、ダッシュボードの鍵の1行を ~/.ssh/authorized_keys に足します。鍵はスクリプトしか動かせないように縛ってあります。",
+  "locales": {
+    "en": {
+      "name": "Claude Code",
+      "description": "View Claude Code sessions on this machine and machines reached over SSH, with a session list on the left and the conversation on the right. With Herdr installed you can also send prompts, interrupt, answer confirmations and start new sessions. Admin accounts only",
+      "settingsNote": "On each machine, put the bridge script (\"Save script\" below) in ~/.local/bin and add the dashboard key line to ~/.ssh/authorized_keys. The key is restricted so it can only run the script."
+    }
+  }
+}

@@ -1,0 +1,81 @@
+import { defineServerMessages } from "@home-dashboard/extension-sdk";
+
+/** 画面に返す文（設定画面のエラー・接続の確かめ・機械につながらなかった理由・操作できなかった理由） */
+const ja = {
+    maxMachines: "機械は {max} 台までです",
+    machineNotFound: "その機械は見つかりません",
+    nameRequired: "名前を入れてください",
+    typeRequired: "種類を選んでください",
+    hostInvalid: "宛先を IP かホスト名で入れてください",
+    portInvalid: "口の番号は 1〜65535 です",
+    usernameRequired: "ユーザー名を入れてください",
+    sshFingerprintFormat: "ホスト鍵の指紋は SHA256:… の形で入れてください",
+    noReply: "{host} から返事がありません",
+    cannotConnect: "{host} につながりません",
+    keyRejected: "鍵が通りません（相手の authorized_keys に、下の1行を足してください）",
+    hostKeyNotRegistered: "ホスト鍵の指紋が登録されていません",
+    hostKeyMismatch: "ホスト鍵の指紋が合いません",
+    bridgeMissing: "仲介のスクリプトが動きません（~/.local/bin/hd-claude-bridge.py を置き、python3 があるか確かめてください）",
+    bridgeOld: "仲介のスクリプトが古い版です（入れ直してください）",
+    bridgeUnreadable: "仲介のスクリプトの返事を読めませんでした",
+    connected: "つながりました（{hostname}。{herdr}）",
+    herdrVersion: "Herdr {version}",
+    noHerdr: "Herdr は無いので、見るだけになります",
+    noClaude: "Claude Code のログ（~/.claude/projects）がありません",
+    "herdr-missing": "この機械に Herdr がありません（操作には Herdr が要ります）",
+    "herdr-timeout": "Herdr が返事をしません",
+    "bad-session": "セッションの id が正しくありません",
+    "session-not-found": "セッションのログが見つかりません",
+    "bad-pane": "Herdr のペインの id が正しくありません",
+    "bad-keys": "送れないキーです",
+    "bad-workspace": "ワークスペースの id が正しくありません",
+    "empty-prompt": "送る文を入れてください",
+    "prompt-too-long": "送る文が長すぎます",
+    "cwd-not-found": "そのフォルダはありません",
+    agentBlocked: "確認の画面が出ています。先に答えてください",
+    herdrFailed: "Herdr で操作できませんでした（{detail}）",
+    failed: "うまくいきませんでした（{detail}）",
+};
+
+const en: { [K in keyof typeof ja]: string } = {
+    maxMachines: "You can add up to {max} machines",
+    machineNotFound: "That machine was not found",
+    nameRequired: "Enter a name",
+    typeRequired: "Choose a type",
+    hostInvalid: "Enter the address as an IP or host name",
+    portInvalid: "The port must be 1–65535",
+    usernameRequired: "Enter a user name",
+    sshFingerprintFormat: "Enter the host key fingerprint as SHA256:…",
+    noReply: "No reply from {host}",
+    cannotConnect: "Cannot connect to {host}",
+    keyRejected: "The key was rejected (add the line below to authorized_keys on that machine)",
+    hostKeyNotRegistered: "The host key fingerprint is not registered",
+    hostKeyMismatch: "The host key fingerprint does not match",
+    bridgeMissing: "The bridge script does not run (put it at ~/.local/bin/hd-claude-bridge.py and check that python3 exists)",
+    bridgeOld: "The bridge script is an old version (install it again)",
+    bridgeUnreadable: "Could not read the reply from the bridge script",
+    connected: "Connected ({hostname}. {herdr})",
+    herdrVersion: "Herdr {version}",
+    noHerdr: "Herdr is not installed, so sessions are view-only",
+    noClaude: "There are no Claude Code logs (~/.claude/projects)",
+    "herdr-missing": "Herdr is not installed on this machine (needed to control sessions)",
+    "herdr-timeout": "Herdr did not reply",
+    "bad-session": "The session id is not valid",
+    "session-not-found": "The session log was not found",
+    "bad-pane": "The Herdr pane id is not valid",
+    "bad-keys": "Those keys cannot be sent",
+    "bad-workspace": "The workspace id is not valid",
+    "empty-prompt": "Enter something to send",
+    "prompt-too-long": "The message is too long",
+    "cwd-not-found": "That folder does not exist",
+    agentBlocked: "A confirmation is showing. Answer it first",
+    herdrFailed: "Herdr could not do that ({detail})",
+    failed: "That did not work ({detail})",
+};
+
+export const messages = defineServerMessages({ ja, en });
+
+/** 仲介スクリプトの error（herdr-missing など）のうち、文を持っているもの */
+export const MESSAGE_KEYS: ReadonlySet<string> = new Set(Object.keys(ja));
+
+export type MessageKey = Parameters<typeof messages.t>[1];
