@@ -46,8 +46,9 @@ export function Sidebar({
             type="button"
             className={cx(
               "nav-item press flex w-full cursor-pointer items-center overflow-hidden border-0 text-left whitespace-nowrap text-text",
-              "enabled:hover:fill-bright enabled:hover:nav-lift disabled:cursor-default disabled:opacity-40 phone:tabbar-item",
-              on && "fill-bright nav-lift",
+              "enabled:hover:fill-bright enabled:hover:text-on-fill enabled:hover:nav-lift disabled:cursor-default disabled:opacity-40 phone:tabbar-item",
+              // 塗りの上の字の色も替える（text-text が CSS の並びで fill-bright の色に勝ち、明るい地に白いアイコンになっていた）
+              on && "fill-bright text-on-fill nav-lift",
             )}
             aria-label={item.ariaLabel ?? item.label}
             aria-current={on ? "page" : undefined}

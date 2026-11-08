@@ -92,7 +92,7 @@ export function MonthGrid({
             onSelect && "press cursor-pointer",
             onSelect && !isSelected && "hover:bg-tint/8",
             outside && "text-muted opacity-55",
-            isSelected && "fill-bright",
+            isSelected && "fill-bright text-on-fill",
           );
           // 日曜は赤・土曜は青の数字（選んだ日は塗りの上の文字の色のまま）。今日は数字を丸で囲む
           const numberClass = cx(

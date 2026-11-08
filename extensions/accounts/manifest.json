@@ -1,7 +1,7 @@
 {
   "id": "accounts",
   "name": "カレンダー・メール",
-  "version": "2.2.1",
+  "version": "2.2.2",
   "description": "Calendar・Mail の画面、予定とメールのウィジェット、音声アシスタントの予定とメール。Google・iCloud・Microsoft・一般のアカウントを、設定の「アカウント → インターネットアカウント」でログインした人ごとに足す（家で共有するにしたものは家族と音声アシスタントにも見える）",
   "apiVersion": 1,
   "features": [
