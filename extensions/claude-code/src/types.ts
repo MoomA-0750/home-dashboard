@@ -81,8 +81,22 @@ export type LogItem =
   | { k: "user"; id: string; ts?: string; text: string; images: number }
   | { k: "assistant"; id: string; ts?: string; text: string; model?: string }
   | { k: "thinking"; id: string; ts?: string; text: string }
-  | { k: "tool"; id: string; ts?: string; name: string; input: Record<string, unknown>; model?: string }
-  | { k: "result"; id: string; ts?: string; text: string; images: number; error: boolean }
+  | {
+      k: "tool";
+      id: string;
+      ts?: string;
+      name: string;
+      input: Record<string, unknown>;
+      model?: string;
+    }
+  | {
+      k: "result";
+      id: string;
+      ts?: string;
+      text: string;
+      images: number;
+      error: boolean;
+    }
   | { k: "system"; id: string; ts?: string; subtype: string; text: string };
 
 export interface LogChunk {

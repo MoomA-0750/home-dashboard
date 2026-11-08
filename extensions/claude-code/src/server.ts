@@ -1,20 +1,28 @@
-import { readFile } from "node:fs/promises";
 import { cachedLoader, defineServerExtension, HttpError, type Locale } from "@home-dashboard/extension-sdk";
 import {
   authorizedKeysLine,
   BRIDGE_FILE,
   BRIDGE_VERSION,
   BridgeFailure,
-  bridgeScriptPath,
   dropAllConnections,
   dropConnection,
   ensureKeyPair,
   REMOTE_COMMAND,
   runBridge,
+  writeSelfScript,
 } from "./bridge";
 import { MachineStore, validateMachine } from "./machines";
+import { BRIDGE_SOURCE } from "./script";
 import { MESSAGE_KEYS, messages, type MessageKey } from "./messages";
-import type { AgentAction, HerdrState, LogChunk, MachineConfig, MachineHello, MachineOverview, SessionSummary } from "./types";
+import type {
+  AgentAction,
+  HerdrState,
+  LogChunk,
+  MachineConfig,
+  MachineHello,
+  MachineOverview,
+  SessionSummary,
+} from "./types";
 
 /**
  * Claude Code の拡張機能のサーバー側。登録した機械（SSH の先・この機械）の Claude Code のセッションを読み、
@@ -34,7 +42,10 @@ function known(code: string): code is MessageKey {
 
 /** 仲介スクリプト・SSH の失敗を、画面に出す文にする */
 function describeFailure(err: unknown, locale: Locale, host = ""): string {
-  if (!(err instanceof BridgeFailure)) return messages.t(locale, "failed", { detail: String((err as Error)?.message ?? err) });
+  if (!(err instanceof BridgeFailure))
+    return messages.t(locale, "failed", {
+      detail: String((err as Error)?.message ?? err),
+    });
   if (err.code.startsWith("herdr: ")) {
     const detail = err.code.slice("herdr: ".length);
     if (detail.includes("agent_blocked")) return messages.t(locale, "agentBlocked");
@@ -50,25 +61,42 @@ function asHttpError(err: unknown, locale: Locale, machine?: MachineConfig): Htt
   return new HttpError(status, describeFailure(err, locale, machine?.host ?? machine?.name ?? ""));
 }
 
-const int = (value: string | undefined) => (value === undefined || value === "" ? undefined : Number.parseInt(value, 10));
+const int = (value: string | undefined) =>
+  value === undefined || value === "" ? undefined : Number.parseInt(value, 10);
 
 export default defineServerExtension({
   register(api) {
     const store = new MachineStore(api.dataDir);
     api.onDispose(dropAllConnections);
+    // 同じ機械（self）で動かすときのために、仲介スクリプトをデータ置き場に書き出しておく
+    const selfScript = writeSelfScript(api.dataDir, BRIDGE_SOURCE);
+    selfScript.catch((err: Error) => api.log.warn(`仲介スクリプトを書き出せませんでした: ${err.message}`));
+    async function call<T>(
+      machine: MachineConfig,
+      command: string,
+      args: Record<string, unknown> = {},
+      timeoutMs?: number,
+    ) {
+      if (machine.type === "self") await selfScript;
+      return runBridge<T>(machine, api.dataDir, command, args, timeoutMs);
+    }
 
     // 何台もの画面が数秒ごとに読んでも、機械へ聞きに行くのは 3 秒に1回まで
     const overview = cachedLoader(3_000);
 
     async function readMachine(machine: MachineConfig, locale: Locale): Promise<MachineOverview> {
       try {
-        const reply = await runBridge<{ sessions: SessionSummary[]; herdr: HerdrState | null }>(
-          machine,
-          api.dataDir,
-          "overview",
-          { days: 21, limit: 80 },
-        );
-        return { id: machine.id, name: machine.name, ok: true, sessions: reply.sessions, herdr: reply.herdr };
+        const reply = await call<{
+          sessions: SessionSummary[];
+          herdr: HerdrState | null;
+        }>(machine, "overview", { days: 21, limit: 80 }, 30_000);
+        return {
+          id: machine.id,
+          name: machine.name,
+          ok: true,
+          sessions: reply.sessions,
+          herdr: reply.herdr,
+        };
       } catch (err) {
         return {
           id: machine.id,
@@ -87,7 +115,9 @@ export default defineServerExtension({
       async ({ locale }) =>
         overview(locale, async () => {
           const machines = await store.list();
-          return { machines: await Promise.all(machines.map((m) => readMachine(m, locale))) };
+          return {
+            machines: await Promise.all(machines.map((m) => readMachine(m, locale))),
+          };
         }),
       ADMIN,
     );
@@ -98,7 +128,7 @@ export default defineServerExtension({
       async ({ params, query, locale }) => {
         const machine = await store.get(params.id, locale);
         try {
-          return await runBridge<LogChunk>(machine, api.dataDir, "log", {
+          return await call<LogChunk>(machine, "log", {
             sessionId: query.session ?? "",
             from: int(query.from),
             before: int(query.before),
@@ -117,7 +147,7 @@ export default defineServerExtension({
       async ({ params, query, locale }) => {
         const machine = await store.get(params.id, locale);
         try {
-          return await runBridge<{ text: string }>(machine, api.dataDir, "screen", {
+          return await call<{ text: string }>(machine, "screen", {
             pane: query.pane ?? "",
             lines: int(query.lines) ?? 60,
           });
@@ -137,7 +167,12 @@ export default defineServerExtension({
         const { action, ...args } = input;
         if (!["prompt", "keys", "focus", "start"].includes(action)) throw new HttpError(400, "unknown action");
         try {
-          const result = await runBridge<Record<string, unknown>>(machine, api.dataDir, action, args, action === "start" ? 75_000 : 65_000);
+          const result = await call<Record<string, unknown>>(
+            machine,
+            action,
+            args,
+            action === "start" ? 75_000 : 65_000,
+          );
           return { ok: true, ...result };
         } catch (err) {
           throw asHttpError(err, locale, machine);
@@ -184,11 +219,19 @@ export default defineServerExtension({
           throw err;
         }
         try {
-          const hello = await runBridge<MachineHello>(machine, api.dataDir, "hello", {}, 12_000);
+          const hello = await call<MachineHello>(machine, "hello", {}, 12_000);
           if ((hello.version ?? 0) < BRIDGE_VERSION) return { ok: false, message: messages.t(locale, "bridgeOld") };
-          const parts = [hello.herdr ? messages.t(locale, "herdrVersion", { version: hello.herdr }) : messages.t(locale, "noHerdr")];
+          const parts = [
+            hello.herdr ? messages.t(locale, "herdrVersion", { version: hello.herdr }) : messages.t(locale, "noHerdr"),
+          ];
           if (!hello.claude) parts.push(messages.t(locale, "noClaude"));
-          return { ok: true, message: messages.t(locale, "connected", { hostname: hello.hostname, herdr: parts.join("。") }) };
+          return {
+            ok: true,
+            message: messages.t(locale, "connected", {
+              hostname: hello.hostname,
+              herdr: parts.join("。"),
+            }),
+          };
         } catch (err) {
           return {
             ok: false,
@@ -219,11 +262,6 @@ export default defineServerExtension({
     );
 
     // 仲介スクリプトそのもの（保存して相手の ~/.local/bin に置く）
-    api.route(
-      "GET",
-      "/bridge",
-      async () => api.file(await readFile(bridgeScriptPath()), "text/x-python"),
-      ADMIN,
-    );
+    api.route("GET", "/bridge", () => api.file(new TextEncoder().encode(BRIDGE_SOURCE), "text/x-python"), ADMIN);
   },
 });

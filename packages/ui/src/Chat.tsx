@@ -93,12 +93,15 @@ export function ChatLayout({
   listLabel,
   listOpen,
   onCloseList,
+  canCloseList = true,
   children,
 }: {
   list: ReactNode;
   listLabel?: string;
   listOpen: boolean;
   onCloseList: () => void;
+  /** 一覧の上に「戻る」を出す（まだ何も開いていないときは、戻る先が無いので false） */
+  canCloseList?: boolean;
   children: ReactNode;
 }) {
   const t = messages.useT();
@@ -112,7 +115,7 @@ export function ChatLayout({
         )}
         aria-label={listLabel ?? t("conversationList")}
       >
-        <div className={listOpen ? "hidden narrow:block" : "hidden"}>
+        <div className={listOpen && canCloseList ? "hidden narrow:block" : "hidden"}>
           <BackButton label={t("backToChat")} onClick={onCloseList} />
         </div>
         <ListNoChevron>{list}</ListNoChevron>

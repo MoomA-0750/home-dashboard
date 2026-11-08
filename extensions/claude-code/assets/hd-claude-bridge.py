@@ -78,13 +78,19 @@ def herdr_path():
     return shutil.which("herdr", path=path)
 
 
+def session_args():
+    """Herdr の名前付きのセッション（HD_HERDR_SESSION。既定のセッションでないものを使うとき・試すとき）"""
+    name = os.environ.get("HD_HERDR_SESSION", "")
+    return ["--session", name] if re.match(r"^[A-Za-z0-9_-]{1,40}$", name) else []
+
+
 def run_herdr(args, timeout=20):
     exe = herdr_path()
     if not exe:
         raise BridgeError("herdr-missing")
     try:
         proc = subprocess.run(
-            [exe] + args,
+            [exe] + session_args() + args,
             stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -215,24 +221,28 @@ def session_summary(path):
         "cwd": None,
         "branch": None,
     }
-    for chunk in (read_tail(path, LIST_TAIL_BYTES), read_head(path, LIST_HEAD_BYTES)):
-        for entry in json_lines(chunk):
-            kind = entry.get("type")
-            if kind == "custom-title" and entry.get("customTitle"):
-                info["title"] = entry["customTitle"]
-                info["_custom"] = True
-            elif kind == "ai-title" and entry.get("aiTitle") and not info.get("_custom"):
-                info["title"] = entry["aiTitle"]
-            elif kind == "summary" and entry.get("summary") and not info["title"]:
-                info["title"] = entry["summary"]
-            elif kind == "last-prompt" and entry.get("lastPrompt"):
-                info["lastPrompt"] = clip(entry["lastPrompt"], 200)
-            if entry.get("cwd"):
-                info["cwd"] = entry["cwd"]
-            if entry.get("gitBranch"):
-                info["branch"] = entry["gitBranch"]
-        if info["title"] and info["cwd"]:
+    for entry in json_lines(read_tail(path, LIST_TAIL_BYTES)):
+        kind = entry.get("type")
+        if kind == "custom-title" and entry.get("customTitle"):
+            info["title"] = entry["customTitle"]
+            info["_custom"] = True
+        elif kind == "ai-title" and entry.get("aiTitle") and not info.get("_custom"):
+            info["title"] = entry["aiTitle"]
+        elif kind == "summary" and entry.get("summary") and not info["title"]:
+            info["title"] = entry["summary"]
+        elif kind == "last-prompt" and entry.get("lastPrompt"):
+            info["lastPrompt"] = clip(entry["lastPrompt"], 200)
+        if entry.get("gitBranch"):
+            info["branch"] = entry["gitBranch"]
+        if entry.get("cwd") and not info["cwd"]:
+            info["cwd"] = entry["cwd"]
+    # 場所は、始めたときのフォルダ（途中で cd しても、そのセッションのフォルダとして見せるもの）
+    for entry in json_lines(read_head(path, LIST_HEAD_BYTES)):
+        if entry.get("cwd"):
+            info["cwd"] = entry["cwd"]
             break
+        if not info["title"] and entry.get("type") in ("ai-title", "summary"):
+            info["title"] = entry.get("aiTitle") or entry.get("summary")
     info.pop("_custom", None)
     return info
 

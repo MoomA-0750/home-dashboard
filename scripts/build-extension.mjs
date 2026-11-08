@@ -154,6 +154,9 @@ async function buildOne(dir, { zip, watch, exportsByName }) {
           ].join(" "),
         },
         define: { __dirname: "__hdDirname", __filename: "__hdFilename" },
+        // 相手の機械に置くスクリプトなどを、文字列として読み込めるように（server.js は別の場所に写してから動かすので、
+        // 自分のフォルダのファイルを道で探せない）。import source from "../assets/x.py"
+        loader: { ".py": "text", ".sh": "text", ".txt": "text" },
         logLevel: "warning",
       }),
     );

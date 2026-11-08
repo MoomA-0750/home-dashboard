@@ -23,12 +23,28 @@ import type { MachineConfig, MachineType } from "./types";
  * 変えられるのは管理者だけ。行を押すとその機械の設定を開く
  */
 
-type Draft = Omit<MachineConfig, "id" | "port"> & { id?: string; port?: string };
+type Draft = Omit<MachineConfig, "id" | "port"> & {
+  id?: string;
+  port?: string;
+};
 type Ctx = ExtensionSettingsPanelProps["ctx"];
 
-const emptyDraft = (): Draft => ({ name: "", type: "ssh", host: "", port: "22", username: "", fingerprint: "" });
-const toDraft = (m: MachineConfig): Draft => ({ ...m, port: m.port ? String(m.port) : "" });
-const toBody = (d: Draft): Partial<MachineConfig> => ({ ...d, port: d.port ? Number(d.port) : undefined });
+const emptyDraft = (): Draft => ({
+  name: "",
+  type: "ssh",
+  host: "",
+  port: "22",
+  username: "",
+  fingerprint: "",
+});
+const toDraft = (m: MachineConfig): Draft => ({
+  ...m,
+  port: m.port ? String(m.port) : "",
+});
+const toBody = (d: Draft): Partial<MachineConfig> => ({
+  ...d,
+  port: d.port ? Number(d.port) : undefined,
+});
 
 export function MachineSettings({ ctx, isAdmin }: ExtensionSettingsPanelProps) {
   const t = strings.useT();
@@ -85,7 +101,10 @@ export function MachineSettings({ ctx, isAdmin }: ExtensionSettingsPanelProps) {
               title={machine.name}
               detail={
                 machine.type === "ssh"
-                  ? t("machineSsh", { user: machine.username ?? "", host: machine.host ?? "" })
+                  ? t("machineSsh", {
+                      user: machine.username ?? "",
+                      host: machine.host ?? "",
+                    })
                   : t("machineSelf")
               }
               onClick={() => setEditing(toDraft(machine))}
@@ -154,7 +173,12 @@ function MachineEditor({ ctx, draft: initial, onDone }: { ctx: Ctx; draft: Draft
     }
   };
 
-  const field = (label: string, key: "name" | "host" | "port" | "username" | "fingerprint", placeholder = "", hint?: string) => (
+  const field = (
+    label: string,
+    key: "name" | "host" | "port" | "username" | "fingerprint",
+    placeholder = "",
+    hint?: string,
+  ) => (
     <Field label={label} hint={hint}>
       <input
         type="text"
@@ -253,10 +277,15 @@ function SetupGuide({ ctx }: { ctx: Ctx }) {
     ? `mkdir -p ~/.local/bin ~/.ssh && mv ~/Downloads/${key.bridgeFile} ~/.local/bin/ && chmod 755 ~/.local/bin/${key.bridgeFile}`
     : "";
   return (
-    <Group title={t("setupTitle")}>
+    <Group>
+      <SectionTitle>{t("setupTitle")}</SectionTitle>
       <ol className="flex list-decimal flex-col gap-3 pl-5 text-label leading-normal">
         <li className="flex flex-col gap-2">
-          <span>{t("setupStep1", { file: key?.bridgeFile ?? "hd-claude-bridge.py" })}</span>
+          <span>
+            {t("setupStep1", {
+              file: key?.bridgeFile ?? "hd-claude-bridge.py",
+            })}
+          </span>
           <ButtonRow>
             <ButtonLink href={bridgeUrl(ctx)} download={key?.bridgeFile ?? "hd-claude-bridge.py"}>
               {t("saveScript")}
@@ -274,7 +303,9 @@ function SetupGuide({ ctx }: { ctx: Ctx }) {
             <>
               <CodeBlock>{key.authorizedKeysLine}</CodeBlock>
               <ButtonRow>
-                <Button onClick={() => copy("key", key.authorizedKeysLine)}>{copied === "key" ? t("copied") : t("copy")}</Button>
+                <Button onClick={() => copy("key", key.authorizedKeysLine)}>
+                  {copied === "key" ? t("copied") : t("copy")}
+                </Button>
               </ButtonRow>
             </>
           )}

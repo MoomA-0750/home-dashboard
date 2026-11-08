@@ -62,13 +62,23 @@ export function toolName(name: string): string {
 }
 
 /** 指示に入るスラッシュコマンドの印（<command-name> など）を、打った形（/name 引数）に戻す */
-export function promptText(text: string): { text: string; output: string | null } {
+export function promptText(text: string): {
+  text: string;
+  output: string | null;
+} {
   const name = text.match(/<command-name>([^<]*)<\/command-name>/)?.[1];
   const args = text.match(/<command-args>([\s\S]*?)<\/command-args>/)?.[1];
   const output = text.match(/<local-command-stdout>([\s\S]*?)<\/local-command-stdout>/)?.[1];
-  if (name) return { text: `${name.startsWith("/") ? name : `/${name}`}${args ? ` ${args}` : ""}`, output: null };
+  if (name)
+    return {
+      text: `${name.startsWith("/") ? name : `/${name}`}${args ? ` ${args}` : ""}`,
+      output: null,
+    };
   if (output !== undefined) return { text: "", output: output.trim() };
-  return { text: text.replace(/<command-message>[\s\S]*?<\/command-message>\s*/g, "").trim(), output: null };
+  return {
+    text: text.replace(/<command-message>[\s\S]*?<\/command-message>\s*/g, "").trim(),
+    output: null,
+  };
 }
 
 function Time({ ts }: { ts?: string }) {
@@ -113,9 +123,18 @@ function ToolInput({ item }: { item: ToolItem }) {
     return (
       <ul className="flex flex-col gap-1 text-label">
         {(input.todos as Record<string, unknown>[]).map((todo, index) => (
-          <li key={index} className={cx("flex items-start gap-2", todo.status === "completed" && "text-muted line-through")}>
+          <li
+            key={index}
+            className={cx("flex items-start gap-2", todo.status === "completed" && "text-muted line-through")}
+          >
             <Icon
-              name={todo.status === "completed" ? "checkmark" : todo.status === "in_progress" ? "arrow-sync" : "chevron-right"}
+              name={
+                todo.status === "completed"
+                  ? "checkmark"
+                  : todo.status === "in_progress"
+                    ? "arrow-sync"
+                    : "chevron-right"
+              }
               className="mt-0.5 size-rem-4 shrink-0"
             />
             <span>{str(todo.content) || str(todo.activeForm)}</span>
@@ -132,7 +151,17 @@ function ToolInput({ item }: { item: ToolItem }) {
   );
 }
 
-function ToolRow({ item, result, running, cwd }: { item: ToolItem; result?: ResultItem; running: boolean; cwd: string | null }) {
+function ToolRow({
+  item,
+  result,
+  running,
+  cwd,
+}: {
+  item: ToolItem;
+  result?: ResultItem;
+  running: boolean;
+  cwd: string | null;
+}) {
   const t = strings.useT();
   const [open, setOpen] = useState(false);
   const summary = toolSummary(item, cwd);
@@ -189,7 +218,11 @@ function Thinking({ text }: { text: string }) {
         {t("thinking")}
         <Icon name={open ? "chevron-up" : "chevron-down"} className="ml-auto size-rem-4 shrink-0 opacity-50" />
       </button>
-      {open && <p className="ml-4.5 border-l border-line pl-3 text-label leading-normal whitespace-pre-wrap text-muted untrim">{text}</p>}
+      {open && (
+        <p className="ml-4.5 border-l border-line pl-3 text-label leading-normal whitespace-pre-wrap text-muted untrim">
+          {text}
+        </p>
+      )}
     </li>
   );
 }
@@ -233,7 +266,9 @@ export function Transcript({ items, cwd, working }: { items: LogItem[]; cwd: str
           <ChatRow key={item.id} mine gap>
             <ChatBubble mine>
               {prompt.text}
-              {item.images > 0 && <span className="mt-1 block text-note text-muted">{t("images", { n: item.images })}</span>}
+              {item.images > 0 && (
+                <span className="mt-1 block text-note text-muted">{t("images", { n: item.images })}</span>
+              )}
             </ChatBubble>
             <Time ts={item.ts} />
           </ChatRow>,
@@ -243,7 +278,7 @@ export function Transcript({ items, cwd, working }: { items: LogItem[]; cwd: str
       case "assistant":
         flush();
         out.push(
-          <li key={item.id} className="mb-2 w-full min-w-0 px-2">
+          <li key={item.id} className="my-2 w-full min-w-0 px-2">
             <Markdown text={item.text} />
           </li>,
         );

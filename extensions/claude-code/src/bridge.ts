@@ -1,9 +1,7 @@
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync } from "node:fs";
 import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 // ssh2 は CommonJS なので、名前を指定せずに読み込む
 import ssh2 from "ssh2";
 import type { MachineConfig } from "./types";
@@ -34,13 +32,20 @@ export class BridgeFailure extends Error {
   }
 }
 
-/** 拡張機能のフォルダ（組み立てた dist/ か、src/ から動かしたとき）の assets にあるスクリプト */
-export function bridgeScriptPath(): string {
-  const here = dirname(fileURLToPath(import.meta.url));
-  for (const candidate of [join(here, "assets", BRIDGE_FILE), join(here, "..", "assets", BRIDGE_FILE)]) {
-    if (existsSync(candidate)) return candidate;
+/** 同じ機械で動かすときの、仲介スクリプトの置き場（拡張機能のデータ置き場に書き出す） */
+export function selfScriptPath(dataDir: string): string {
+  return join(dataDir, BRIDGE_FILE);
+}
+
+/** 仲介スクリプトを書き出す（中身が変わったときだけ）。同じ機械で動かすときに使う */
+export async function writeSelfScript(dataDir: string, source: string): Promise<string> {
+  const path = selfScriptPath(dataDir);
+  const current = await readFile(path, "utf-8").catch(() => null);
+  if (current !== source) {
+    await mkdir(dirname(path), { recursive: true });
+    await writeFile(path, source, { mode: 0o700 });
   }
-  return join(here, "assets", BRIDGE_FILE);
+  return path;
 }
 
 export interface KeyPair {
@@ -70,7 +75,9 @@ async function loadOrCreateKeyPair(dataDir: string): Promise<KeyPair> {
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
   }
-  const pair = utils.generateKeyPairSync("ed25519", { comment: "home-dashboard-claude-code" });
+  const pair = utils.generateKeyPairSync("ed25519", {
+    comment: "home-dashboard-claude-code",
+  });
   await mkdir(dir, { recursive: true, mode: 0o700 });
   await writeFile(privatePath, pair.private, { mode: 0o600 });
   await chmod(privatePath, 0o600);
@@ -193,16 +200,21 @@ async function execSsh(machine: MachineConfig, keys: KeyPair, command: string, i
       stream.stderr.on("data", (chunk: Buffer) => errOut.push(chunk));
       stream.on("close", () => {
         clearTimeout(timer);
-        resolve({ out: Buffer.concat(out).toString("utf-8"), err: Buffer.concat(errOut).toString("utf-8") });
+        resolve({
+          out: Buffer.concat(out).toString("utf-8"),
+          err: Buffer.concat(errOut).toString("utf-8"),
+        });
       });
       stream.end(input);
     });
   });
 }
 
-function execSelf(command: string, input: string, timeoutMs: number) {
+function execSelf(script: string, command: string, input: string, timeoutMs: number) {
   return new Promise<{ out: string; err: string }>((resolve, reject) => {
-    const child = spawn("python3", [bridgeScriptPath(), command], { stdio: ["pipe", "pipe", "pipe"] });
+    const child = spawn("python3", [script, command], {
+      stdio: ["pipe", "pipe", "pipe"],
+    });
     const out: Buffer[] = [];
     const errOut: Buffer[] = [];
     const timer = setTimeout(() => {
@@ -217,24 +229,30 @@ function execSelf(command: string, input: string, timeoutMs: number) {
     });
     child.on("close", () => {
       clearTimeout(timer);
-      resolve({ out: Buffer.concat(out).toString("utf-8"), err: Buffer.concat(errOut).toString("utf-8") });
+      resolve({
+        out: Buffer.concat(out).toString("utf-8"),
+        err: Buffer.concat(errOut).toString("utf-8"),
+      });
     });
     child.stdin.end(input);
   });
 }
 
-/** 仲介スクリプトの命令を1つ動かす */
+/**
+ * 仲介スクリプトの命令を1つ動かす。同じ機械（self）では、script（書き出したスクリプトの道）を python3 で動かす
+ */
 export async function runBridge<T>(
   machine: MachineConfig,
   dataDir: string,
   command: string,
   args: Record<string, unknown> = {},
   timeoutMs = 20_000,
+  script = selfScriptPath(dataDir),
 ): Promise<T> {
   const input = JSON.stringify(args);
   const { out, err } =
     machine.type === "self"
-      ? await execSelf(command, input, timeoutMs)
+      ? await execSelf(script, command, input, timeoutMs)
       : await execSsh(machine, await ensureKeyPair(dataDir), command, input, timeoutMs);
   return parseReply<T>(out, err);
 }

@@ -40,7 +40,8 @@ my-thing/
   assets/           画面に配るファイル（アイコンなど。/api/extensions/<id>/files/assets/... で読める）
 ```
 
-組み立てると `dist/{manifest.json,server.js,web.js,web.css,assets/}` ができる。サーバー側も画面側も無い、manifest だけの拡張機能も作れる
+組み立てると `dist/{manifest.json,server.js,web.js,web.css,assets/}` ができる。サーバー側は別の場所に写してから動くので、自分のフォルダのファイルを道で探せない。
+サーバー側で中身を使うファイル（相手の機械に置くスクリプトなど）は、`import source from "../assets/x.py"` で文字列として読み込む（`.py`・`.sh`・`.txt`）。サーバー側も画面側も無い、manifest だけの拡張機能も作れる
 （チャットがそう。画面は本体の音声アシスタントと一緒に動くので本体にあり、拡張機能は入／切だけを受け持つ）。
 
 ## manifest.json

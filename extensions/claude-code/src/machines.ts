@@ -23,7 +23,9 @@ export class MachineStore {
 
   async list(): Promise<MachineConfig[]> {
     try {
-      const parsed = JSON.parse(await readFile(this.path, "utf-8")) as { machines?: MachineConfig[] };
+      const parsed = JSON.parse(await readFile(this.path, "utf-8")) as {
+        machines?: MachineConfig[];
+      };
       return Array.isArray(parsed.machines) ? parsed.machines : [];
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
@@ -39,7 +41,8 @@ export class MachineStore {
 
   async create(input: unknown, locale: Locale = "ja"): Promise<MachineConfig> {
     const machines = await this.list();
-    if (machines.length >= MAX_MACHINES) throw new HttpError(400, messages.t(locale, "maxMachines", { max: MAX_MACHINES }));
+    if (machines.length >= MAX_MACHINES)
+      throw new HttpError(400, messages.t(locale, "maxMachines", { max: MAX_MACHINES }));
     const machine = validateMachine({ ...(input as object), id: randomUUID() }, locale);
     await this.save([...machines, machine]);
     return machine;
@@ -63,7 +66,9 @@ export class MachineStore {
 
   private async save(machines: MachineConfig[]): Promise<void> {
     await mkdir(this.dataDir, { recursive: true });
-    await writeFile(this.path, `${JSON.stringify({ machines }, null, 2)}\n`, { mode: 0o600 });
+    await writeFile(this.path, `${JSON.stringify({ machines }, null, 2)}\n`, {
+      mode: 0o600,
+    });
     await chmod(this.path, 0o600).catch(() => undefined);
   }
 }
@@ -87,6 +92,7 @@ export function validateMachine(input: Record<string, unknown>, locale: Locale =
   const username = text(input.username, 32);
   if (!/^[A-Za-z_][A-Za-z0-9_.-]*$/.test(username)) throw new HttpError(400, m("usernameRequired"));
   const fingerprint = text(input.fingerprint, 100);
-  if (fingerprint && !/^SHA256:[A-Za-z0-9+/]{43}$/.test(fingerprint)) throw new HttpError(400, m("sshFingerprintFormat"));
+  if (fingerprint && !/^SHA256:[A-Za-z0-9+/]{43}$/.test(fingerprint))
+    throw new HttpError(400, m("sshFingerprintFormat"));
   return { id, name, type, host, port, username, fingerprint };
 }

@@ -64,14 +64,23 @@ export interface SshKeyInfo {
   bridgeFile: string;
 }
 
-export const fetchMachines = async (ctx: Ctx) => (await request<{ machines: MachineConfig[] }>(ctx, "/machines")).machines;
+export const fetchMachines = async (ctx: Ctx) =>
+  (await request<{ machines: MachineConfig[] }>(ctx, "/machines")).machines;
 export const fetchSshKey = (ctx: Ctx) => request<SshKeyInfo>(ctx, "/ssh-key");
 export const saveMachine = (ctx: Ctx, machine: Partial<MachineConfig>) =>
   machine.id
     ? request<MachineConfig>(ctx, `/machines/${encodeURIComponent(machine.id)}`, { method: "PUT", json: machine })
-    : request<MachineConfig>(ctx, "/machines", { method: "POST", json: machine });
+    : request<MachineConfig>(ctx, "/machines", {
+        method: "POST",
+        json: machine,
+      });
 export const deleteMachine = (ctx: Ctx, id: string) =>
-  request<{ ok: true }>(ctx, `/machines/${encodeURIComponent(id)}`, { method: "DELETE" });
+  request<{ ok: true }>(ctx, `/machines/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
 export const testMachine = (ctx: Ctx, machine: Partial<MachineConfig>) =>
-  request<{ ok: boolean; message: string; fingerprint?: string }>(ctx, "/machines-test", { method: "POST", json: machine });
+  request<{ ok: boolean; message: string; fingerprint?: string }>(ctx, "/machines-test", {
+    method: "POST",
+    json: machine,
+  });
 export const bridgeUrl = (ctx: Ctx) => extensionApiUrl(ctx, "claude-code", "/bridge");

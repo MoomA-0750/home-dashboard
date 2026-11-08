@@ -88,7 +88,8 @@ export const strings = defineMessages({
     port: "口",
     username: "ユーザー",
     fingerprint: "ホスト鍵の指紋",
-    fingerprintHint: "空のまま「接続を確かめる」を押すと、相手の指紋が出ます（ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub と比べてから使う）",
+    fingerprintHint:
+      "空のまま「接続を確かめる」を押すと、相手の指紋が出ます（ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub と比べてから使う）",
     useFingerprint: "この指紋を使う",
     save: "保存",
     remove: "消す",
@@ -98,8 +99,10 @@ export const strings = defineMessages({
     saved: "保存しました",
     setupTitle: "機械の側の準備",
     setupStep1: "仲介のスクリプトを保存して、相手の機械の ~/.local/bin/{file} に置きます（python3 で動きます）。",
-    setupStep2: "次の1行を、相手の機械の ~/.ssh/authorized_keys に足します。鍵はスクリプトしか動かせないように縛ってあります。",
-    setupStep3: "操作するには、相手の機械で Herdr を動かし、Claude Code を Herdr の中で動かします（無ければ見るだけになります）。",
+    setupStep2:
+      "次の1行を、相手の機械の ~/.ssh/authorized_keys に足します。鍵はスクリプトしか動かせないように縛ってあります。",
+    setupStep3:
+      "操作するには、相手の機械で Herdr を動かし、Claude Code を Herdr の中で動かします（無ければ見るだけになります）。",
     saveScript: "スクリプトを保存",
     installCommand: "相手の機械で、保存したスクリプトを置くコマンド",
     machineSsh: "SSH · {user}@{host}",
@@ -182,7 +185,8 @@ export const strings = defineMessages({
     branch: "Branch",
     updated: "Updated {time}",
     machinesTitle: "Machines",
-    machinesNote: "Machines whose sessions you can see. Add this machine over SSH too when the dashboard runs in Docker.",
+    machinesNote:
+      "Machines whose sessions you can see. Add this machine over SSH too when the dashboard runs in Docker.",
     addMachine: "Add a machine",
     editMachine: "Edit machine",
     name: "Name",
@@ -194,7 +198,7 @@ export const strings = defineMessages({
     username: "User",
     fingerprint: "Host key fingerprint",
     fingerprintHint:
-      "Leave it empty and press \"Test connection\" to see the machine's fingerprint (compare it with ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub before using it)",
+      'Leave it empty and press "Test connection" to see the machine\'s fingerprint (compare it with ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub before using it)',
     useFingerprint: "Use this fingerprint",
     save: "Save",
     remove: "Remove",
@@ -204,8 +208,10 @@ export const strings = defineMessages({
     saved: "Saved",
     setupTitle: "Preparing the machine",
     setupStep1: "Save the bridge script and put it at ~/.local/bin/{file} on the machine (it runs with python3).",
-    setupStep2: "Add this line to ~/.ssh/authorized_keys on the machine. The key is restricted so it can only run the script.",
-    setupStep3: "To control sessions, run Herdr on the machine and run Claude Code inside Herdr (otherwise sessions are view-only).",
+    setupStep2:
+      "Add this line to ~/.ssh/authorized_keys on the machine. The key is restricted so it can only run the script.",
+    setupStep3:
+      "To control sessions, run Herdr on the machine and run Claude Code inside Herdr (otherwise sessions are view-only).",
     saveScript: "Save script",
     installCommand: "Command to put the saved script in place on the machine",
     machineSsh: "SSH · {user}@{host}",

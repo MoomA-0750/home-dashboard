@@ -56,7 +56,13 @@ interface Entry {
   herdr: boolean;
 }
 
-const STATUS_RANK: Record<AgentStatus, number> = { blocked: 0, working: 1, done: 2, idle: 3, unknown: 4 };
+const STATUS_RANK: Record<AgentStatus, number> = {
+  blocked: 0,
+  working: 1,
+  done: 2,
+  idle: 3,
+  unknown: 4,
+};
 const STATUS_TONE: Record<AgentStatus, "on" | "warn" | "dim" | undefined> = {
   blocked: "warn",
   working: "on",
@@ -81,7 +87,8 @@ function entriesOf(machine: MachineOverview): Entry[] {
     sessionId: session?.id ?? agent?.sessionId ?? null,
     title:
       session?.title ||
-      (agent?.title && agent.title !== "Claude Code" ? agent.title : "") ||
+      // 端末の題（Claude Code が会話の名前を付ける）。始めたばかりの「claude …」「Claude Code」は名前にしない
+      (agent?.title && !/^(claude\b|Claude Code$)/.test(agent.title) ? agent.title : "") ||
       session?.lastPrompt ||
       basename(session?.cwd ?? agent?.cwd ?? null) ||
       "Claude Code",
@@ -92,13 +99,34 @@ function entriesOf(machine: MachineOverview): Entry[] {
     workspace: agent ? (workspaces.get(agent.workspace) ?? null) : null,
     herdr,
   });
-  for (const agent of agents) entries.push(make(agent.sessionId ? (sessions.get(agent.sessionId) ?? null) : null, agent));
+  for (const agent of agents)
+    entries.push(make(agent.sessionId ? (sessions.get(agent.sessionId) ?? null) : null, agent));
   for (const session of machine.sessions) if (!bySession.has(session.id)) entries.push(make(session, null));
   return entries.sort((a, b) => {
-    if (a.agent && b.agent) return STATUS_RANK[a.agent.status] - STATUS_RANK[b.agent.status] || (b.mtime ?? 0) - (a.mtime ?? 0);
+    if (a.agent && b.agent)
+      return STATUS_RANK[a.agent.status] - STATUS_RANK[b.agent.status] || (b.mtime ?? 0) - (a.mtime ?? 0);
     if (a.agent || b.agent) return a.agent ? -1 : 1;
     return (b.mtime ?? 0) - (a.mtime ?? 0);
   });
+}
+
+interface Pick {
+  machineId: string;
+  sessionId: string | null;
+  pane: string | null;
+}
+
+const pickOf = (entry: Entry): Pick => ({
+  machineId: entry.machineId,
+  sessionId: entry.sessionId,
+  pane: entry.agent?.pane ?? null,
+});
+
+/** 選んだものと同じか（セッションの id か、Herdr のペインが同じ） */
+function matches(pick: Pick, entry: Entry): boolean {
+  if (pick.machineId !== entry.machineId) return false;
+  if (pick.sessionId && entry.sessionId) return pick.sessionId === entry.sessionId;
+  return Boolean(pick.pane && entry.agent?.pane === pick.pane);
 }
 
 function useWhen() {
@@ -140,45 +168,75 @@ function useSessionLog(ctx: Ctx, entry: Entry | null, fast: boolean) {
   const stateRef = useRef(state);
   stateRef.current = state;
 
+  // 後ろから読む（開いたとき。ログがまだ無い（最初の指示の前）ときは、読み直しのたびにもう一度試す）
+  const loadTail = useCallback(async () => {
+    if (!entry?.sessionId) return;
+    try {
+      const chunk = await fetchLog(ctx, entry.machineId, entry.sessionId, {
+        limit: 160,
+      });
+      setState((prev) =>
+        prev?.sessionKey === sessionKey
+          ? prev
+          : {
+              sessionKey,
+              items: chunk.items,
+              start: chunk.start,
+              end: chunk.end,
+              more: chunk.more,
+            },
+      );
+      setError(null);
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }, [ctx, entry?.machineId, entry?.sessionId, sessionKey]);
+
   useEffect(() => {
     setState(null);
     setError(null);
-    if (!entry?.sessionId) return;
-    let cancelled = false;
-    fetchLog(ctx, entry.machineId, entry.sessionId, { limit: 160 })
-      .then((chunk) => {
-        if (!cancelled) setState({ sessionKey, items: chunk.items, start: chunk.start, end: chunk.end, more: chunk.more });
-      })
-      .catch((err: Error) => !cancelled && setError(err.message));
-    return () => {
-      cancelled = true;
-    };
+    void loadTail();
     // 開くセッションが変わったときだけ、後ろから読み直す
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionKey]);
 
   const pull = useCallback(async () => {
     const current = stateRef.current;
-    if (!entry?.sessionId || !current || current.sessionKey !== sessionKey) return;
-    const chunk = await fetchLog(ctx, entry.machineId, entry.sessionId, { from: current.end });
+    if (!entry?.sessionId) return;
+    if (!current || current.sessionKey !== sessionKey) return loadTail();
+    const chunk = await fetchLog(ctx, entry.machineId, entry.sessionId, {
+      from: current.end,
+    });
     setState((prev) =>
       prev && prev.sessionKey === sessionKey && prev.end === current.end
-        ? { ...prev, items: chunk.items.length ? mergeItems(prev.items, chunk.items) : prev.items, end: chunk.end }
+        ? {
+            ...prev,
+            items: chunk.items.length ? mergeItems(prev.items, chunk.items) : prev.items,
+            end: chunk.end,
+          }
         : prev,
     );
-  }, [ctx, entry?.machineId, entry?.sessionId, sessionKey]);
+  }, [ctx, entry?.machineId, entry?.sessionId, sessionKey, loadTail]);
 
-  usePolling(pull, fast ? 1_500 : 5_000, Boolean(state && entry?.sessionId));
+  usePolling(pull, fast ? 1_500 : 5_000, Boolean(entry?.sessionId));
 
   const loadOlder = useCallback(async () => {
     const current = stateRef.current;
     if (!entry?.sessionId || !current || !current.more) return;
     setLoadingOlder(true);
     try {
-      const chunk = await fetchLog(ctx, entry.machineId, entry.sessionId, { before: current.start, limit: 160 });
+      const chunk = await fetchLog(ctx, entry.machineId, entry.sessionId, {
+        before: current.start,
+        limit: 160,
+      });
       setState((prev) =>
         prev && prev.sessionKey === sessionKey
-          ? { ...prev, items: mergeItems(chunk.items, prev.items), start: chunk.start, more: chunk.more }
+          ? {
+              ...prev,
+              items: mergeItems(chunk.items, prev.items),
+              start: chunk.start,
+              more: chunk.more,
+            }
           : prev,
       );
     } catch (err) {
@@ -188,7 +246,13 @@ function useSessionLog(ctx: Ctx, entry: Entry | null, fast: boolean) {
     }
   }, [ctx, entry?.machineId, entry?.sessionId, sessionKey]);
 
-  return { state: state?.sessionKey === sessionKey ? state : null, error, loadOlder, loadingOlder, pull };
+  return {
+    state: state?.sessionKey === sessionKey ? state : null,
+    error,
+    loadOlder,
+    loadingOlder,
+    pull,
+  };
 }
 
 // --- 確認の画面と端末の画面
@@ -213,10 +277,19 @@ function TerminalPanel({
   const screen = usePolledResource(() => fetchScreen(ctx, entry.machineId, pane, 40), 1_500, Boolean(pane));
   // 端末の下の空行は出さない
   const text = (screen.data?.text ?? "").replace(/\s+$/, "");
+  // 確認の問いと選ぶものは画面の下にあるので、いつも下まで送っておく
+  const preRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const pre = preRef.current?.querySelector("pre");
+    if (pre) pre.scrollTop = pre.scrollHeight;
+  }, [text]);
   return (
-    <Group title={blocked ? t("blockedTitle") : t("terminal")}>
+    <Group>
+      <SectionTitle>{blocked ? t("blockedTitle") : t("terminal")}</SectionTitle>
       {blocked && <Note>{t("blockedNote")}</Note>}
-      {text ? <CodePre className="max-h-80">{text}</CodePre> : <Note>{t("loading")}</Note>}
+      <div ref={preRef} className="min-w-0">
+        {text ? <CodePre className="max-h-80 whitespace-pre-wrap">{text}</CodePre> : <Note>{t("loading")}</Note>}
+      </div>
       <ButtonRow>
         {blocked &&
           CHOICES.map((n) => (
@@ -253,7 +326,7 @@ function NewSessionDialog({
   machine: MachineOverview;
   defaultCwd: string;
   onClose: () => void;
-  onStarted: (message: string) => void;
+  onStarted: (message: string, pane: string | null) => void;
 }) {
   const t = strings.useT();
   const [cwd, setCwd] = useState(defaultCwd);
@@ -264,8 +337,12 @@ function NewSessionDialog({
     setBusy(true);
     setError(null);
     try {
-      await runAction(ctx, machine.id, { action: "start", cwd, workspace: workspace || undefined });
-      onStarted(t("started"));
+      const result = await runAction(ctx, machine.id, {
+        action: "start",
+        cwd,
+        workspace: workspace || undefined,
+      });
+      onStarted(t("started"), result.pane ?? null);
       onClose();
     } catch (err) {
       setError((err as Error).message);
@@ -285,7 +362,13 @@ function NewSessionDialog({
           <input value={machine.name} readOnly />
         </Field>
         <Field label={t("newCwd")} hint={t("newCwdHint")}>
-          <input value={cwd} onChange={(event) => setCwd(event.target.value)} required spellCheck={false} autoCapitalize="off" />
+          <input
+            value={cwd}
+            onChange={(event) => setCwd(event.target.value)}
+            required
+            spellCheck={false}
+            autoCapitalize="off"
+          />
         </Field>
         <Field label={t("newWorkspace")}>
           <select value={workspace} onChange={(event) => setWorkspace(event.target.value)}>
@@ -317,31 +400,40 @@ export function CodeScreen({ ctx, account }: ScreenProps) {
   const t = strings.useT();
   const when = useWhen();
   const admin = account.role === "admin";
-  const overview = usePolledResource(() => fetchOverview(ctx), 4_000, admin, { cacheKey: "claude-code:overview" });
+  const overview = usePolledResource(() => fetchOverview(ctx), 4_000, admin, {
+    cacheKey: "claude-code:overview",
+  });
   const machines = overview.data?.machines ?? [];
   const entries = useMemo(() => machines.flatMap(entriesOf), [machines]);
 
-  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  // 選んだもの。始めたばかりのセッションは id がまだ無いので、Herdr のペインでも覚えておき、id が分かったら足す
+  const [pick, setPick] = useState<Pick | null>(null);
+  const selectedKey = pick ? `${pick.machineId}/${pick.sessionId ?? pick.pane}` : null;
   const [listOpen, setListOpen] = useState(false);
   const [terminalOpen, setTerminalOpen] = useState(false);
   const [newFor, setNewFor] = useState<MachineOverview | null>(null);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
-  const [notice, setNotice] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
+  const [notice, setNotice] = useState<{
+    tone: "ok" | "error";
+    text: string;
+  } | null>(null);
 
   // 選んだものが一覧に無くなっても（Herdr のペインが閉じたなど）、同じセッションを探し直す
   const selected = useMemo(() => {
-    if (!selectedKey) return null;
-    const direct = entries.find((e) => e.key === selectedKey);
-    if (direct) return direct;
-    const [machineId, id] = selectedKey.split("/");
-    return entries.find((e) => e.machineId === machineId && e.sessionId === id) ?? null;
-  }, [entries, selectedKey]);
+    if (!pick) return null;
+    return entries.find((e) => matches(pick, e)) ?? null;
+  }, [entries, pick]);
+
+  useEffect(() => {
+    if (selected && pick && (selected.sessionId !== pick.sessionId || (selected.agent?.pane ?? null) !== pick.pane))
+      setPick(pickOf(selected));
+  }, [selected, pick]);
 
   // 広い画面では、最初は一覧のいちばん上を開いておく
   useEffect(() => {
-    if (!selectedKey && entries.length > 0 && window.matchMedia("(min-width: 1101px)").matches) setSelectedKey(entries[0].key);
-  }, [selectedKey, entries]);
+    if (!pick && entries.length > 0 && window.matchMedia("(min-width: 1101px)").matches) setPick(pickOf(entries[0]));
+  }, [pick, entries]);
 
   useEffect(() => {
     setNotice(null);
@@ -408,50 +500,58 @@ export function CodeScreen({ ctx, account }: ScreenProps) {
     );
   }
 
-  const list = machines.map((machine) => {
-    const machineEntries = entries.filter((e) => e.machineId === machine.id);
-    const herdr = machine.herdr?.running === true;
-    return (
-      <div key={machine.id} className="mb-4 flex flex-col gap-1.5">
-        <div className="flex items-center gap-2 px-2">
-          <SectionTitle>{machine.name}</SectionTitle>
-          {!machine.ok ? (
-            <Badge tone="warn">{t("unreachable")}</Badge>
-          ) : !machine.herdr ? (
-            <Badge tone="dim">{t("viewOnly")}</Badge>
-          ) : !herdr ? (
-            <Badge tone="warn">{t("herdrStopped")}</Badge>
-          ) : null}
-          {herdr && (
-            <IconButton
-              icon="add"
-              label={t("newSession")}
-              title={t("newSession")}
-              className="ml-auto"
-              onClick={() => setNewFor(machine)}
-            />
-          )}
+  const loadError =
+    overview.error instanceof Error ? overview.error.message : overview.error ? String(overview.error) : null;
+  const list = !overview.data ? (
+    <Note>{loadError ?? t("loading")}</Note>
+  ) : (
+    machines.map((machine) => {
+      const machineEntries = entries.filter((e) => e.machineId === machine.id);
+      const herdr = machine.herdr?.running === true;
+      return (
+        <div key={machine.id} className="mb-4 flex flex-col gap-1.5">
+          <div className="flex items-center gap-2 px-2">
+            <SectionTitle>{machine.name}</SectionTitle>
+            {!machine.ok ? (
+              <Badge tone="warn">{t("unreachable")}</Badge>
+            ) : !machine.herdr ? (
+              <Badge tone="dim">{t("viewOnly")}</Badge>
+            ) : !herdr ? (
+              <Badge tone="warn">{t("herdrStopped")}</Badge>
+            ) : null}
+            {herdr && (
+              <IconButton
+                icon="add"
+                label={t("newSession")}
+                title={t("newSession")}
+                className="ml-auto"
+                onClick={() => setNewFor(machine)}
+              />
+            )}
+          </div>
+          {!machine.ok && machine.error && <Note>{machine.error}</Note>}
+          {machine.ok && machineEntries.length === 0 && <Note>{t("noSessions")}</Note>}
+          <List label={machine.name}>
+            {machineEntries.map((entry) => (
+              <ListItem
+                key={entry.key}
+                title={entry.title}
+                detail={[...new Set([basename(entry.cwd), entry.agent ? entry.workspace?.label : when(entry.mtime)])]
+                  .filter(Boolean)
+                  .join(" · ")}
+                badge={entry.agent ? <StatusBadge status={entry.agent.status} /> : undefined}
+                selected={selected === entry}
+                onClick={() => {
+                  setPick(pickOf(entry));
+                  setListOpen(false);
+                }}
+              />
+            ))}
+          </List>
         </div>
-        {!machine.ok && machine.error && <Note>{machine.error}</Note>}
-        {machine.ok && machineEntries.length === 0 && <Note>{t("noSessions")}</Note>}
-        <List label={machine.name}>
-          {machineEntries.map((entry) => (
-            <ListItem
-              key={entry.key}
-              title={entry.title}
-              detail={[basename(entry.cwd), entry.agent ? entry.workspace?.label : when(entry.mtime)].filter(Boolean).join(" · ")}
-              badge={entry.agent ? <StatusBadge status={entry.agent.status} /> : undefined}
-              selected={selected?.key === entry.key}
-              onClick={() => {
-                setSelectedKey(entry.key);
-                setListOpen(false);
-              }}
-            />
-          ))}
-        </List>
-      </div>
-    );
-  });
+      );
+    })
+  );
 
   const blocked = status === "blocked";
   const working = status === "working";
@@ -464,7 +564,12 @@ export function CodeScreen({ ctx, account }: ScreenProps) {
           {live && selected.agent ? t(`status_${selected.agent.status}`) : t("status_stopped")}
           {" · "}
           {selected.machineName}
-          {selected.cwd && ` · ${selected.cwd}`}
+          {selected.cwd && (
+            <>
+              {" · "}
+              <span title={selected.cwd}>{basename(selected.cwd)}</span>
+            </>
+          )}
           {selected.branch && ` · ${selected.branch}`}
         </>
       }
@@ -489,7 +594,14 @@ export function CodeScreen({ ctx, account }: ScreenProps) {
               glass
               disabled={busy}
               onClick={() =>
-                void act(() => runAction(ctx, selected.machineId, { action: "focus", pane: selected.agent!.pane }), t("focused"))
+                void act(
+                  () =>
+                    runAction(ctx, selected.machineId, {
+                      action: "focus",
+                      pane: selected.agent!.pane,
+                    }),
+                  t("focused"),
+                )
               }
             />
           )}
@@ -498,11 +610,20 @@ export function CodeScreen({ ctx, account }: ScreenProps) {
               icon="play"
               disabled={busy}
               onClick={() =>
-                void act(
-                  () =>
-                    runAction(ctx, selected.machineId, { action: "start", cwd: selected.cwd!, resume: selected.sessionId! }),
-                  t("resumed"),
-                )
+                void act(async () => {
+                  const result = await runAction(ctx, selected.machineId, {
+                    action: "start",
+                    cwd: selected.cwd!,
+                    resume: selected.sessionId!,
+                  });
+                  // 続きは同じセッションの id で動く。Herdr のペインも覚えて、一覧が読み直されるまでのあいだも選んだままにする
+                  if (result.pane)
+                    setPick({
+                      machineId: selected.machineId,
+                      sessionId: selected.sessionId,
+                      pane: result.pane,
+                    });
+                }, t("resumed"))
               }
             >
               {t("resume")}
@@ -517,7 +638,14 @@ export function CodeScreen({ ctx, account }: ScreenProps) {
 
   return (
     <ScreenFrame title={{ ja: "Claude Code", en: "Claude Code" }} fill>
-      <ChatLayout list={list} listLabel={t("sessions")} listOpen={listOpen} onCloseList={() => setListOpen(false)}>
+      <ChatLayout
+        list={list}
+        listLabel={t("sessions")}
+        // 狭い画面で何も選んでいないときは、一覧を出す
+        listOpen={listOpen || !selected}
+        onCloseList={() => setListOpen(false)}
+        canCloseList={Boolean(selected)}
+      >
         {!selected ? (
           <ChatPending>{overview.data ? t("pickSession") : t("loading")}</ChatPending>
         ) : (
@@ -558,7 +686,11 @@ export function CodeScreen({ ctx, account }: ScreenProps) {
               disabled={!live || blocked}
               canSubmit={live && !blocked && !busy && Boolean(text.trim())}
               above={notice && <Message tone={notice.tone}>{notice.text}</Message>}
-              stop={live && working && !text.trim() ? { label: t("interrupt"), onClick: () => sendKeys(["esc"]) } : undefined}
+              stop={
+                live && working && !text.trim()
+                  ? { label: t("interrupt"), onClick: () => sendKeys(["esc"]) }
+                  : undefined
+              }
             />
           </>
         )}
@@ -569,7 +701,8 @@ export function CodeScreen({ ctx, account }: ScreenProps) {
           machine={newFor}
           defaultCwd={selected?.machineId === newFor.id && selected.cwd ? selected.cwd : "~"}
           onClose={() => setNewFor(null)}
-          onStarted={(message) => {
+          onStarted={(message, pane) => {
+            if (pane) setPick({ machineId: newFor.id, sessionId: null, pane });
             setNotice({ tone: "ok", text: message });
             void overview.refresh();
           }}

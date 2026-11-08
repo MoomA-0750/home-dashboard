@@ -4,12 +4,17 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, describe, test } from "node:test";
-import { authorizedKeysLine, bridgeScriptPath } from "./bridge";
+import { fileURLToPath } from "node:url";
+import { authorizedKeysLine } from "./bridge";
 import { validateMachine } from "./machines";
 import type { LogChunk, LogItem, SessionSummary } from "./types";
 
 // PATH を絞って動かすので、python3 の場所は先に調べておく
-const PYTHON = spawnSync("sh", ["-c", "command -v python3"], { encoding: "utf-8" }).stdout.trim() || "python3";
+const PYTHON =
+  spawnSync("sh", ["-c", "command -v python3"], {
+    encoding: "utf-8",
+  }).stdout.trim() || "python3";
+const SCRIPT = fileURLToPath(new URL("../assets/hd-claude-bridge.py", import.meta.url));
 const SESSION = "0f4e4b73-439f-41b3-917c-432bf925a368";
 const home = mkdtempSync(join(tmpdir(), "claude-code-test-"));
 after(() => rmSync(home, { recursive: true, force: true }));
@@ -22,9 +27,17 @@ const lines = [
     timestamp: "2026-11-09T00:00:00Z",
     cwd: "/work/app",
     gitBranch: "main",
-    message: { role: "user", content: "<system-reminder>見せない</system-reminder>\nREADME を直して" },
+    message: {
+      role: "user",
+      content: "<system-reminder>見せない</system-reminder>\nREADME を直して",
+    },
   },
-  { type: "user", uuid: "meta", isMeta: true, message: { role: "user", content: "内部の文" } },
+  {
+    type: "user",
+    uuid: "meta",
+    isMeta: true,
+    message: { role: "user", content: "内部の文" },
+  },
   {
     type: "assistant",
     uuid: "a1",
@@ -34,18 +47,47 @@ const lines = [
       content: [
         { type: "thinking", thinking: "考える" },
         { type: "text", text: "直します。" },
-        { type: "tool_use", id: "toolu_1", name: "Edit", input: { file_path: "/work/app/README.md", old_string: "a", new_string: "b" } },
+        {
+          type: "tool_use",
+          id: "toolu_1",
+          name: "Edit",
+          input: {
+            file_path: "/work/app/README.md",
+            old_string: "a",
+            new_string: "b",
+          },
+        },
       ],
     },
   },
   {
     type: "user",
     uuid: "u2",
-    message: { role: "user", content: [{ type: "tool_result", tool_use_id: "toolu_1", content: "ok", is_error: false }] },
+    message: {
+      role: "user",
+      content: [
+        {
+          type: "tool_result",
+          tool_use_id: "toolu_1",
+          content: "ok",
+          is_error: false,
+        },
+      ],
+    },
   },
   { type: "api-request", id: "x", params: {} },
-  { type: "assistant", uuid: "side", isSidechain: true, message: { content: [{ type: "text", text: "サブエージェント" }] } },
-  { type: "system", uuid: "s1", subtype: "compact_boundary", content: "Conversation compacted" },
+  {
+    type: "assistant",
+    uuid: "side",
+    isSidechain: true,
+    message: { content: [{ type: "text", text: "サブエージェント" }] },
+  },
+  {
+    type: "system",
+    uuid: "s1",
+    subtype: "compact_boundary",
+    content: "Conversation compacted",
+  },
 ];
 
 const projectDir = join(home, ".claude", "projects", "-work-app");
@@ -53,8 +95,12 @@ mkdirSync(projectDir, { recursive: true });
 writeFileSync(join(projectDir, `${SESSION}.jsonl`), `${lines.map((l) => JSON.stringify(l)).join("\n")}\n`);
 
 /** 仲介スクリプトを、作ったホームで動かす（Herdr が見つからないように PATH も絞る） */
-function bridge<T>(command: string, args: unknown = {}, env: Record<string, string> = {}): T & { ok: boolean; error?: string } {
-  const result = spawnSync(PYTHON, [bridgeScriptPath(), command], {
+function bridge<T>(
+  command: string,
+  args: unknown = {},
+  env: Record<string, string> = {},
+): T & { ok: boolean; error?: string } {
+  const result = spawnSync(PYTHON, [SCRIPT, command], {
     input: JSON.stringify(args),
     env: { HOME: home, PATH: "/nonexistent", ...env },
     encoding: "utf-8",
@@ -88,7 +134,10 @@ describe("仲介スクリプト", () => {
 
   test("続きは end から読み、新しい行だけを返す", () => {
     const first = bridge<LogChunk>("log", { sessionId: SESSION });
-    const next = bridge<LogChunk>("log", { sessionId: SESSION, from: first.end });
+    const next = bridge<LogChunk>("log", {
+      sessionId: SESSION,
+      from: first.end,
+    });
     assert.equal(next.items.length, 0);
     assert.equal(next.end, first.end);
   });
@@ -105,15 +154,46 @@ describe("仲介スクリプト", () => {
 
 describe("機械の登録", () => {
   test("SSH の機械は宛先・ユーザー・指紋の形を確かめる", () => {
-    const machine = validateMachine({ id: "m1", name: "PC", type: "ssh", host: "192.168.1.10", username: "mooma" });
-    assert.equal(machine.port, 22);
-    assert.throws(() => validateMachine({ id: "m1", name: "PC", type: "ssh", host: "a b", username: "x" }));
-    assert.throws(() => validateMachine({ id: "m1", name: "PC", type: "ssh", host: "h", username: "x", fingerprint: "MD5:aa" }));
-    assert.deepEqual(validateMachine({ id: "m2", name: "このサーバー", type: "self", host: "ignored" }), {
-      id: "m2",
-      name: "このサーバー",
-      type: "self",
+    const machine = validateMachine({
+      id: "m1",
+      name: "PC",
+      type: "ssh",
+      host: "192.168.1.10",
+      username: "mooma",
     });
+    assert.equal(machine.port, 22);
+    assert.throws(() =>
+      validateMachine({
+        id: "m1",
+        name: "PC",
+        type: "ssh",
+        host: "a b",
+        username: "x",
+      }),
+    );
+    assert.throws(() =>
+      validateMachine({
+        id: "m1",
+        name: "PC",
+        type: "ssh",
+        host: "h",
+        username: "x",
+        fingerprint: "MD5:aa",
+      }),
+    );
+    assert.deepEqual(
+      validateMachine({
+        id: "m2",
+        name: "このサーバー",
+        type: "self",
+        host: "ignored",
+      }),
+      {
+        id: "m2",
+        name: "このサーバー",
+        type: "self",
+      },
+    );
   });
 
   test("鍵の1行は仲介スクリプトに縛り、転送・端末を止める", () => {

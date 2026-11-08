@@ -1,4 +1,5 @@
 import { Fragment, type ReactNode } from "react";
+import { cx } from "@home-dashboard/widget-sdk";
 
 /**
  * Claude の返事（Markdown）を、要素で組んで出す（HTML として流し込まない）。Claude Code の端末とウェブの画面と同じく、
@@ -86,7 +87,12 @@ export function parseBlocks(source: string): Block[] {
           i++;
         } else break;
       }
-      blocks.push({ t: "list", ordered, start: ordered ? Number.parseInt(item[2], 10) || 1 : 1, items });
+      blocks.push({
+        t: "list",
+        ordered,
+        start: ordered ? Number.parseInt(item[2], 10) || 1 : 1,
+        items,
+      });
       continue;
     }
     const body: string[] = [];
@@ -105,7 +111,8 @@ export function parseBlocks(source: string): Block[] {
   return blocks;
 }
 
-const INLINE_RE = /(`+)([^`]+?)\1|\*\*([^*]+?)\*\*|__([^_]+?)__|\*([^*\s][^*]*?)\*|\[([^\]]+)\]\(([^)\s]+)\)|(https?:\/\/[^\s)<>]+)/g;
+const INLINE_RE =
+  /(`+)([^`]+?)\1|\*\*([^*]+?)\*\*|__([^_]+?)__|\*([^*\s][^*]*?)\*|\[([^\]]+)\]\(([^)\s]+)\)|(https?:\/\/[^\s)<>]+)/g;
 
 function safeHref(url: string): string | null {
   try {
@@ -201,10 +208,7 @@ const HEADING_CLASS: Record<number, string> = {
 export function CodePre({ children, className }: { children: ReactNode; className?: string }) {
   return (
     <pre
-      className={
-        "untrim max-h-96 min-w-0 overflow-auto rounded-inner border border-glass-border bg-input px-3.5 py-2.5 font-mono text-caption leading-normal whitespace-pre text-text text-shadow-none " +
-        (className ?? "")
-      }
+      className={cx("untrim max-h-96 min-w-0 overflow-auto rounded-inner border border-glass-border bg-input px-3.5 py-2.5 font-mono text-caption leading-normal whitespace-pre text-text text-shadow-none", className)}
     >
       {children}
     </pre>
@@ -236,11 +240,11 @@ export function Markdown({ text }: { text: string }) {
           case "table":
             return (
               <div key={index} className="min-w-0 overflow-x-auto">
-                <table className="border-collapse text-label">
+                <table className="border-collapse text-label wrap-normal">
                   <thead>
                     <tr>
                       {block.head.map((cell, c) => (
-                        <th key={c} className="border-b border-line px-2.5 py-1.5 text-left font-semibold">
+                        <th key={c} className="min-w-24 border-b border-line px-2.5 py-1.5 text-left font-semibold">
                           <Inline text={cell} />
                         </th>
                       ))}
@@ -250,7 +254,7 @@ export function Markdown({ text }: { text: string }) {
                     {block.rows.map((row, r) => (
                       <tr key={r}>
                         {row.map((cell, c) => (
-                          <td key={c} className="border-b border-line/60 px-2.5 py-1.5 align-top">
+                          <td key={c} className="min-w-24 border-b border-line/60 px-2.5 py-1.5 align-top">
                             <Inline text={cell} />
                           </td>
                         ))}
@@ -266,7 +270,9 @@ export function Markdown({ text }: { text: string }) {
               <Tag
                 key={index}
                 start={block.ordered ? block.start : undefined}
-                className={(block.ordered ? "list-decimal" : "list-disc") + " flex flex-col gap-1 pl-6 marker:text-muted"}
+                className={
+                  (block.ordered ? "list-decimal" : "list-disc") + " flex flex-col gap-1 pl-6 marker:text-muted"
+                }
               >
                 {block.items.map((item, n) => (
                   <li key={n}>
