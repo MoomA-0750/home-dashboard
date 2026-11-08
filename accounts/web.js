@@ -2061,7 +2061,7 @@ function MailInboxView({ ctx, config, openDetail }) {
   }
   return /* @__PURE__ */ jsxs(WidgetCard, { className: "items-stretch justify-start gap-1.5", onClick: openDetail, label: t("cardLabel", { n: data.unread }), children: [
     /* @__PURE__ */ jsxs("span", { className: "flex items-baseline gap-1.5", children: [
-      /* @__PURE__ */ jsx(Icon, { name: "mail", className: "size-5.5 self-center text-muted" }),
+      /* @__PURE__ */ jsx(Icon, { name: "mail", className: "size-rem-5.5 self-center text-muted" }),
       /* @__PURE__ */ jsx("span", { className: "text-stat leading-none font-semibold tabular-nums", children: data.unread }),
       /* @__PURE__ */ jsx("span", { className: "text-caption font-medium text-muted", children: t("unread") })
     ] }),

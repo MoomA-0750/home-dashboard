@@ -1,11 +1,11 @@
 {
   "format": 1,
-  "commit": "f28b7844cf69972d8bcca70a9c445867cd5f33e7",
+  "commit": "6f74bece206ec344df0c51b46ce09b47a37b42bd",
   "extensions": [
     {
       "id": "accounts",
       "name": "カレンダー・メール",
-      "version": "2.2.0",
+      "version": "2.2.1",
       "description": "Calendar・Mail の画面、予定とメールのウィジェット、音声アシスタントの予定とメール。Google・iCloud・Microsoft・一般のアカウントを、設定の「アカウント → インターネットアカウント」でログインした人ごとに足す（家で共有するにしたものは家族と音声アシスタントにも見える）",
       "apiVersion": 1,
       "features": [
@@ -21,7 +21,7 @@
         }
       ],
       "provides": [],
-      "revision": "e2420e4f93cbfdaf",
+      "revision": "693ec51405ef33cb",
       "path": "accounts"
     },
     {
@@ -142,12 +142,12 @@
     {
       "id": "sticky-notes",
       "name": "付箋",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "description": "家にいる人に向けた伝言を付箋のように貼る。文字の揃え（横・縦）と、iMessage のような効果（ドン・大声・そっと・見えないインク、付箋の中で起こる紙吹雪・風船・ハート）を付けられる。どの端末からも貼ったりはがしたりでき、音声アシスタントからも貼れる（add_sticky_note）",
       "apiVersion": 1,
       "features": [],
       "provides": [],
-      "revision": "6dcc0ae9f7fc22df",
+      "revision": "c73e3b0241639638",
       "path": "sticky-notes"
     },
     {
@@ -177,12 +177,12 @@
     {
       "id": "weather",
       "name": "天気",
-      "version": "1.3.4",
+      "version": "1.3.5",
       "description": "Open-Meteo（キー不要）から、家の地点の天気を出す。天気の画面（今の天気・1時間ごと・10日間・UV・日の出入り・風・湿度・気圧・視程・大気質）、ホームの時刻の横の天気・天気ウィジェット・音声アシスタントの get_weather",
       "apiVersion": 1,
       "features": [],
       "provides": [],
-      "revision": "5fc54673250290ed",
+      "revision": "97ce48dbc1f82448",
       "path": "weather"
     }
   ]

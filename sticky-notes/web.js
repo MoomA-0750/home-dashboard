@@ -563,7 +563,7 @@ function NoteForm({ ctx, t }) {
       /* @__PURE__ */ jsxs(
         "div",
         {
-          className: "sticky top-0 flex w-52 shrink-0 flex-col gap-3 self-start phone:static phone:w-auto phone:self-stretch",
+          className: "sticky top-0 flex w-note-preview shrink-0 flex-col gap-3 self-start phone:static phone:w-auto phone:self-stretch",
           "aria-label": t("preview"),
           children: [
             /* @__PURE__ */ jsx("span", { className: "text-note text-muted", children: t("preview") }),

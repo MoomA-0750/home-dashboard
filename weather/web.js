@@ -198,7 +198,7 @@ function WeatherView({ ctx, config, openDetail }) {
     loading && !data && /* @__PURE__ */ jsx(WidgetHint, { children: t("loading") }),
     Boolean(error) && /* @__PURE__ */ jsx(WidgetHint, { tone: "error", children: t("fetchFailed") }),
     data && /* @__PURE__ */ jsxs(Fragment, { children: [
-      /* @__PURE__ */ jsx(Icon, { name: weatherIcon(data.current.code, data.current.isDay), className: "size-8" }),
+      /* @__PURE__ */ jsx(Icon, { name: weatherIcon(data.current.code, data.current.isDay), className: "size-rem-8" }),
       /* @__PURE__ */ jsx("span", { className: "text-heading font-semibold", children: temperature(data.current.temperatureC, { unit: true }) }),
       /* @__PURE__ */ jsx("span", { className: "text-muted", children: conditionText(data.current.code, data.current.condition, locale) })
     ] })
@@ -213,7 +213,7 @@ function WeatherDetail({ ctx, config }) {
   const maxProb = Math.max(1, ...data.hourly.map((h) => h.precipitationProbability));
   return /* @__PURE__ */ jsxs(DetailFrame, { title: t("weatherIn", { place: data.location.name }), children: [
     /* @__PURE__ */ jsxs("div", { className: "mb-4 flex items-center gap-3", children: [
-      /* @__PURE__ */ jsx(Icon, { name: weatherIcon(data.current.code, data.current.isDay), className: "size-8" }),
+      /* @__PURE__ */ jsx(Icon, { name: weatherIcon(data.current.code, data.current.isDay), className: "size-rem-8" }),
       /* @__PURE__ */ jsx("span", { className: "text-heading font-semibold", children: temperature(data.current.temperatureC, { unit: true }) }),
       /* @__PURE__ */ jsx("span", { children: conditionText(data.current.code, data.current.condition, locale) })
     ] }),
@@ -517,7 +517,7 @@ function WeatherScreen({ ctx }) {
     error ? /* @__PURE__ */ jsx(ScreenNotice, { tone: "error", children: t("staleError") }) : null,
     /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-1 gap-x-8 wide:grid-cols-3", children: [
       /* @__PURE__ */ jsx(ScreenSection, { className: "mb-3.5 min-w-0 wide:flex wide:flex-col", children: /* @__PURE__ */ jsxs(Group, { className: "flex min-w-0 items-center gap-4 wide:flex-1", children: [
-        /* @__PURE__ */ jsx(Icon, { name: weatherIcon(current.code, current.isDay), className: "size-12" }),
+        /* @__PURE__ */ jsx(Icon, { name: weatherIcon(current.code, current.isDay), className: "size-rem-12" }),
         /* @__PURE__ */ jsx("span", { className: "text-stat leading-none font-semibold", children: deg(current.temperatureC) }),
         /* @__PURE__ */ jsxs("span", { className: "flex min-w-0 flex-col gap-1.5 text-label leading-tight text-muted", children: [
           /* @__PURE__ */ jsx("strong", { className: "text-title leading-tight text-text", children: conditionText(current.code, current.condition, locale) }),
@@ -527,7 +527,7 @@ function WeatherScreen({ ctx }) {
       ] }) }),
       /* @__PURE__ */ jsx(ScreenSection, { className: "mb-3.5 min-w-0 wide:col-span-2 wide:flex wide:flex-col", children: /* @__PURE__ */ jsx(Group, { className: "flex min-w-0 items-center wide:flex-1", children: /* @__PURE__ */ jsx("ol", { className: "weather-scroll-row m-0 flex w-full list-none snap-x snap-proximity gap-1 py-1.5", children: hourly.map((hour, i) => /* @__PURE__ */ jsxs("li", { className: "flex shrink-0 grow basis-14 snap-start flex-col items-center gap-1 leading-tight tabular-nums", children: [
         /* @__PURE__ */ jsx("span", { className: "text-note text-muted", children: i === 0 ? t("now") : t("hour", { h: new Date(hour.time).getHours() }) }),
-        /* @__PURE__ */ jsx(Icon, { name: weatherIcon(hour.code, hour.isDay), className: "my-0.5 size-6.5" }),
+        /* @__PURE__ */ jsx(Icon, { name: weatherIcon(hour.code, hour.isDay), className: "my-0.5 size-rem-6.5" }),
         /* @__PURE__ */ jsx("span", { className: "weather-rain h-4 text-caption", children: hour.precipitationProbability >= 20 ? `${hour.precipitationProbability}%` : "" }),
         /* @__PURE__ */ jsx("span", { className: "font-semibold", children: deg(hour.temperatureC) })
       ] }, hour.time)) }) }) })
@@ -536,7 +536,7 @@ function WeatherScreen({ ctx }) {
       /* @__PURE__ */ jsx(ScreenSection, { className: "mb-3.5 min-w-0", children: /* @__PURE__ */ jsx(List, { boxed: true, label: t("daysForecast", { n: daily.length }), children: daily.map((day, i) => /* @__PURE__ */ jsx(
         ListItem,
         {
-          leading: /* @__PURE__ */ jsx(Icon, { name: weatherIcon(day.code, true), className: "size-6" }),
+          leading: /* @__PURE__ */ jsx(Icon, { name: weatherIcon(day.code, true), className: "size-rem-6" }),
           title: dayName(day.date, i, t, locale),
           detail: [
             conditionText(day.code, day.condition, locale),
