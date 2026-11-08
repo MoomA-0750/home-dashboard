@@ -1,11 +1,11 @@
 {
   "format": 1,
-  "commit": "6f74bece206ec344df0c51b46ce09b47a37b42bd",
+  "commit": "10a28bb7f8daf1c5cf8f0aa88262fd66eef4f94b",
   "extensions": [
     {
       "id": "accounts",
       "name": "カレンダー・メール",
-      "version": "2.2.1",
+      "version": "2.2.2",
       "description": "Calendar・Mail の画面、予定とメールのウィジェット、音声アシスタントの予定とメール。Google・iCloud・Microsoft・一般のアカウントを、設定の「アカウント → インターネットアカウント」でログインした人ごとに足す（家で共有するにしたものは家族と音声アシスタントにも見える）",
       "apiVersion": 1,
       "features": [
@@ -21,7 +21,7 @@
         }
       ],
       "provides": [],
-      "revision": "693ec51405ef33cb",
+      "revision": "957b94a811f23dd5",
       "path": "accounts"
     },
     {
@@ -51,6 +51,17 @@
       "provides": [],
       "revision": "60ff623e6f4a1421",
       "path": "claude"
+    },
+    {
+      "id": "claude-code",
+      "name": "Claude Code",
+      "version": "0.1.0",
+      "description": "この機械や SSH でつなぐ機械の Claude Code のセッションを、左に一覧・右にやり取りの画面で見る。Herdr が入っていれば、指示を送る・止める・確認に答える・新しく始めることもできる。管理者のアカウントだけが使える",
+      "apiVersion": 1,
+      "features": [],
+      "provides": [],
+      "revision": "e2890b97c56a8120",
+      "path": "claude-code"
     },
     {
       "id": "git-repos",

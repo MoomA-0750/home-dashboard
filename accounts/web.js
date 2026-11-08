@@ -791,7 +791,7 @@ function MonthGrid({
               onSelect && "press cursor-pointer",
               onSelect && !isSelected && "hover:bg-tint/8",
               outside && "text-muted opacity-55",
-              isSelected && "fill-bright"
+              isSelected && "fill-bright text-on-fill"
             );
             const numberClass = cx(
               !isSelected && day.getDay() === 0 && "text-danger",
