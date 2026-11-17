@@ -133,34 +133,57 @@
 
 /* 実行中に差し替える値を指すもの（壁紙に合わせた色・サイドバーの幅で変わる字の大きさなど） */
 @theme inline {
-  /* テーマの色（壁紙に合わせて差し替える）。bg-accent/40 のように不透明度も付けられる */
-  --color-accent: rgb(var(--accent-rgb));
-  --color-accent-soft: rgb(var(--accent-soft-rgb));
-  --color-tint: rgb(var(--tint-rgb));
-  --color-ink: rgb(var(--ink-rgb));
-  --color-shade: rgb(var(--shade-rgb));
-  /* 文字・線 */
-  --color-text: var(--text-primary);
-  --color-muted: var(--text-secondary);
+  /*
+   * 色は kasane の名前（kasane/themes/dashboard.css。主の色などは壁紙に合わせて差し替わる）を指す。bg-accent/40 のように不透明度も付けられる。
+   * kasane の Tailwind（kasane/tailwind.css）と同じクラス名で同じ色を出す。ただし accent-soft だけは前のまま（下の「前の名前」）
+   */
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-raised: var(--raised);
+  --color-input: var(--input);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
   --color-line: var(--line);
-  --color-glass-border: var(--glass-border);
-  /* 状態 */
-  --color-ok: var(--accent-ok);
-  --color-warn: var(--accent-warn);
-  --color-danger: var(--danger);
-  --color-danger-strong: var(--danger-strong);
-  --color-on-danger: var(--on-danger);
-  --color-success: var(--success);
-  /* 面 */
-  --color-raised: var(--surface-raised);
-  --color-input: var(--surface-input);
+  --color-line-strong: var(--line-strong);
+  --color-hover: var(--hover);
+  --color-active: var(--active);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-on-accent: var(--on-accent);
   --color-fill: var(--fill);
   --color-on-fill: var(--on-fill);
-  --color-backdrop: var(--modal-backdrop);
+  --color-fill-hover: var(--fill-hover);
+  --color-link: var(--link);
+  --color-focus: var(--focus);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-fill: var(--danger-fill);
+  --color-on-danger: var(--on-danger);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-backdrop: var(--backdrop);
+  --color-scrim: var(--scrim);
+  --color-on-media: var(--on-media);
   --color-transparent: transparent;
   --color-current: currentColor;
   --color-white: #fff;
   --color-black: #000;
+  /*
+   * 前の名前（互換の層。本体と、外で組まれた拡張機能が使っている。消す時期は決めていない。docs/extensions.md）。
+   * accent-soft は前の意味（リンク・フォーカスの明るい色 ＝ kasane の --link）のまま
+   */
+  --color-accent-soft: var(--link);
+  --color-tint: rgb(var(--tint-rgb));
+  --color-ink: var(--on-fill);
+  --color-shade: rgb(var(--shade-rgb));
+  --color-text: var(--fg);
+  --color-glass-border: var(--glass-border);
+  --color-ok: var(--accent-ok);
+  --color-danger-strong: var(--danger-fill);
 
   /* 字の大きさの段（役割で選ぶ）。text-caption・text-body など */
   --text-micro: var(--font-micro);
@@ -184,7 +207,7 @@
   --radius-art: 12px;
   --radius-full: 9999px;
 
-  --shadow-widget: var(--widget-shadow);
+  --shadow-widget: var(--shadow-card);
   --text-shadow-halo: var(--text-halo);
 }
 
