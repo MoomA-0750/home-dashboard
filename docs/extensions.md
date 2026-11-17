@@ -255,6 +255,10 @@ export default defineWebExtension({
 - Tailwind のクラスで書けないもの（`@keyframes`・込み入った選び方・その拡張機能だけの色）は、本体の `packages/ui/src/theme/*.css` に `@utility` で足す
 - 決まりに沿っているかは `pnpm lint:style extensions/<id>` で確かめる（CSS のファイル・効かないクラス・テーマを通さない値・部品で書くもの）
 - 字の大きさは `text-*` の段、余白は Tailwind の既定の刻み（`p-4` ＝ 1rem）、動きは `animate-*`・`ease-*` から選ぶ。JS で動かすスクロールは `scrollBehavior()` を使う（「動きを減らす」設定に合わせる）
+- 色・面の名前は kasane の名前（`text-fg`・`text-muted`・`text-link`・`border-line`・`bg-surface`・`font-strong` など。design-system.md の「0. 書き方」）。
+  **古い名前は互換のために残してある**: 前のテーマで組んだ拡張機能（`text-text`・`font-semibold`・`border-glass-border`・`text-accent-soft`・`rounded-inner`・`rounded-group`、
+  CSS の `var(--text-primary)`・`var(--glass-border)`・`rgb(var(--accent-rgb))`・`var(--card-radius)` など）は、本体を新しくしてもそのまま同じ見た目で動く。
+  消す時期は決めていない。新しく書くときは新しい名前を使う（一覧は design-system.md の「11. kasane に載せたこと」）
 
 ## 言語（日本語・英語）
 

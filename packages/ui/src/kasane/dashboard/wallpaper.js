@@ -1,4 +1,4 @@
-/* kasane 1.1.0  source 31767d7050db5c0d  写したもの。直すのは kasane（scripts/kasane-sync.mjs） */
+/* kasane 1.1.0  source 0c3da3202ebd0a06  写したもの。直すのは kasane（scripts/kasane-sync.mjs） */
 /**
  * dashboard テーマの壁紙の仕組み（フェーズ8。home-dashboard の wallpaperTheme.ts・useWallpaper.ts から移した）。
  * まだ約束の外: 関数の名前・引数・戻り値・中の数・このファイルの場所は、ダッシュボードのアプリの移行が終わるまで変わりうる。
@@ -402,6 +402,9 @@ export function writeColors(root, colors) {
  *   strength: 暗さの強さ（0〜1.5、既定 1）
  *   night: 夜の表示（true か 0〜1 の暗さ。壁紙を沈める）/ lite: 軽い表示（ガラスのぼかしを切って面を濃くする）
  *   onMeasure: 測ったとき（設定の画面に位置ごとの明るさと足す暗さを出す）
+ * 壁紙の画像は読み込み終えてから、色・暗さと同じときに書く（読み込みの間は前の壁紙のまま。先に書くと、読み込みの間は
+ * 下地のグラデーションが見え、読み込んだ後も前の壁紙の色と暗さが数コマ残る）。読めなかったときは、画像を書いて（下地が見える）
+ * 色・暗さを既定に戻す。
  * 戻り値: 後始末の関数（読み込み・測り直しの待ちと、画面の大きさの見張りをやめる。書いた値は残す。
  *         次の applyWallpaper がすぐ上書きするので、壁紙を替えるときに既定の色へ一瞬戻らない）
  */
@@ -413,7 +416,7 @@ export function applyWallpaper(root, { image = null, strength = 1, night = false
     writeColors(root, colorsFor(DEFAULT_HUE, 1));
     return () => {};
   }
-  root.style.setProperty("--_wallpaper-image", `url("${String(image).replace(/["\\]/g, "\\$&")}")`);
+  const url = `url("${String(image).replace(/["\\]/g, "\\$&")}")`;
   let cancelled = false;
   let timer;
   const img = new Image();
@@ -427,11 +430,18 @@ export function applyWallpaper(root, { image = null, strength = 1, night = false
   };
   img.onload = () => {
     if (cancelled) return;
-    // 色を先に決める（光の色が測りに入るので）
+    // 色を先に決める（光の色が測りに入るので）。画像・色・暗さを同じときに書く
     const { hue, vivid } = seedOf(measureHue(img));
     colors = colorsFor(hue, vivid);
+    root.style.setProperty("--_wallpaper-image", url);
     writeColors(root, colors);
     measure();
+  };
+  img.onerror = () => {
+    if (cancelled) return;
+    root.style.setProperty("--_wallpaper-image", url);
+    writeShading(root, DEFAULT_DIMS);
+    writeColors(root, colors);
   };
   img.src = image;
   // 画面の縦横比で見える範囲が変わるので、大きさが変わったら測り直す

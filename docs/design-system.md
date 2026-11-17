@@ -6,7 +6,10 @@
 - 値（色・字の大きさ・余白・角丸・影・重なり・動き）は Tailwind のテーマ（`packages/ui/src/tailwind-theme.css`）にあるものだけを使う。
   Tailwind の既定の色（`text-red-500` など）・字の大きさ・角丸・ブレークポイントは消してあり、書いても何も出ない。
   `[#123]`・`[13px]` のような、テーマを通さない値も書かない。合う段が無いときは、まずテーマに足す
-- 実行中に変わる値（壁紙に合わせた色・動きの時間）は `packages/ui/src/styles/tokens.css` の `:root` の変数が持ち、テーマはそれを指す
+- 色・面・字・余白・動きの値は **kasane**（自分のアプリで共通に使うデザインの名前と値）の `dashboard` テーマが持つ。`packages/ui/src/kasane/` は
+  kasane から写したもの（`kasane-native.json`。手で直さない。直すのは kasane の側で、写し直すと `--check` で古さが分かる）。`<html data-theme="dashboard">` で効く
+- この画面だけの値（ウィジェットのカードの寸法・重なりの段・サイドバーの幅など）は `packages/ui/src/styles/tokens.css` の `--home-dashboard-*`。テーマはそれを指す
+- 前の名前（`--text-primary`・`--glass-border`・`--accent-rgb`・`text-text`・`font-semibold` など）は、外で組まれた拡張機能のために互換の層として残してある（下の「互換の層」）。新しく書くときは使わない
 - 部品（ボタン・一覧・入れ物・小窓・バー…）は `packages/ui`（`@home-dashboard/ui`）にある。拡張機能からは `@home-dashboard/widget-sdk` から使う。
   拡張機能は部品を組み合わせ、並べ方（flex・grid・gap・余白）だけを自分のクラスで書く。自分で色・角丸・ガラスを決めない
 - 設計図は Figma（tokens.css の冒頭のリンク）。値を変えるときは、設計図にも同じ値を置く
@@ -16,6 +19,7 @@
 ### 道具
 
 - `pnpm lint:style [フォルダ]` … 決まりに沿っているか（CSS のファイル・効かないクラス・テーマを通さない値・色の直書き・部品で書くもの）
+- kasane の検査（kasane の `scripts/lint.mjs packages/ui/src apps/web --app home-dashboard`）… kasane に無い名前・直書きの値。理由があって残すものは `kasane-allow.txt`
 - クラスをつなぐのは `cx()`（`@home-dashboard/ui`・widget-sdk）。ぶつかるクラスは後のものが勝つ（部品の `p-4` に `className="p-2"` を渡すと `p-2`）
 - 拡張機能の組み立て（`scripts/build-extension.mjs`）が、拡張機能の中で使ったクラスだけを `dist/web.css` に出す。テーマと全体の決まりは本体が出す
 - Tailwind のクラスで書けないもの（`@keyframes`・込み入った選び方）は、`packages/ui/src/theme/*.css` に `@utility` で足す（拡張機能からも使える）
@@ -25,12 +29,12 @@
 
 | 何 | クラス | 例 |
 |---|---|---|
-| 文字の色 | `text-text`（本文）・`text-muted`（説明）・`text-accent`・`text-accent-soft`・`text-ok`・`text-warn`・`text-danger`・`text-success`・`text-on-fill`・`text-on-danger` | `text-muted` |
-| 地・縁の色 | `bg-*`・`border-*` に同じ名前。ほかに `bg-raised`（浮かせる面）・`bg-input`（入力欄）・`bg-fill`・`bg-backdrop`（小窓の後ろ）・`border-line`・`border-glass-border`・`bg-shade`・`bg-tint`。不透明度は `/40` | `bg-tint/10` |
+| 文字の色 | `text-fg`（本文）・`text-muted`（説明）・`text-faint`・`text-accent`・`text-link`（リンク）・`text-ok`（正常の印）・`text-warn`・`text-danger`・`text-success`・`text-on-fill`・`text-on-danger`・`text-on-media`（壁紙・写真の上の白） | `text-muted` |
+| 地・縁の色 | `bg-*`・`border-*` に同じ名前。ほかに `bg-surface`・`bg-surface-2`・`bg-raised`（浮かせる面）・`bg-input`（入力欄）・`bg-hover`・`bg-active`・`bg-fill`・`bg-danger-fill`・`bg-backdrop`（小窓の後ろ）・`bg-k-accent-soft`（kasane の淡い地）・`border-line`・`border-line-strong`（入力欄の縁）・`outline-focus`・`bg-shade`・`bg-tint`（壁紙に合わせた暗い色・明るい色）。不透明度は `/40` | `bg-tint/10` |
 | 字の大きさ | `text-micro`・`text-caption`・`text-note`・`text-label`・`text-small`・`text-body`・`text-title`・`text-heading`、画面の見出し `text-screen`・大きな数値 `text-stat`・カードの見出し `text-card` | `text-caption` |
-| 太さ・行間 | `font-normal`（400）・`font-medium`（500）・`font-semibold`（600）・`font-bold`（700）／`leading-none`（1）・`leading-tight`（1.3）・`leading-normal`（1.5） | |
+| 太さ・行間 | `font-normal`（400）・`font-medium`（500）・`font-strong`（600）・`font-bold`（700）／`leading-none`（1）・`leading-tight`（1.3）・`leading-normal`（1.5） | |
 | 余白・大きさ | 4px 刻み（`p-4` ＝ 16px・`size-6` ＝ 24px）。設計図の寸法は px なので、画面の幅で変わらない。入れ物の内側は `p-4`、入れ物のあいだは `gap-3`。字の横に並ぶもの（リストのアイコンの台・アバター・字と並ぶ天気のアイコン）は `size-rem-*`（0.25rem 刻み。字と一緒に壁掛けで大きく・スマホで小さくなる） | `px-4 py-3`・`size-rem-8` |
-| 角丸 | `rounded-card`（45px）・`rounded-inner`（15px）・`rounded-group`・`rounded-nav`・`rounded-art`（12px。小さな写真）・`rounded-full`（丸・ピル） | |
+| 角丸 | `rounded-card`（ウィジェットのカード 45px）・`rounded-md`（中の角丸 15px ＝ kasane の `--radius`）・`rounded-k-card`（入れ物 ＝ kasane の `--radius-card`）・`rounded-k-inner`（入れ物に書いた `--nest-radius` − `--nest-pad`）・`rounded-nav`・`rounded-art`（12px。小さな写真）・`rounded-full`（丸・ピル） | |
 | 影 | `shadow-widget`・`text-shadow-halo`（`halo` と同じ） | |
 | 動きの曲線 | `ease-out`（出てくる）・`ease-in`（消える）・`ease-standard`（その場で変わる）。時間は `duration-(--motion-fast)` など | |
 | 出る・消える動き | `animate-enter`・`animate-enter-slow`・`animate-fade`・`animate-pop`・`animate-drop`・`animate-fade-out`・`animate-exit`・`animate-pop-out`・`animate-drop-out`・`animate-reveal`・`animate-spin` | `closing:animate-fade-out` |
@@ -64,7 +68,26 @@
 
 ## 2. 色
 
-テーマの色は「r, g, b」の形で持ち、壁紙を読み込んだときに、壁紙の色合いに合わせて差し替える（`packages/ui/src/wallpaperTheme.ts`。`@home-dashboard/ui/wallpaper`）。直書きの色は差し替えに付いてこないので、テーマの色は必ずトークン（Tailwind では `text-accent`・`bg-tint/10` など）で書く。
+色の名前と値は kasane の `dashboard` テーマ（`packages/ui/src/kasane/themes/dashboard.css`）。名前の意味は kasane の名前の体系に従う。
+主の色などの5色は、壁紙を読み込んだときに壁紙の色合いに合わせて差し替わる（kasane の `dashboard/wallpaper.js` の `colorsFor`。明るさは決めた値で、
+壁紙からは色相とあざやかさだけを取る。`@home-dashboard/ui/wallpaper` の `startWallpaper` が当てる）。直書きの色は差し替えに付いてこないので、色は必ず名前で書く。
+
+| kasane の名前 | 役割 | 前の名前（互換の層） |
+|---|---|---|
+| `--fg` | 本文・見出し・数値 | `--text`・`--text-primary` |
+| `--muted` | 説明・日時・注記・区画の見出し | `--text-secondary` |
+| `--accent` | 選んでいる所・自分の吹き出し・光るもの | `--accent-rgb` |
+| `--link`・`--focus` | 文字のリンク・フォーカスの縁 | `--accent-soft-rgb`（Tailwind の `accent-soft`） |
+| `--fill` / `--on-fill` | 明るい塗り（選んでいる項目・いちばん押すボタン）とその上の字 | `--tint-rgb` の 94% / `--ink-rgb` |
+| `--line` | 区切り線・ガラスの縁 | `--glass-border` |
+| `--line-strong` | 入力欄・ボタンの縁（地と 3:1） | |
+| `--warn` / `--danger` / `--danger-fill` / `--success` | 注意 / エラーの字 / 危ない操作 / うまくいった知らせの字 | `--accent-warn` / `--danger` / `--danger-strong` / `--success` |
+| `--raised` / `--input` | 小窓・メニューの面（不透明）/ 入力欄の地 | `--surface-raised` / `--surface-input` |
+| `--backdrop` | 小窓の後ろの幕 | `--modal-backdrop` |
+| `--home-dashboard-ok` | 正常の印（状態の丸。この画面だけ） | `--accent-ok` |
+| `--home-dashboard-tint` / `--home-dashboard-shade` | 壁紙に合わせた明るい色 / 壁紙を暗くする色・字の影（この画面だけ） | `--tint-rgb` / `--shade-rgb` |
+
+前の表（2026-11 まで）:
 
 | トークン | 役割 | 書き方 |
 |---|---|---|
@@ -123,48 +146,48 @@
 | 浮かせる面 | `--surface-raised`（ぼかさない） | 小窓（`Dialog`）・メニュー（`PillMenu`）・詳細 | 部品を使う |
 | 明るい塗り | `--fill` の地に `--on-fill` の文字 | 選んでいる項目・いちばん押すボタン（`Button variant="primary"`） | `background: var(--fill); color: var(--on-fill);` |
 
-**ガラスの5つ1組**（`tailwind-theme.css` の `glass` の1か所だけに書く。部品も拡張機能も `glass` を付ける）
+**ガラスの5つ1組**（`styles/components.css` の `glass` の1か所だけに書く。部品も拡張機能も `glass` を付ける。値は kasane の面の名前）
 
 ```css
-border: 1px solid var(--glass-border);
-background: var(--widget-sheen), var(--widget-bg);
+border: var(--border-width) solid var(--line);
+background: var(--surface-image), var(--surface);
 background-clip: padding-box; /* 縁の線の下に光沢を敷かない */
-box-shadow: var(--widget-shadow);
-backdrop-filter: var(--widget-blur);
+box-shadow: var(--shadow-card);
+backdrop-filter: var(--surface-filter);
 ```
 
-**軽い表示**（弱い端末向け。`:root[data-lite]`、lib/lite.ts）
+**軽い表示**（弱い端末向け。`<html data-lite>`、lib/lite.ts）
 
-- ぼかしを切り（`--widget-blur`・`--modal-backdrop-blur` を none）、ガラスの地（`--widget-bg`）と小窓の後ろの幕（`--modal-backdrop`）を濃くする
+- kasane の `[data-theme="dashboard"][data-lite]` が、ぼかしを切り（`--surface-filter` を none）、ガラスの地（`--surface`）と小窓の後ろの幕（`--backdrop`）を濃くする。小窓の後ろのぼかし（`--home-dashboard-modal-backdrop-blur`）も切る
 - 自分で `backdrop-filter` を書いたもの（拡張機能の CSS も）は、軽い表示ではまとめて切られる。ぼかしが無くても読めるよう、地の色を必ず付ける
-- 入れ物のぼかしは、なるべく5つ1組のトークン（`--widget-blur`）で書く（軽い表示で揃って切り替わる）
+- 入れ物のぼかしは、なるべく `--surface-filter` で書く（軽い表示で揃って切り替わる）
 
 **壁紙の上の読みやすさ**
 
-- 壁紙の明るさを、画面の横の位置ごと（4か所）に測り、明るい所にだけ暗さを足す（`--wallpaper-dim-1〜4`）。強さは設定の「壁紙」で変える
-- 壁紙にじかに置く文字の影（`--text-halo`）の濃さは、暗さを足した後に残る明るさで自動で決まる（`--text-halo-strength`）
+- 壁紙の重ねは kasane の `.k-wallpaper`（画面全体の枠 `AppShell` が付ける）。壁紙の明るさを細い列ごとに測り（主の色の光も重ねて）、明るい所が目安の明るさ（0.12）に収まるだけの暗さを、横の4つの点に置く。強さは設定の「壁紙」で変える
+- 壁紙にじかに置く文字の影（`--home-dashboard-text-halo`）の濃さは、暗さを足した後に残る明るさで自動で決まる（`--home-dashboard-text-halo-strength`）
 - 影は文字の外へ 20px ほど広がる。はみ出しを切る入れ物（スクロールする区画・省略で切る1行）は、`--halo-room` だけ内側に余白を取り、外側を同じだけ詰める
 - ガラスの中では影を付けない（`halo` は、壁紙にじかに置く文字にだけ付ける）
 
 ## 5. 寸法
 
-**余白**は `--space-1`（0.25rem）〜`--space-10`（2.5rem）の段から選ぶ（1・2・3・4・5・6・8・10 = 0.25rem 刻み）。設定の入れ物は専用のトークンを使う。
+**余白**は `--space-1`（0.25rem）〜`--space-10`（2.5rem）の段から選ぶ（1・2・3・4・5・6・8・10 = 0.25rem 刻み。kasane の段）。Tailwind の `p-4` などは 4px 刻みのまま（kasane は 0.25rem だが、この画面はアイコンとボタンを画面の幅で変えないため。kasane の例外）。設定の入れ物は専用のトークンを使う（前の名前は `--group-padding` など）。
 
 | トークン | 値 | 使う所 |
 |---|---|---|
-| `--group-padding` | 1rem | 入れ物の内側（左右は常に。中に入力欄を並べるときは上下も） |
-| `--group-row-padding` | 0.8rem | 線で区切った一覧の1行の上下 |
-| `--group-gap` | 0.75rem | 入れ物と入れ物のあいだ |
-| `--field-padding-x` | 0.9rem | 入力欄・入れ物の中の知らせの左右 |
-| `--card-padding` | 30px | カード・小窓の内側 |
+| `--home-dashboard-group-padding` | 1rem | 入れ物の内側（左右は常に。中に入力欄を並べるときは上下も） |
+| `--home-dashboard-group-row-padding` | 0.8rem | 線で区切った一覧の1行の上下 |
+| `--home-dashboard-group-gap` | 0.75rem | 入れ物と入れ物のあいだ |
+| `--home-dashboard-field-padding-x` | 0.9rem | 入力欄・入れ物の中の知らせの左右 |
+| `--home-dashboard-card-padding` | 30px | カード・小窓の内側 |
 
 **角丸**は「外の角丸 ＝ 中の角丸 ＋ 内側の余白」で縁を平行にする。
 
 | トークン | 値 | 使う所 |
 |---|---|---|
-| `--card-radius` | 45px | カード・大きな入れ物・小窓・値のタイル |
-| `--inner-radius` | card − padding（15px） | カードの中の要素・入力欄・メニュー |
-| `--group-radius` | inner ＋ group-padding | 設定の入れ物（`Group`・`List boxed`） |
+| `--home-dashboard-card-radius` | 45px | カード・大きな入れ物・小窓・値のタイル |
+| `--home-dashboard-inner-radius` | card − padding（15px。kasane の `--radius` と同じ） | カードの中の要素・入力欄・メニュー |
+| `--home-dashboard-group-radius` | inner ＋ group-padding（kasane の `--radius-card` と同じ） | 設定の入れ物（`Group`・`List boxed`） |
 | `999px` | ピル | ボタン・バッジ・バー |
 | `50%` | 丸 | アイコンのボタン・顔・印 |
 
@@ -205,7 +228,7 @@ backdrop-filter: var(--widget-blur);
 
 ## 7. 重なりと画面の大きさ
 
-**重なりの順**（`--z-*`）: base 1（画面）＜ handle 2（サイドバーのつまみ・カードの編集の層）＜ tabbar 3（スマホの下のタブバー）＜ launcher 5（音声の起動ボタン）＜ popover 10（メニュー・詳細）＜ bar 15（編集の操作帯）＜ snackbar 20（操作の結果の知らせ）＜ modal 30（小窓）＜ voice 40（音声のパネル。小窓を開いていても上に出す）＜ guard 50（音声アシスタントの了承・許可の小窓。話しかけている最中に出るので、音声のパネルより上）
+**重なりの順**（popover・bar・snackbar・modal は kasane の `--z-*`、ほかはこの画面の `--home-dashboard-z-*`。前の名前 `--z-base` なども残してある）: base 1（画面）＜ handle 2（サイドバーのつまみ・カードの編集の層）＜ tabbar 3（スマホの下のタブバー）＜ launcher 5（音声の起動ボタン）＜ popover 10（メニュー・詳細）＜ bar 15（編集の操作帯）＜ snackbar 20（操作の結果の知らせ）＜ modal 30（小窓）＜ voice 40（音声のパネル。小窓を開いていても上に出す）＜ guard 50（音声アシスタントの了承・許可の小窓。話しかけている最中に出るので、音声のパネルより上）
 
 **画面の大きさの区切り**
 
@@ -226,11 +249,11 @@ backdrop-filter: var(--widget-blur);
 | `--motion-fast` | 120ms | 色が変わる・押して縮む・hover |
 | `--motion-base` | 200ms | トグル・メニュー・タブ・中身の入れ替え・下敷き |
 | `--motion-slow` | 280ms | 小窓の面・画面の切り替え |
-| `--motion-reveal` | 1600ms | 追加したウィジェットを光らせる |
+| `--home-dashboard-motion-reveal` | 1600ms | 追加したウィジェットを光らせる |
 | `--ease-out` | cubic-bezier(.2, .8, .2, 1) | 出てくるもの（減速して止まる） |
 | `--ease-in` | cubic-bezier(.4, 0, 1, 1) | 消えるもの（加速して去る） |
 | `--ease-standard` | cubic-bezier(.2, 0, 0, 1) | その場で色や形が変わるもの |
-| `--motion-rise` | 10px | 出てくるときに上がる距離 |
+| `--home-dashboard-motion-rise` | 10px | 出てくるときに上がる距離 |
 
 **動きの型**（`animate-*` のクラス。部品を使えば付いてくる）
 
@@ -289,3 +312,21 @@ backdrop-filter: var(--widget-blur);
 | 画面の区切り | 7章の4つ（メールの 1500px だけ例外） |
 
 `ButtonLink` は今は使われていないが、拡張機能向けの部品なので残す。
+
+## 11. kasane に載せたこと（2026-11-17）
+
+色・面・字・余白・動きの値を kasane の `dashboard` テーマから取るようにした（`packages/ui/src/kasane/` に写す。`kasane-native.json`）。
+
+- 壁紙の測り・暗さ・色は kasane の `dashboard/wallpaper.js`（`@home-dashboard/ui/wallpaper` が出し直す）。壁紙の重ねは `.k-wallpaper`
+- 見た目が変わった所: ガラスの地（黒 15→25% のグラデーション → 黒 30%）、薄い字（`--muted` #c4d4e4 → #d3e0ec）、リンクの色（明るく）、ガラスの縁（tint 16% → 白 14%）、
+  小窓の面（95% → 不透明）、壁紙の明るい所の暗さ（測りの穴を塞いだので、点と点の間・主の色の光の所が少し暗くなる）、使えないときの薄さ（0.4〜0.6 → 0.5）
+- 意味の違う3つのクラスは、前の綴りを前の意味のまま残した: `text-accent-soft`（リンクの色）・`rounded-card`（45px）・`rounded-inner`（15px）。kasane の意味は `bg-k-accent-soft`・`rounded-k-card`・`rounded-k-inner`
+- 壁紙の暗さの重ねと、kasane の色の一部（明るい塗り・小窓の後ろの幕・入力欄の縁）は `color-mix()` で書いてある（Chrome 111・Safari 16.2 から。Tailwind v4 の不透明度 `/40` も前から同じものを使っている）。壁掛けの端末のブラウザでは、まだ確かめていない
+
+### 互換の層
+
+外で組まれた拡張機能（`dist/web.css` を本体と別に組んだもの）は、前のテーマの名前を読む。改名すると見た目が消えるので、前の名前を残してある。消す時期は決めていない。
+
+- 変数: `--text`・`--text-primary`・`--text-secondary`・`--glass-border`・`--glass-bg`・`--widget-bg`・`--widget-sheen`・`--widget-shadow`・`--widget-blur`・`--modal-backdrop`・`--modal-backdrop-blur`・`--surface-raised`・`--surface-input`・`--accent-ok`・`--accent-warn`・`--danger-strong`・`--card-radius`・`--card-padding`・`--inner-radius`・`--group-*`・`--field-padding-x`・`--nav-*`・`--list-item-padding`・`--text-halo`・`--text-halo-strength`・`--motion-reveal`・`--motion-rise`・`--z-base` など、`--sidebar-width`・`--night-darkness`、r, g, b の5つ（`--accent-rgb`・`--accent-soft-rgb`・`--tint-rgb`・`--ink-rgb`・`--shade-rgb`。壁紙に合わせて書き直す）、`--wallpaper-dim-1〜4`
+- クラス: `text-text`・`font-semibold`・`*-glass-border`・`*-danger-strong`・`*-ink`・`*-accent-soft`・`rounded-inner`・`rounded-group`・`shadow-widget`
+- 確かめ方: 前の本体（origin/main）のテーマで、拡張機能（本体に入っているものと examples）が使うクラスを全部組み、前の本体と新しい本体の両方に入れて、読む変数が全部決まっていること・計算後の値の差が意図した色の差だけであることを見た
