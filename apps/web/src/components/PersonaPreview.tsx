@@ -5,7 +5,7 @@ import type { VoicePersona, VoiceState } from "../lib/useVoiceAssistant";
 import { Chip, defineMessages, Message } from "@home-dashboard/widget-sdk";
 
 /** 操作の区切りの小さな見出し（状態・向き・表情・身振り） */
-const HEADING = "mt-3.5 mb-1.5 text-caption font-semibold text-muted first:mt-0";
+const HEADING = "mt-3.5 mb-1.5 text-caption font-strong text-muted first:mt-0";
 
 const messages = defineMessages({
   ja: {
@@ -185,7 +185,7 @@ export function PersonaPreview({ persona, modelUrl }: PersonaPreviewProps) {
             ))}
           </div>
           {rig && (
-            <dl className="mt-4 grid grid-cols-label gap-x-3 gap-y-1 text-caption text-muted [&_dd]:text-text [&_dd]:wrap-anywhere">
+            <dl className="mt-4 grid grid-cols-label gap-x-3 gap-y-1 text-caption text-muted [&_dd]:text-fg [&_dd]:wrap-anywhere">
               <dt>{t("earLeft")}</dt>
               <dd>{boneNames(rig.ears.left)}</dd>
               <dt>{t("earRight")}</dt>

@@ -96,8 +96,8 @@ export function PillMenu({
                 type="button"
                 className={cx(
                   "press-wide flex w-full cursor-pointer flex-col items-start gap-0.5 rounded-nested px-3 py-2 text-left",
-                  "disabled:cursor-default disabled:opacity-45",
-                  item.selected ? "fill-bright text-on-fill" : "text-text enabled:hover:bg-tint/10",
+                  "disabled:cursor-default disabled:opacity-(--disabled-opacity)",
+                  item.selected ? "fill-bright text-on-fill" : "text-fg enabled:hover:bg-tint/10",
                 )}
                 disabled={item.disabled}
                 onClick={() => {

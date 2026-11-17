@@ -225,13 +225,13 @@ function StepText({ text, fields }: { text: string; fields: FieldView[] }) {
       nodes.push(`{${parts[i]}}${tail}`);
     } else if (field.isSet && field.value !== null) {
       nodes.push(
-        <code key={i} className="rounded-art bg-tint/15 px-1 text-text wrap-anywhere">
+        <code key={i} className="rounded-art bg-tint/15 px-1 text-fg wrap-anywhere">
           {`${String(field.value).replace(/\/$/, "")}${tail}`}
         </code>,
       );
     } else {
       nodes.push(
-        <span key={i} className="font-semibold text-text">
+        <span key={i} className="font-strong text-fg">
           {`<${shortLabel(field.label)}>`}
         </span>,
         tail,
@@ -361,7 +361,7 @@ function PanelForm({
     <Group>
       {(panel.title || showBadge) && (
         <div className="mb-3 flex items-center justify-between gap-2">
-          {panel.title && <h5 className="text-label font-semibold">{panel.title}</h5>}
+          {panel.title && <h5 className="text-label font-strong">{panel.title}</h5>}
           {showBadge && <Badge on={configured}>{configured ? t("configured") : t("unset")}</Badge>}
         </div>
       )}
@@ -369,7 +369,7 @@ function PanelForm({
         {panel.note && <Note>{panel.note}</Note>}
         {panel.steps.length > 0 && (
           <details className="mb-3 text-note leading-normal">
-            <summary className="inline-flex min-h-8 cursor-pointer items-center text-text underline">{t("steps")}</summary>
+            <summary className="inline-flex min-h-8 cursor-pointer items-center text-fg underline">{t("steps")}</summary>
             <ol className="mt-1.5 flex list-decimal flex-col gap-1.5 pl-6 text-muted">
               {panel.steps.map((step, i) => (
                 <li key={i}>
@@ -379,14 +379,14 @@ function PanelForm({
             </ol>
           </details>
         )}
-        <fieldset disabled={!editable || busy} className="min-w-0 disabled:opacity-60">
+        <fieldset disabled={!editable || busy} className="min-w-0 disabled:opacity-(--disabled-opacity)">
           {panel.fields.map((field) => {
             const source = (
               <span className="flex flex-wrap items-center gap-2">
                 {t(SOURCE_LABELS[field.source])}
                 {field.env && t("envName", { env: field.env })}
                 {field.source === "settings" && (
-                  <button type="button" className="cursor-pointer text-text underline" onClick={() => void reset(field)}>
+                  <button type="button" className="cursor-pointer text-fg underline" onClick={() => void reset(field)}>
                     {t("resetToEnv")}
                   </button>
                 )}

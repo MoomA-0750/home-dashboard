@@ -3,7 +3,7 @@ import type { WidgetRuntimeContext } from "@home-dashboard/widget-sdk";
 
 /**
  * 夜の表示（部屋が暗い・電気が消えているときに画面をぐっと暗くする）。サーバーの /api/night を読み、
- * 夜に入った・出たの知らせ（night-updated）ですぐ替える。夜の間は <html data-night> と --night-darkness を付け、
+ * 夜に入った・出たの知らせ（night-updated）ですぐ替える。夜の間は <html data-night> と --home-dashboard-night-darkness を付け、
  * styles/base.css が背景と文字を暗くする
  */
 
@@ -73,7 +73,8 @@ export function useNight(ctx: WidgetRuntimeContext) {
     const root = document.documentElement;
     if (night?.active) {
       root.dataset.night = "";
-      root.style.setProperty("--night-darkness", String(night.darkness));
+      root.style.setProperty("--home-dashboard-night-darkness", String(night.darkness));
+      root.style.setProperty("--night-darkness", String(night.darkness)); // 前の名前（互換の層）
     } else {
       delete root.dataset.night;
     }

@@ -44,6 +44,8 @@
   --font-weight-normal: 400;
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
+  /* kasane の名前（font-strong ＝ 600）。本体は font-strong で書く。font-semibold は外で組まれた拡張機能のために残す */
+  --font-weight-strong: 600;
   --font-weight-bold: 700;
 
   /* 行間。1行の名前・数値は none（1）、複数行になる文章は normal（1.5） */
@@ -66,13 +68,13 @@
   --animate-exit: motion-exit var(--motion-base) var(--ease-in) forwards;
   --animate-pop-out: motion-pop-out var(--motion-base) var(--ease-in) forwards;
   --animate-drop-out: motion-drop-out var(--motion-fast) var(--ease-in) forwards;
-  --animate-reveal: widget-reveal var(--motion-reveal) var(--ease-out);
+  --animate-reveal: widget-reveal var(--home-dashboard-motion-reveal) var(--ease-out);
   --animate-spin: spin 1s linear infinite;
 
   @keyframes motion-enter {
     from {
       opacity: 0;
-      transform: translateY(var(--motion-rise));
+      transform: translateY(var(--home-dashboard-motion-rise));
     }
   }
   @keyframes motion-fade {
@@ -100,7 +102,7 @@
   @keyframes motion-exit {
     to {
       opacity: 0;
-      transform: translateY(var(--motion-rise));
+      transform: translateY(var(--home-dashboard-motion-rise));
     }
   }
   @keyframes motion-pop-out {
@@ -179,12 +181,12 @@
   --color-accent-soft: var(--link);
   /* kasane の --accent-soft（淡い地。選んだ行の地など）。前の accent-soft と綴りを分けた */
   --color-k-accent-soft: var(--accent-soft);
-  --color-tint: rgb(var(--tint-rgb));
+  --color-tint: var(--home-dashboard-tint);
   --color-ink: var(--on-fill);
-  --color-shade: rgb(var(--shade-rgb));
+  --color-shade: var(--home-dashboard-shade);
   --color-text: var(--fg);
-  --color-glass-border: var(--glass-border);
-  --color-ok: var(--accent-ok);
+  --color-glass-border: var(--line);
+  --color-ok: var(--home-dashboard-ok);
   --color-danger-strong: var(--danger-fill);
 
   /* 字の大きさの段（役割で選ぶ）。text-caption・text-body など */
@@ -208,16 +210,16 @@
    */
   --radius-md: var(--radius);
   --radius-k-card: var(--radius-card);
-  --radius-card: var(--card-radius);
+  --radius-card: var(--home-dashboard-card-radius);
   /* 前の名前（互換の層。外で組まれた拡張機能が使っている）。rounded-inner は固定の 15px、rounded-group は入れ物（kasane の rounded-k-card と同じ） */
-  --radius-inner: var(--inner-radius);
-  --radius-group: var(--group-radius);
-  --radius-nav: var(--nav-icon-radius);
+  --radius-inner: var(--home-dashboard-inner-radius);
+  --radius-group: var(--home-dashboard-group-radius);
+  --radius-nav: var(--home-dashboard-nav-icon-radius);
   --radius-art: 12px;
   --radius-full: 9999px;
 
   --shadow-widget: var(--shadow-card);
-  --text-shadow-halo: var(--text-halo);
+  --text-shadow-halo: var(--home-dashboard-text-halo);
 }
 
 /*
@@ -268,7 +270,7 @@
 
 /* 壁紙にじかに置く文字の影 */
 @utility halo {
-  text-shadow: var(--text-halo);
+  text-shadow: var(--home-dashboard-text-halo);
 }
 
 /* 押せるもの: 色を短く変え、押している間だけ少し縮む（幅の広い行は press-wide） */
@@ -299,16 +301,16 @@
 
 /* 重なりの順（docs/design-system.md の7章）。layer-modal など */
 @utility layer-base {
-  z-index: var(--z-base);
+  z-index: var(--home-dashboard-z-base);
 }
 @utility layer-handle {
-  z-index: var(--z-handle);
+  z-index: var(--home-dashboard-z-handle);
 }
 @utility layer-tabbar {
-  z-index: var(--z-tabbar);
+  z-index: var(--home-dashboard-z-tabbar);
 }
 @utility layer-launcher {
-  z-index: var(--z-launcher);
+  z-index: var(--home-dashboard-z-launcher);
 }
 @utility layer-popover {
   z-index: var(--z-popover);
@@ -323,10 +325,10 @@
   z-index: var(--z-modal);
 }
 @utility layer-voice {
-  z-index: var(--z-voice);
+  z-index: var(--home-dashboard-z-voice);
 }
 @utility layer-guard {
-  z-index: var(--z-guard);
+  z-index: var(--home-dashboard-z-guard);
 }
 
 /* 省略（…）で切る1行。字の上下の余白を戻す（text-box-trim を切る） */

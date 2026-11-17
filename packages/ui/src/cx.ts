@@ -56,7 +56,7 @@ const merge = extendTailwindMerge<"layer" | "tap" | "surface">({
       text: ["micro", "caption", "note", "label", "small", "body", "title", "heading", "screen", "stat", "card"],
       radius: ["md", "k-card", "card", "inner", "group", "nav", "art", "full"],
       shadow: ["widget"],
-      "font-weight": ["normal", "medium", "semibold", "bold"],
+      "font-weight": ["normal", "medium", "semibold", "strong", "bold"],
       leading: ["none", "tight", "normal"],
       ease: ["out", "in", "standard"],
       animate: ["enter", "enter-slow", "fade", "pop", "drop", "fade-out", "exit", "pop-out", "drop-out", "reveal", "spin"],

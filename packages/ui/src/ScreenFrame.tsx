@@ -25,7 +25,7 @@ export function ScreenFrame({
     <main
       className={cx(
         // 横長で背の低い画面では、画面の高さに収めたい中身（Media など）が引く見出しと余白の分を伝える
-        "layer-base col-start-3 h-svh min-w-0 wall:[--screen-header-space:110px] phone:col-start-1 phone:h-screen-phone",
+        "layer-base col-start-3 h-svh min-w-0 wall:[--home-dashboard-screen-header-space:110px] phone:col-start-1 phone:h-screen-phone",
         fill ? "overflow-hidden" : "overflow-y-auto",
       )}
     >
@@ -39,7 +39,7 @@ export function ScreenFrame({
       >
         {/* 見出しの右の操作（ButtonRow など）は、狭い画面で次の行に回っても右に寄せる */}
         <header className="mb-8 flex flex-wrap items-center justify-between gap-4 wall:mb-4 [&>:not(h1):last-child]:ml-auto">
-          <h1 className="text-screen font-semibold wall:text-card">{textFor(title, locale)}</h1>
+          <h1 className="text-screen font-strong wall:text-card">{textFor(title, locale)}</h1>
           {actions}
         </header>
         {children}

@@ -46,19 +46,19 @@ export function MainInfo({ ctx }: MainInfoProps) {
         className="grid grid-cols-(--clock-time-columns) items-center text-(length:--clock-size) leading-none drop-shadow-(--clock-shadow)"
         aria-label={`${t("currentTime")} ${formatClock(ctx.now, locale)}`}
       >
-        <span className="flex min-w-0 justify-end font-semibold whitespace-nowrap text-white">
+        <span className="flex min-w-0 justify-end font-strong whitespace-nowrap text-on-media">
           <span className="inline-block w-min">{hh}</span>
         </span>
-        <span className="flex min-w-0 justify-start font-(--clock-thin) whitespace-nowrap text-white/70">
+        <span className="flex min-w-0 justify-start font-(--clock-thin) whitespace-nowrap text-on-media/70">
           <span className="inline-block w-min">{mm}</span>
         </span>
       </div>
       <div className="flex flex-col items-start gap-2.5 self-center text-(length:--meta-size) leading-none font-(--clock-thin) whitespace-nowrap">
         {/* 天気の取得前でも行の高さを取っておき、日付が上にずれないようにする */}
-        <div className="flex min-h-lh items-center text-white/70">
+        <div className="flex min-h-lh items-center text-on-media/70">
           {HeaderWeather && <HeaderWeather ctx={ctx} />}
         </div>
-        <p className="text-white">{dateText}</p>
+        <p className="text-on-media">{dateText}</p>
       </div>
     </div>
   );

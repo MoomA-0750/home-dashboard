@@ -280,7 +280,7 @@ export function PersonaManager({
           <List boxed label={opened.name}>
             <ListItem
               leading={<PersonaIcon apiBaseUrl={apiBaseUrl} persona={opened} />}
-              title={<span className="text-title font-semibold">{opened.name}</span>}
+              title={<span className="text-title font-strong">{opened.name}</span>}
               detail={t("callWith", { phrase: opened.wakePhrase })}
               trailing={
                 <ToggleSwitch

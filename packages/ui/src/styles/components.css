@@ -7,16 +7,16 @@
 
 /* ガラスの面（5つ1組）。入れ物・カード・ボタンはこれを付ける（自分で縁や影を書かない） */
 .glass {
-  border: 1px solid var(--glass-border);
-  background: var(--widget-sheen), var(--widget-bg);
+  border: var(--border-width) solid var(--line);
+  background: var(--surface-image), var(--surface);
   background-clip: padding-box;
-  box-shadow: var(--widget-shadow);
-  backdrop-filter: var(--widget-blur);
+  box-shadow: var(--shadow-card);
+  backdrop-filter: var(--surface-filter);
 }
 
 /* 浮かせる面（小窓・メニュー）。ぼかさず、ほぼ不透明 */
 .raised {
-  border: 1px solid var(--glass-border);
-  background: var(--surface-raised);
-  box-shadow: var(--widget-shadow);
+  border: var(--border-width) solid var(--line);
+  background: var(--raised);
+  box-shadow: var(--shadow-card);
 }

@@ -67,11 +67,11 @@ export function SnackbarHost() {
   };
   return (
     // 画面の下の中央（サイドバーの右の幅の中）。スマホではタブバーの上
-    <div className="pointer-events-none fixed right-0 bottom-8 left-(--sidebar-width) layer-snackbar flex justify-center px-4 phone:left-0 phone:above-tabbar">
+    <div className="pointer-events-none fixed right-0 bottom-8 left-(--home-dashboard-sidebar-width) layer-snackbar flex justify-center px-4 phone:left-0 phone:above-tabbar">
       <div
         key={shown.id}
         className={cx(
-          "glass pointer-events-auto flex max-w-140 min-h-12 items-center gap-2.5 rounded-full py-1.5 pr-1.5 pl-4 text-label leading-normal text-text",
+          "glass pointer-events-auto flex max-w-140 min-h-12 items-center gap-2.5 rounded-full py-1.5 pr-1.5 pl-4 text-label leading-normal text-fg",
           "animate-enter closing:animate-exit closing:pointer-events-none",
           shown.tone === "error" && "border-danger/45",
           shown.closing && "is-closing",

@@ -14,9 +14,9 @@ import { Button, ButtonRow, cx, defineMessages, List, ListItem, Message, Note, S
 import { SLIDER_ROW, SLIDER_ROW_LABEL, STACK } from "./settingsStyles";
 
 /** 壁紙の見本（画面と同じく、縁の角を丸めた枠に敷き詰める） */
-const PREVIEW = "relative w-full rounded-md border border-glass-border bg-cover bg-center";
+const PREVIEW = "relative w-full rounded-md border border-line bg-cover bg-center";
 /** 場所の番号（見本の上と、下の一覧の行の頭で同じ形にして、対応させる） */
-const ZONE_NUMBER = "inline-grid size-6 place-items-center rounded-full bg-shade/70 text-caption font-semibold";
+const ZONE_NUMBER = "inline-grid size-6 place-items-center rounded-full bg-shade/70 text-caption font-strong";
 
 interface WallpaperSettingsProps {
   apiBaseUrl: string;
@@ -161,7 +161,7 @@ function DimSettings({
   // 画面と同じ縦横比で、画面に重ねているのと同じ暗さを重ねる
   const overlay =
     dims.length === 4
-      ? `linear-gradient(to right, rgba(var(--shade-rgb), ${dims[0]}) 12%, rgba(var(--shade-rgb), ${dims[1]}) 42%, rgba(var(--shade-rgb), ${dims[2]}) 67%, rgba(var(--shade-rgb), ${dims[3]}) 90%)`
+      ? `linear-gradient(to right, color-mix(in srgb, var(--home-dashboard-shade) ${dims[0] * 100}%, transparent) 12%, color-mix(in srgb, var(--home-dashboard-shade) ${dims[1] * 100}%, transparent) 42%, color-mix(in srgb, var(--home-dashboard-shade) ${dims[2] * 100}%, transparent) 67%, color-mix(in srgb, var(--home-dashboard-shade) ${dims[3] * 100}%, transparent) 90%)`
       : "none";
   const aspect = typeof window === "undefined" ? 16 / 9 : Math.min(2.4, Math.max(0.5, window.innerWidth / window.innerHeight));
 
@@ -189,7 +189,7 @@ function DimSettings({
           {zones.map((zone, index) => (
             <ListItem
               key={zone.from}
-              leading={<span className={cx(ZONE_NUMBER, "border border-glass-border")}>{index + 1}</span>}
+              leading={<span className={cx(ZONE_NUMBER, "border border-line")}>{index + 1}</span>}
               title={t("zone", { from: percent(zone.from), to: percent(zone.to) })}
               detail={t("brightness", {
                 before: percent(zone.bright),

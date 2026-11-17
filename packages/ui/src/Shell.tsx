@@ -45,9 +45,9 @@ export function Sidebar({
             key={item.id}
             type="button"
             className={cx(
-              "nav-item press flex w-full cursor-pointer items-center overflow-hidden border-0 text-left whitespace-nowrap text-text",
-              "enabled:hover:fill-bright enabled:hover:text-on-fill enabled:hover:nav-lift disabled:cursor-default disabled:opacity-40 phone:tabbar-item",
-              // 塗りの上の字の色も替える（text-text が CSS の並びで fill-bright の色に勝ち、明るい地に白いアイコンになっていた）
+              "nav-item press flex w-full cursor-pointer items-center overflow-hidden border-0 text-left whitespace-nowrap text-fg",
+              "enabled:hover:fill-bright enabled:hover:text-on-fill enabled:hover:nav-lift disabled:cursor-default disabled:opacity-(--disabled-opacity) phone:tabbar-item",
+              // 塗りの上の字の色も替える（text-fg が CSS の並びで fill-bright の色に勝ち、明るい地に白いアイコンになっていた）
               on && "fill-bright text-on-fill nav-lift",
             )}
             aria-label={item.ariaLabel ?? item.label}
@@ -169,7 +169,8 @@ export function AppShell({
       data-shell=""
       data-expanded={width > SIDEBAR_LABEL_THRESHOLD || undefined}
       className="k-wallpaper shell-grid grid h-svh grid-rows-1 overflow-hidden phone:grid-cols-1 phone:pb-tabbar"
-      style={{ "--sidebar-width": `${width}px` } as CSSProperties}
+      // 前の名前（--sidebar-width）も書く（外で組まれた拡張機能が読む。互換の層）
+      style={{ "--home-dashboard-sidebar-width": `${width}px`, "--sidebar-width": `${width}px` } as CSSProperties}
     >
       <Sidebar items={items} active={active} onSelect={onSelect} />
       <SidebarHandle width={width} onResize={resize} />
@@ -244,7 +245,7 @@ export function SettingsLayout({
           <div className="hidden tablet:block">
             <BackButton label={title} onClick={onBack} />
           </div>
-          <h3 className="mt-1 mb-4 text-heading font-semibold">{items.find((item) => item.id === page)?.label}</h3>
+          <h3 className="mt-1 mb-4 text-heading font-strong">{items.find((item) => item.id === page)?.label}</h3>
           {children}
         </div>
       </div>

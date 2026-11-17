@@ -5,7 +5,16 @@
  */
 :root {
   /* サイドバーはドラッグでリサイズするため JS から上書きされる（80〜240px） */
-  --sidebar-width: 80px;
+  --home-dashboard-sidebar-width: 80px;
+
+  /*
+   * 壁紙に合わせて差し替わる、明るい塗りの色（tint）と、壁紙を暗くする色・字の影の色（shade）。kasane の dashboard テーマの
+   * 中の色と同じ値を、@home-dashboard/ui/wallpaper が r, g, b（下の互換の層）で書く。Tailwind の bg-tint/10・bg-shade/70
+   */
+  --home-dashboard-tint: rgb(var(--tint-rgb));
+  --home-dashboard-shade: rgb(var(--shade-rgb));
+  /* 正常の印（状態の丸）。kasane の --success（うまくいった知らせの字。淡い）とは分けている */
+  --home-dashboard-ok: #4ade80;
 
   /*
    * ■ 互換の層（公開している拡張機能のため。消す時期は決めていない。docs/extensions.md）
@@ -30,21 +39,43 @@
   --glass-border: var(--line);
   --glass-bg: var(--hover);
   --widget-bg: linear-gradient(var(--surface), var(--surface));
+  --accent-ok: var(--home-dashboard-ok);
   --widget-sheen: var(--surface-image);
   --widget-shadow: var(--shadow-card);
   --widget-blur: var(--surface-filter);
   /* 壁紙の写真と下地（今は .k-wallpaper が描く。写真は startWallpaper が当てる） */
   --dash-background-image: url("/background.jpg");
   --dash-background-fallback: var(--bg-image);
-
-  /* 正常の印（状態の丸）。kasane の --success（うまくいった知らせの字。淡い）とは分けている */
-  --accent-ok: #4ade80;
+  /* この画面だけの寸法の、前の名前（--home-dashboard-* の別名） */
+  --sidebar-width: var(--home-dashboard-sidebar-width);
+  --card-radius: var(--home-dashboard-card-radius);
+  --card-padding: var(--home-dashboard-card-padding);
+  --inner-radius: var(--home-dashboard-inner-radius);
+  --group-padding: var(--home-dashboard-group-padding);
+  --group-row-padding: var(--home-dashboard-group-row-padding);
+  --group-gap: var(--home-dashboard-group-gap);
+  --group-radius: var(--home-dashboard-group-radius);
+  --field-padding-x: var(--home-dashboard-field-padding-x);
+  --nav-icon-radius: var(--home-dashboard-nav-icon-radius);
+  --nav-item-padding: var(--home-dashboard-nav-item-padding);
+  --list-item-padding: var(--home-dashboard-list-item-padding);
+  --text-halo: var(--home-dashboard-text-halo);
+  --modal-backdrop-blur: var(--home-dashboard-modal-backdrop-blur);
+  --motion-reveal: var(--home-dashboard-motion-reveal);
+  --motion-rise: var(--home-dashboard-motion-rise);
+  --z-base: var(--home-dashboard-z-base);
+  --z-handle: var(--home-dashboard-z-handle);
+  --z-tabbar: var(--home-dashboard-z-tabbar);
+  --z-launcher: var(--home-dashboard-z-launcher);
+  --z-voice: var(--home-dashboard-z-voice);
+  --z-guard: var(--home-dashboard-z-guard);
+  --z-night: var(--home-dashboard-z-night);
 
   /* ウィジェットの基本寸法。650x200px・内側余白30px・角丸45px（高さと間は WidgetRail の rowHeight・margin が持つ）。
      アートワーク等の内側要素は「外側の角丸 − 内側余白」を角丸にすると縁が平行になる。 */
-  --card-radius: 45px;
-  --card-padding: 30px;
-  --inner-radius: calc(var(--card-radius) - var(--card-padding));
+  --home-dashboard-card-radius: 45px;
+  --home-dashboard-card-padding: 30px;
+  --home-dashboard-inner-radius: calc(var(--home-dashboard-card-radius) - var(--home-dashboard-card-padding));
   /*
    * 設定画面の入れ物（一覧・区画・知らせ）の寸法。どの入れ物もこの値だけを使う。
    * - --group-padding: 入れ物の内側の余白。左右は常にこれ。中に入力欄などを並べる区画は、上下もこれ
@@ -54,38 +85,39 @@
    * - --group-radius: 入れ物の角丸。中の入力欄・ボタン（角丸 --inner-radius）と縁が平行になるよう「中の角丸 ＋ 内側の余白」
    * - --field-padding-x: 入力欄・コードの枠・入れ物の中の知らせの、左右の余白
    */
-  --group-padding: 1rem;
-  --group-row-padding: 0.8rem;
-  --group-gap: 0.75rem;
-  --group-radius: calc(var(--inner-radius) + var(--group-padding));
-  --field-padding-x: 0.9rem;
+  --home-dashboard-group-padding: 1rem;
+  --home-dashboard-group-row-padding: 0.8rem;
+  --home-dashboard-group-gap: 0.75rem;
+  --home-dashboard-group-radius: calc(var(--home-dashboard-inner-radius) + var(--home-dashboard-group-padding));
+  --home-dashboard-field-padding-x: 0.9rem;
   /* 設定の左の項目一覧。アイコンの角丸と、項目の上下左右の余白（選んだ項目の角丸はこの2つから決まる） */
-  --nav-icon-radius: 0.6rem;
-  --nav-item-padding: 0.5rem;
+  --home-dashboard-nav-icon-radius: 0.6rem;
+  --home-dashboard-nav-item-padding: 0.5rem;
   /* 一覧の1行（入れ物に入れない行）の余白。左と上下は同じにし、左のアイコンの台と角丸をそろえる */
-  --list-item-padding: 0.7rem;
+  --home-dashboard-list-item-padding: 0.7rem;
 
-  /* 壁紙にじかに置く文字の影。濃さ（--text-halo-strength）は、壁紙に足した暗さの後に残る明るさで決める（wallpaperTheme.ts） */
-  --text-halo-strength: 0.6;
-  --text-halo:
-    0 0 2px rgba(var(--shade-rgb), calc(0.3 * var(--text-halo-strength))),
-    0 0 8px rgba(var(--shade-rgb), calc(0.3 * var(--text-halo-strength))),
-    0 0 20px rgba(var(--shade-rgb), calc(0.25 * var(--text-halo-strength)));
+  /* 壁紙にじかに置く文字の影。濃さ（--home-dashboard-text-halo-strength）は、壁紙に足した暗さの後に残る明るさで決める（wallpaperTheme.ts） */
+  --home-dashboard-text-halo-strength: 0.6;
+  --text-halo-strength: var(--home-dashboard-text-halo-strength);
+  --home-dashboard-text-halo:
+    0 0 2px color-mix(in srgb, var(--home-dashboard-shade) calc(30% * var(--home-dashboard-text-halo-strength)), transparent),
+    0 0 8px color-mix(in srgb, var(--home-dashboard-shade) calc(30% * var(--home-dashboard-text-halo-strength)), transparent),
+    0 0 20px color-mix(in srgb, var(--home-dashboard-shade) calc(25% * var(--home-dashboard-text-halo-strength)), transparent);
   /* 画面の上に重ねる詳細・ウィジェットの追加などの下敷きのぼかし（暗さは kasane の --backdrop） */
-  --modal-backdrop-blur: blur(4px);
+  --home-dashboard-modal-backdrop-blur: blur(4px);
 
   /* 字の大きさの段（--font-micro〜--font-heading）・余白の段（--space-*）は kasane の tokens.css */
 
   /* 重なりの順。下から、画面・つまみ・下のタブバー・音声の起動ボタン・メニューと詳細・編集の操作帯・小窓・音声のパネル・音声の確かめ */
-  --z-base: 1;
-  --z-handle: 2;
-  --z-tabbar: 3;
-  --z-launcher: 5;
+  --home-dashboard-z-base: 1;
+  --home-dashboard-z-handle: 2;
+  --home-dashboard-z-tabbar: 3;
+  --home-dashboard-z-launcher: 5;
   /* --z-popover 10・--z-bar 15・--z-snackbar 20・--z-modal 30 は kasane の tokens.css */
-  --z-voice: 40;
-  --z-guard: 50;
+  --home-dashboard-z-voice: 40;
+  --home-dashboard-z-guard: 50;
   /* 夜の表示の暗幕（いちばん上。押す操作は下へ通す） */
-  --z-night: 100;
+  --home-dashboard-z-night: 100;
 
   /* 状態の色（--danger・--danger-fill・--on-danger・--success）、面（--raised・--input）、明るい塗り（--fill・--on-fill）は kasane */
 
@@ -96,9 +128,9 @@
    * 動きを減らす設定（prefers-reduced-motion）では、時間を全部 0 にする（下の @media）
    */
   /* --motion-fast・--motion-base・--motion-slow と曲線 --ease-* は kasane の tokens.css。ここは追加したものを知らせる長い光だけ */
-  --motion-reveal: 1600ms;
+  --home-dashboard-motion-reveal: 1600ms;
   /* 出てくるときの距離。小さく、短く（大きく動かすと、ガラスのぼかしの描き直しが増えて重い） */
-  --motion-rise: 10px;
+  --home-dashboard-motion-rise: 10px;
 
   /* 設計図の寸法はすべて px なのでこの値の影響を受けない。
      ここで効くのはウィジェット内部の rem 指定だけで、壁掛けパネルでの可読性のために
@@ -111,7 +143,7 @@
  * [data-theme="dashboard"][data-lite]）。拡張機能が自分で書いたぼかしもまとめて切る
  */
 :root[data-lite] {
-  --modal-backdrop-blur: none;
+  --home-dashboard-modal-backdrop-blur: none;
 }
 
 :root[data-lite] *,
@@ -124,7 +156,7 @@
 /* 動きを減らす設定では、時間を全部 0 にする（出てくるときの動きも消える） */
 @media (prefers-reduced-motion: reduce) {
   :root {
-    --motion-reveal: 0ms;
-    --motion-rise: 0px;
+    --home-dashboard-motion-reveal: 0ms;
+    --home-dashboard-motion-rise: 0px;
   }
 }

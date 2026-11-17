@@ -1,4 +1,62 @@
 # kasane の検査（node <kasane>/scripts/lint.mjs packages/ui/src apps/web --app home-dashboard）で許すもの。
 # 1行に1つ: <規則の名前 か *>  <ファイルのパターン>  [見つかった文字列に含まれる文字]  # 理由
+# 移行（kasane のフェーズ8）で、名前は kasane のものか --home-dashboard-* に寄せた。ここに残すのは、理由があって寄せないものだけ
 
 *  packages/ui/src/kasane/*  # kasane から写したもの（kasane-sync。直すのは kasane）
+
+# ---- 互換の層（公開している拡張機能のため。消す時期は決めていない。docs/extensions.md） ----
+unknown-var  packages/ui/src/styles/tokens.css  -rgb  # 前の r, g, b の5つ。@home-dashboard/ui/wallpaper が書き、tint・shade はここから作る
+unknown-var  packages/ui/src/wallpaperTheme.ts  # 前の名前を書き続ける
+
+# ---- Tailwind のテーマ ----
+# kasane の tailwind.css は読まず、同じ名前をこの画面のテーマに書いている（余白の刻みは 4px のまま、意味の違う3つのクラスを前の意味で残すため）
+override  packages/ui/src/tailwind-theme.css
+color-literal  packages/ui/src/tailwind-theme.css  --color-  # white・black（拡張機能の前のクラス bg-white/10 など）
+breakpoint  packages/ui/src/tailwind-theme.css  1500px  # triple:（メールの3つ並び）。この画面だけの区切り
+corner-shape  packages/ui/src/tailwind-theme.css  # rounded-k-inner（kasane の rounded-inner と同じ式。corner-shape は kasane の層が付ける）
+
+# ---- この画面だけの値 ----
+font-literal  packages/ui/src/styles/tokens.css  clamp(  # :root の字の大きさを画面の幅で伸び縮み（壁掛け・スマホ）
+color-literal  packages/ui/src/styles/tokens.css  --home-dashboard-ok  # 正常の印（状態の丸）。kasane の --success（淡い字）とは分けている
+color-literal  apps/web/index.html  #071226  # <meta name="theme-color">（CSS の変数を読めない）
+color-literal  packages/ui/src/styles/base.css  #000  # 夜の表示の暗幕は黒
+motion-literal  packages/ui/src/styles/base.css  1.2s  # 夜の表示に入る・出るときの、ゆっくりした暗幕
+easing-literal  packages/ui/src/styles/base.css  1.2s ease
+opacity-literal  packages/ui/src/styles/base.css  # react-grid-layout の CSS を上書きする値
+corner-shape  packages/ui/src/styles/base.css  # 並べ替えの置き場所（react-grid-layout）。ウィジェットのカードと同じ角丸
+
+# 出てくる・消える動き（animate-enter・animate-fade など）。時間は kasane の --motion-* で、動きを減らす設定では 0 になる（tailwind-theme.css）
+motion-literal  *  animate-
+# 1行の数値・名前（時計・アイコンの横の名前）は行間 1（leading-none）
+font-literal  *  leading-none
+# 薄くして奥にあることを見せるもの（使えないときの薄さは --disabled-opacity）
+opacity-literal  packages/ui/src/PillMenu.tsx  opacity-75
+opacity-literal  packages/ui/src/ui.tsx  opacity-
+border-literal  apps/web/src/components/WidgetHost.tsx  border-2  # 編集中のウィジェットの破線の枠
+
+# 部品の引数（部品の中だけの変数。拡張機能も style で書く: --progress-color・--slider-*・--tile-* など）
+unknown-var  packages/ui/src/ui.tsx  --progress-color
+unknown-var  packages/ui/src/ui.tsx  --slider-
+tw-arbitrary  packages/ui/src/ui.tsx  bg-[var(--
+unknown-var  packages/ui/src/Icon.tsx  --fluent-icon
+unknown-var  apps/web/src/components/MainInfo.tsx  --clock-
+unknown-var  apps/web/src/components/MainInfo.tsx  --meta-size
+unknown-var  apps/web/src/components/WallpaperSettings.tsx  --preview-aspect
+tw-arbitrary  packages/ui/src/ScreenFrame.tsx  --home-dashboard-screen-header-space
+
+# ---- 画面ごとの @utility・@keyframes（packages/ui/src/theme/。拡張機能もクラスで使う） ----
+# 拡張機能に渡す引数（--u・--tile-color・--sticky-paper・--stagger-* など）と、絵の部品（付箋・家電のタイル・音声の球・時計）の固有の値
+unknown-var  packages/ui/src/theme/*
+color-literal  packages/ui/src/theme/home-assistant.css  # 家電のタイルの状態の色（照明の色温度・電池の段）
+color-literal  packages/ui/src/theme/small.css  # 付箋の紙と字の色
+color-literal  packages/ui/src/theme/ui.css  # アバターの色（名前から決める色相）・吹き出し
+font-literal  packages/ui/src/theme/home-assistant.css  # 家電のタイルの数値（タイルの大きさで伸び縮み）
+radius-literal  packages/ui/src/theme/*
+shadow-literal  packages/ui/src/theme/*
+space-literal  packages/ui/src/theme/*  # 影が切れないように取る余白・時計の置き場所など、決まった寸法
+motion-literal  packages/ui/src/theme/*  # 付箋・音声の球の、長い・繰り返す動き（動きを減らす設定では止める）
+easing-literal  packages/ui/src/theme/*
+easing-linear  packages/ui/src/theme/*  # 回り続ける印・インクの流れ
+opacity-literal  packages/ui/src/theme/*
+border-literal  packages/ui/src/theme/*  # 音声の球の輪・吹き出しの縁
+corner-shape  packages/ui/src/theme/*

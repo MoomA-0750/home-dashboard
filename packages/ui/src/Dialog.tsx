@@ -62,7 +62,7 @@ export function Dialog({
     >
       <div
         className={cx(
-          "raised relative max-h-dialog w-full animate-pop overflow-y-auto rounded-card p-(--card-padding) in-[.is-closing]:animate-pop-out",
+          "raised relative max-h-dialog w-full animate-pop overflow-y-auto rounded-card p-(--home-dashboard-card-padding) in-[.is-closing]:animate-pop-out",
           { md: "max-w-dialog", wide: "max-w-dialog-wide", fit: "w-fit min-w-dialog max-w-full phone:min-w-0" }[size],
           className,
         )}
@@ -73,7 +73,7 @@ export function Dialog({
       >
         {title !== undefined ? (
           <div className="mb-4 flex items-center justify-between gap-2">
-            <h2 className="text-heading font-semibold">{title}</h2>
+            <h2 className="text-heading font-strong">{title}</h2>
             {dismissible && <IconButton icon="dismiss" label={t("close")} onClick={close} />}
           </div>
         ) : (

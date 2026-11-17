@@ -63,6 +63,7 @@ function writeCompatColors(root: HTMLElement, colors: DashboardColors): void {
 
 function writeCompatShading(root: HTMLElement, dims: number[], halo: number): void {
   dims.forEach((dim, index) => root.style.setProperty(`--wallpaper-dim-${index + 1}`, String(dim)));
+  root.style.setProperty("--home-dashboard-text-halo-strength", String(halo));
   root.style.setProperty("--text-halo-strength", String(halo));
 }
 

@@ -4,7 +4,7 @@
 
 /* 壁掛けの横長で背の低い画面で、Media の中身を画面の高さに収める（見出しと余白の分を引く） */
 @utility media-wall-height {
-  height: calc(100svh - var(--screen-header-space, 110px));
+  height: calc(100svh - var(--home-dashboard-screen-header-space, 110px));
 }
 
 /* Media のタブの入れ物。中身が少なくても、画面の高さの7割は取る */

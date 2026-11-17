@@ -31,13 +31,13 @@
 
 /* 小窓の後ろの下敷き（暗さとぼかし。軽い表示では濃く、ぼかさない） */
 @utility scrim {
-  background: var(--modal-backdrop);
-  backdrop-filter: var(--modal-backdrop-blur);
+  background: var(--backdrop);
+  backdrop-filter: var(--home-dashboard-modal-backdrop-blur);
 }
 
 /* メニューの中の項目の角丸（メニューの角丸 ＝ 項目の角丸 ＋ メニューの余白 6px） */
 @utility rounded-nested {
-  border-radius: calc(var(--inner-radius) - 6px);
+  border-radius: calc(var(--home-dashboard-inner-radius) - 6px);
 }
 
 /*
@@ -112,11 +112,11 @@
   :where(&) :where(input:not([type="checkbox"], [type="radio"], [type="file"], [type="range"]), select, textarea) {
     width: 100%;
     min-height: 44px;
-    padding: 0 var(--field-padding-x);
-    border: 1px solid var(--glass-border);
-    border-radius: var(--inner-radius);
-    background: var(--surface-input);
-    color: var(--text-primary);
+    padding: 0 var(--home-dashboard-field-padding-x);
+    border: var(--border-width) solid var(--line);
+    border-radius: var(--home-dashboard-inner-radius);
+    background: var(--input);
+    color: var(--fg);
     font: inherit;
     font-size: var(--font-small);
     text-shadow: none;
@@ -125,23 +125,23 @@
     padding-block: 0.6rem;
   }
   :where(&) :where(input, textarea)::placeholder {
-    color: var(--text-secondary);
+    color: var(--muted);
   }
   :where(&) :where(option) {
-    background: var(--surface-raised);
+    background: var(--raised);
   }
 }
 
 /* チャットの吹き出し。自分のものは、見分けやすいようガラスに薄い水色を重ね、右下の角を尖らせる */
 @utility bubble-mine {
-  border: 1px solid color-mix(in srgb, var(--link) 35%, transparent);
+  border: var(--border-width) solid color-mix(in srgb, var(--link) 35%, transparent);
   border-bottom-right-radius: 0.3rem;
   background:
-    var(--widget-sheen),
-    linear-gradient(0deg, rgba(var(--accent-rgb), 0.2), rgba(var(--accent-rgb), 0.3));
+    var(--surface-image),
+    linear-gradient(0deg, color-mix(in srgb, var(--accent) 20%, transparent), color-mix(in srgb, var(--accent) 30%, transparent));
   background-clip: padding-box;
-  box-shadow: var(--widget-shadow);
-  backdrop-filter: var(--widget-blur);
+  box-shadow: var(--shadow-card);
+  backdrop-filter: var(--surface-filter);
 }
 @utility bubble-theirs {
   border-bottom-left-radius: 0.3rem;

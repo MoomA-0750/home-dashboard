@@ -19,7 +19,7 @@ import { ErrorBoundary } from "./ErrorBoundary";
 
 /** 編集の操作（設定・上へ・下へ）は、カードの上で目立つ明るい塗りの丸。外すものは危ない色 */
 const EDIT_BUTTON = "fill-bright no-blur";
-const REMOVE_BUTTON = "fill-bright no-blur bg-danger-strong text-on-danger";
+const REMOVE_BUTTON = "fill-bright no-blur bg-danger-fill text-on-danger";
 import { Icon } from "./Icon";
 
 const messages = defineMessages({

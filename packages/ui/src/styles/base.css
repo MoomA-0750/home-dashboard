@@ -18,9 +18,9 @@ body {
   /* kasane のテーマは本文の字を --font-body・行間 relaxed にするが、この画面は <html> の字の大きさ（画面の幅で伸び縮み）のまま */
   font-size: inherit;
   line-height: inherit;
-  color: var(--text);
-  background: #071226;
-  font-family: Murecho, "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
+  color: var(--fg);
+  background: var(--bg);
+  font-family: var(--family-sans);
   overflow: hidden;
 }
 
@@ -37,7 +37,7 @@ button {
 }
 
 .is-scrolling {
-  scrollbar-color: rgba(204, 237, 255, 0.65) transparent;
+  scrollbar-color: color-mix(in srgb, var(--home-dashboard-tint) 65%, transparent) transparent;
 }
 
 /* フォント由来の上下余白を取り除き、設計図どおりのベースライン整列にする */
@@ -50,14 +50,14 @@ button {
 /*
  * 画面全体の枠（@home-dashboard/ui/shell の AppShell）の壁紙と、文字の後ろの暗さは kasane の .k-wallpaper
  * （kasane/dashboard/wallpaper.css。値は @home-dashboard/ui/wallpaper の startWallpaper が壁紙を測って書く）。
- * 夜の表示（本体の lib/useNight.ts が <html data-night> と --night-darkness を付ける）では、.k-wallpaper が壁紙をほぼ黒まで沈め、
+ * 夜の表示（本体の lib/useNight.ts が <html data-night> と --home-dashboard-night-darkness を付ける）では、.k-wallpaper が壁紙をほぼ黒まで沈め、
  * ここでは画面全体（文字・ウィジェット・音声アシスタントも）に暗幕を重ねる。暗幕は押す操作を下へ通すので、暗いまま普段どおり触れる
  */
 body::after {
   content: "";
   position: fixed;
   inset: 0;
-  z-index: var(--z-night);
+  z-index: var(--home-dashboard-z-night);
   pointer-events: none;
   background: #000;
   opacity: 0;
@@ -65,7 +65,7 @@ body::after {
 }
 
 [data-night] body::after {
-  opacity: var(--night-darkness, 0.75);
+  opacity: var(--home-dashboard-night-darkness, 0.75);
 }
 
 /* サイドバーの幅を変えている間（Shell の SidebarHandle が body に data-resizing を付ける） */
@@ -80,8 +80,8 @@ body[data-resizing] {
  * react-grid-layout の CSS は層の外（main.tsx）で読むので、!important で上書きする
  */
 .react-grid-item.react-grid-placeholder {
-  border-radius: var(--card-radius);
-  background: rgba(var(--tint-rgb), 0.18) !important;
+  border-radius: var(--home-dashboard-card-radius);
+  background: color-mix(in srgb, var(--home-dashboard-tint) 18%, transparent) !important;
   opacity: 1 !important;
 }
 

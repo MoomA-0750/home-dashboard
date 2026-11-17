@@ -58,7 +58,7 @@ export function Avatar({
 }) {
   const [failed, setFailed] = useState<string | null>(null);
   const className = cx(
-    "inline-grid flex-none place-items-center rounded-full bg-white/8 object-cover ring-1 ring-glass-border",
+    "inline-grid flex-none place-items-center rounded-full bg-fg/8 object-cover ring-1 ring-line",
     AVATAR_SIZES[size],
   );
   if (src && failed !== src) {
@@ -146,7 +146,7 @@ export function ChatHeader({
       <IconButton icon="history" label={t("conversationList")} glass className="hidden narrow:grid" onClick={onOpenList} />
       <div className="min-w-0 flex-1">
         {/* 1行に収め、入りきらなければ … で切る（文字の影が切れないよう余白を取る） */}
-        <h2 className="halo-room ellipsis text-title font-semibold">{title}</h2>
+        <h2 className="halo-room ellipsis text-title font-strong">{title}</h2>
         {status && (
           <p className="mt-1.5 flex items-center gap-2 text-note text-muted">
             <StatusDot ok={ok} />
@@ -200,7 +200,7 @@ export function ChatBubble({ mine, children }: { mine?: boolean; children: React
   return (
     <div
       className={cx(
-        "max-w-17/20 rounded-md px-3.5 py-2.5 text-body leading-normal whitespace-pre-line text-text text-shadow-none wrap-anywhere untrim",
+        "max-w-17/20 rounded-md px-3.5 py-2.5 text-body leading-normal whitespace-pre-line text-fg text-shadow-none wrap-anywhere untrim",
         mine ? "bubble-mine self-end" : "glass bubble-theirs",
       )}
     >
@@ -229,7 +229,7 @@ export function ChatAttachments({ mine, children }: { mine?: boolean; children: 
 export function ChatImage({ src, alt }: { src: string; alt: string }) {
   return (
     <a
-      className="block max-w-80 overflow-hidden rounded-md border border-glass-border"
+      className="block max-w-80 overflow-hidden rounded-md border border-line"
       href={src}
       target="_blank"
       rel="noreferrer"
@@ -242,7 +242,7 @@ export function ChatImage({ src, alt }: { src: string; alt: string }) {
 /** やり取りに添えた、画像でないファイル。href があれば押して開く・保存する */
 export function ChatFile({ name, href, icon = "attach" }: { name: string; href?: string; icon?: IconName }) {
   const className =
-    "inline-flex max-w-full items-center gap-1.5 rounded-full border border-glass-border px-3 py-1.5 text-note text-muted no-underline [&_.fluent-icon]:size-rem-4";
+    "inline-flex max-w-full items-center gap-1.5 rounded-full border border-line px-3 py-1.5 text-note text-muted no-underline [&_.fluent-icon]:size-rem-4";
   const body = (
     <>
       <Icon name={icon} />
@@ -358,7 +358,7 @@ export function ChatComposer({
   };
   // 欄の中の右端の丸いボタン（明るい塗り）
   const sendClass =
-    "press absolute right-1.5 grid size-8.5 cursor-pointer place-items-center rounded-full fill-bright text-on-fill disabled:cursor-default disabled:opacity-50 [&_.fluent-icon]:size-5";
+    "press absolute right-1.5 grid size-8.5 cursor-pointer place-items-center rounded-full fill-bright text-on-fill disabled:cursor-default disabled:opacity-(--disabled-opacity) [&_.fluent-icon]:size-5";
   return (
     <div className="flex flex-col gap-2.5 border-t border-line pt-3 *:m-0">
       {above}
@@ -370,7 +370,7 @@ export function ChatComposer({
             ref={inputRef}
             type="text"
             className={cx(
-              "tap-lg min-w-0 flex-1 rounded-full border border-glass-border bg-input px-4.5 text-small text-text text-shadow-none placeholder:text-muted disabled:opacity-60",
+              "tap-lg min-w-0 flex-1 rounded-full border border-line bg-input px-4.5 text-small text-fg text-shadow-none placeholder:text-muted disabled:opacity-(--disabled-opacity)",
               (stop || showSend) && "pr-12",
             )}
             value={value}

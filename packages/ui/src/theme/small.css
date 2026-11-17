@@ -7,7 +7,7 @@
   border-radius: 0.2rem 0.2rem 0.6rem 0.2rem;
   background: var(--sticky-paper, #fde68a);
   color: #2b2410;
-  box-shadow: 0 0.3rem 0.8rem rgba(var(--shade-rgb), 0.35);
+  box-shadow: 0 0.3rem 0.8rem color-mix(in srgb, var(--home-dashboard-shade) 35%, transparent);
   &::before {
     content: "";
     position: absolute;

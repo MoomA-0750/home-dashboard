@@ -357,7 +357,7 @@ function ExtensionDetail({
       <BackButton label={t("extensions")} onClick={onBack} />
       <List boxed label={ext.name}>
         <ListItem
-          title={<span className="text-title font-semibold">{ext.name}</span>}
+          title={<span className="text-title font-strong">{ext.name}</span>}
           detail={`${ext.version} · ${originText(ext, t)}`}
           trailing={
             <ToggleSwitch

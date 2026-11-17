@@ -105,7 +105,7 @@ export function NightSettings({ apiBaseUrl, night, isAdmin, onChange }: NightSet
     <section className={STACK}>
       <Note>{t("note")}</Note>
       <SectionTitle>{t("now")}</SectionTitle>
-      <p className={night?.active ? "inline-flex items-center gap-2 font-semibold text-accent" : "inline-flex items-center gap-2 font-semibold text-muted"}>
+      <p className={night?.active ? "inline-flex items-center gap-2 font-strong text-accent" : "inline-flex items-center gap-2 font-strong text-muted"}>
         <Icon name="weather-moon" />
         <span>{night?.active ? t("activeNow") : t("inactiveNow")}</span>
       </p>

@@ -46,14 +46,14 @@ interface ButtonOwnProps {
 export function buttonClass(variant: ButtonVariant = "default", size: ButtonSize = "md") {
   return cx(
     "press inline-flex items-center justify-center gap-2 rounded-full px-4 font-normal leading-none whitespace-nowrap text-shadow-none no-underline cursor-pointer",
-    "disabled:cursor-default disabled:opacity-50",
+    "disabled:cursor-default disabled:opacity-(--disabled-opacity)",
     size === "lg" ? "tap-xl px-6 text-body" : "tap text-label",
     // ガラス（glass）は地と縁をまとめて決め、bg-*・border-* より後に効くので、塗りのボタンには付けない
     variant === "primary"
       ? "fill-bright text-on-fill"
       : variant === "danger"
-        ? "border border-transparent bg-danger-strong text-on-danger"
-        : "glass text-text hover:border-tint/30",
+        ? "border border-transparent bg-danger-fill text-on-danger"
+        : "glass text-fg hover:border-tint/30",
   );
 }
 
@@ -98,11 +98,11 @@ export function IconButton({
     <button
       type={type}
       className={cx(
-        "press grid shrink-0 cursor-pointer place-items-center rounded-full p-0 text-text disabled:cursor-default disabled:opacity-40",
+        "press grid shrink-0 cursor-pointer place-items-center rounded-full p-0 text-fg disabled:cursor-default disabled:opacity-(--disabled-opacity)",
         size === "lg" ? "size-13" : "size-11",
         glassy
           ? "glass text-shadow-none hover:border-tint/30"
-          : cx("border-0 bg-transparent", !selected && "hover:bg-white/10 focus-visible:bg-white/10"),
+          : cx("border-0 bg-transparent", !selected && "hover:bg-fg/10 focus-visible:bg-fg/10"),
         selected && "fill-bright no-blur text-on-fill",
         className,
       )}
@@ -130,8 +130,8 @@ export function Chip({
       type={type}
       aria-pressed={selected}
       className={cx(
-        "glass press tap inline-flex cursor-pointer items-center gap-1.5 rounded-full px-4 text-small text-text text-shadow-none",
-        "hover:border-tint/30 disabled:cursor-default disabled:opacity-40 [&_.fluent-icon]:size-4.5",
+        "glass press tap inline-flex cursor-pointer items-center gap-1.5 rounded-full px-4 text-small text-fg text-shadow-none",
+        "hover:border-tint/30 disabled:cursor-default disabled:opacity-(--disabled-opacity) [&_.fluent-icon]:size-4.5",
         selected && "fill-bright no-blur text-on-fill",
         className,
       )}
@@ -158,7 +158,7 @@ export function ProgressBar({ value, label, className }: { value: number; label?
     >
       {/* 幅は変えず、左へずらして量を出す（動かすのは transform だけ。右の端の丸みも崩れない） */}
       <span
-        className="block h-full w-full rounded-full bg-[var(--progress-color,var(--accent-ok))] transition-transform duration-(--motion-slow) ease-standard"
+        className="block h-full w-full rounded-full bg-[var(--progress-color,var(--home-dashboard-ok))] transition-transform duration-(--motion-slow) ease-standard"
         style={{ translate: `${percent - 100}% 0` }}
       />
     </span>
@@ -312,19 +312,19 @@ export function ListItem({
           list.boxed
             ? cx(
                 // 入れ物の中の行の余白は、字と一緒に伸び縮みする段（--group-*。rem）
-                "px-(--group-padding) py-(--group-row-padding)",
+                "px-(--home-dashboard-group-padding) py-(--home-dashboard-group-row-padding)",
                 onClick && "press-wide cursor-pointer hover:bg-tint/6 focus-visible:bg-tint/6 focus-visible:outline-none",
                 selected && "bg-tint/6",
               )
             : cx(
                 // 左のアイコンの丸と角丸をそろえるため、左と上下の余白を同じにする
                 "rounded-md border border-transparent",
-                list.nav ? "p-(--nav-item-padding)" : "p-(--list-item-padding) pr-(--field-padding-x)",
+                list.nav ? "p-(--home-dashboard-nav-item-padding)" : "p-(--home-dashboard-list-item-padding) pr-(--home-dashboard-field-padding-x)",
                 onClick && "press-wide cursor-pointer",
                 selected
                   ? "glass text-shadow-none"
                   : onClick &&
-                      "hover:border-glass-border hover:bg-white/8 focus-visible:border-glass-border focus-visible:bg-white/8 focus-visible:outline-none",
+                      "hover:border-line hover:bg-fg/8 focus-visible:border-line focus-visible:bg-fg/8 focus-visible:outline-none",
               ),
         )}
         aria-current={selected ? "true" : undefined}
@@ -377,7 +377,7 @@ export function ListIcon({ icon, className }: { icon: IconName; className?: stri
 
 /** Field の外に置く入力欄・選ぶ欄のクラス（Field の中と同じ見た目）。<input className={inputClass}> */
 export const inputClass =
-  "tap-lg w-full min-w-0 rounded-md border border-glass-border bg-input px-(--field-padding-x) text-small text-text text-shadow-none placeholder:text-muted [&_option]:bg-raised";
+  "tap-lg w-full min-w-0 rounded-md border border-line bg-input px-(--home-dashboard-field-padding-x) text-small text-fg text-shadow-none placeholder:text-muted [&_option]:bg-raised";
 
 /** 入力欄・選ぶ欄に名前と説明を付ける。children に <input>・<select>・<textarea> を1つ置く（見た目は Field が付ける） */
 export function Field({
@@ -422,7 +422,7 @@ export function Check({
 
 /** 区画の見出し */
 export function SectionTitle({ children }: { children: ReactNode }) {
-  return <h4 className="mt-6 mb-2.5 text-label font-semibold text-muted first:mt-0">{children}</h4>;
+  return <h4 className="mt-6 mb-2.5 text-label font-strong text-muted first:mt-0">{children}</h4>;
 }
 
 /** 説明の文 */
@@ -433,7 +433,7 @@ export function Note({ children }: { children: ReactNode }) {
 /** 目立たせる知らせ（気をつけてほしいこと） */
 export function Notice({ children }: { children: ReactNode }) {
   return (
-    <p className="mb-2.5 animate-fade rounded-md bg-warn/12 px-3.5 py-2.5 text-note leading-normal text-text untrim">
+    <p className="mb-2.5 animate-fade rounded-md bg-warn/12 px-3.5 py-2.5 text-note leading-normal text-fg untrim">
       {children}
     </p>
   );
@@ -454,7 +454,7 @@ export function Message({ tone = "ok", children }: { tone?: "ok" | "error"; chil
 const BADGE_TONES = {
   on: "border-transparent bg-success text-on-fill",
   warn: "border-transparent bg-warn/18 text-warn",
-  dim: "border-transparent bg-white/6",
+  dim: "border-transparent bg-fg/6",
 } as const;
 
 /** 小さな印（件数・状態）。tone: on（入っている・設定済み）／warn（気を付ける・変更あり）／dim（控えめ） */
@@ -463,7 +463,7 @@ export function Badge({ on, tone, children }: { on?: boolean; tone?: "on" | "war
   return (
     <span
       className={cx(
-        "inline-block rounded-full border border-glass-border px-2 py-0.5 text-micro whitespace-nowrap text-muted tabular-nums",
+        "inline-block rounded-full border border-line px-2 py-0.5 text-micro whitespace-nowrap text-muted tabular-nums",
         kind && BADGE_TONES[kind],
       )}
     >
@@ -494,7 +494,7 @@ export function BackButton({ label, onClick }: { label: string; onClick: () => v
 /** そのまま写して使う文字（コマンド・鍵など）。押すと全体を選ぶ */
 export function CodeBlock({ children }: { children: string }) {
   return (
-    <code className="block max-h-28 w-full overflow-auto rounded-md border border-glass-border bg-input px-3.5 py-2.5 text-caption break-all select-all">
+    <code className="block max-h-28 w-full overflow-auto rounded-md border border-line bg-input px-3.5 py-2.5 text-caption break-all select-all">
       {children}
     </code>
   );
@@ -520,7 +520,7 @@ export function WidgetCard({
   children: ReactNode;
 }) {
   const classes = cx(
-    "glass relative flex size-full flex-col items-start justify-center gap-1 overflow-hidden rounded-card p-(--card-padding) text-left text-text text-shadow-none",
+    "glass relative flex size-full flex-col items-start justify-center gap-1 overflow-hidden rounded-card p-(--home-dashboard-card-padding) text-left text-fg text-shadow-none",
     "[&_:is(h1,h2)]:text-card [&_:is(h1,h2)]:font-bold",
     onClick && "press-wide cursor-pointer",
     className,
@@ -547,7 +547,7 @@ export function WidgetHint({ tone, children }: { tone?: "error"; children: React
 export function DetailFrame({ title, className, children }: { title?: string; className?: string; children: ReactNode }) {
   return (
     <div className={className}>
-      {title && <h2 className="mb-4 text-heading font-semibold">{title}</h2>}
+      {title && <h2 className="mb-4 text-heading font-strong">{title}</h2>}
       {children}
     </div>
   );
@@ -557,7 +557,7 @@ export function DetailFrame({ title, className, children }: { title?: string; cl
 export function ScreenSection({ title, className, children }: { title?: string; className?: string; children: ReactNode }) {
   return (
     <section className={cx("mb-10 wall:mb-6", className)}>
-      {title && <h2 className="mb-4 text-small font-semibold text-muted">{title}</h2>}
+      {title && <h2 className="mb-4 text-small font-strong text-muted">{title}</h2>}
       {children}
     </section>
   );
@@ -611,7 +611,7 @@ export function NarrowOnly({ children }: { children: ReactNode }) {
 const STAT_TONES = {
   // 縁の色（glass は components の層にあるので、border-* がいつも勝つ）
   warm: { tile: "border-warn/45", value: "text-warn" },
-  hot: { tile: "border-danger-strong/55", value: "text-danger-strong" },
+  hot: { tile: "border-danger-fill/55", value: "text-danger-fill" },
 } as const;
 
 /**
@@ -653,7 +653,7 @@ export function StatTile({
         <Icon name={icon} />
         {label}
       </span>
-      <span className={cx("text-stat font-semibold leading-none", tone ? STAT_TONES[tone].value : "text-text")}>
+      <span className={cx("text-stat font-strong leading-none", tone ? STAT_TONES[tone].value : "text-fg")}>
         {value}
         {unit && <small className="ml-1 text-unit font-normal">{unit}</small>}
       </span>
@@ -662,7 +662,7 @@ export function StatTile({
     </>
   );
   const classes = cx(
-    "flex min-w-0 flex-col gap-2.5 text-left leading-tight text-text tabular-nums",
+    "flex min-w-0 flex-col gap-2.5 text-left leading-tight text-fg tabular-nums",
     bare ? "halo gap-1 border-0 bg-transparent p-0 py-1.5" : "glass rounded-card px-6 py-5 text-shadow-none",
     !bare && tone && STAT_TONES[tone].tile,
     onClick && "press cursor-pointer",
@@ -687,7 +687,7 @@ export function StatGrid({ children }: { children: ReactNode }) {
 export function ScreenNotice({ tone, children }: { tone?: "error"; children: ReactNode }) {
   if (tone === "error")
     return (
-      <p className="mb-5 animate-fade rounded-md bg-danger-strong/16 px-4 py-3 leading-normal text-danger untrim" role="alert">
+      <p className="mb-5 animate-fade rounded-md bg-danger-fill/16 px-4 py-3 leading-normal text-danger untrim" role="alert">
         {children}
       </p>
     );
@@ -757,7 +757,7 @@ export function Slider({
       ref={barRef}
       className={cx(
         "relative flex h-7 touch-none items-center rounded-full select-none",
-        "focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-focus",
+        "focus-visible:outline-(length:--focus-width) focus-visible:outline-offset-4 focus-visible:outline-focus",
         usable ? "cursor-pointer" : "cursor-default",
         className,
       )}
@@ -807,12 +807,12 @@ export function Slider({
       }}
     >
       <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--slider-track,var(--line))]">
-        <span className="block h-full rounded-full bg-[var(--slider-color,var(--text-primary))]" style={{ width: `${ratio * 100}%` }} />
+        <span className="block h-full rounded-full bg-[var(--slider-color,var(--fg))]" style={{ width: `${ratio * 100}%` }} />
       </div>
       {/* つまみ。触れている間・キーボードで選んでいる間は大きくする */}
       {usable && (
         <span
-          className="knob-shadow absolute top-1/2 size-3.5 -translate-1/2 rounded-full bg-[var(--slider-color,var(--text-primary))] transition-transform duration-(--motion-fast) ease-standard [:focus-visible>&]:scale-143 [:active>&]:scale-143"
+          className="knob-shadow absolute top-1/2 size-3.5 -translate-1/2 rounded-full bg-[var(--slider-color,var(--fg))] transition-transform duration-(--motion-fast) ease-standard [:focus-visible>&]:scale-143 [:active>&]:scale-143"
           style={{ left: `${ratio * 100}%` }}
         />
       )}

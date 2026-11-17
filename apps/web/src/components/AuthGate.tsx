@@ -223,7 +223,7 @@ function SignInForm({ apiBaseUrl, setup, onSignedIn }: { apiBaseUrl: string; set
   return (
     <div className={SCREEN}>
       <form className="raised flex w-104 max-w-full flex-col gap-4 rounded-card p-8 phone:p-5" onSubmit={submit}>
-        <h1 className="text-heading font-semibold">{setup ? t("setupTitle") : t("signIn")}</h1>
+        <h1 className="text-heading font-strong">{setup ? t("setupTitle") : t("signIn")}</h1>
         {linked !== null && !setup && (
           <div role="status">
             <Notice>
@@ -298,7 +298,7 @@ function SignInForm({ apiBaseUrl, setup, onSignedIn }: { apiBaseUrl: string; set
           <>
             {/* 「または」の両脇に線を引く */}
             <p
-              className="flex items-center gap-3 text-note text-muted before:flex-1 before:border-t before:border-glass-border after:flex-1 after:border-t after:border-glass-border"
+              className="flex items-center gap-3 text-note text-muted before:flex-1 before:border-t before:border-line after:flex-1 after:border-t after:border-line"
               aria-hidden="true"
             >
               {t("or")}

@@ -168,7 +168,7 @@ export function VoiceOverlay({ snapshot, avatarUrl, avatarRig, socket, onCancel 
           <VoiceOrb state={state} />
         )}
         <div className="voice-body flex min-w-0 flex-col gap-4.5">
-          <p className="text-voice-accent text-title font-semibold">{status}</p>
+          <p className="text-voice-accent text-title font-strong">{status}</p>
           {prompt && <p className="text-heading leading-normal text-muted untrim">{prompt}</p>}
           {state === "error" && snapshot.error && <p className="text-title text-muted">{snapshot.error}</p>}
           {/* 返答の途中の文は改行から始まることがあるので、前後の改行を落として出す（上に余白が出ないように） */}

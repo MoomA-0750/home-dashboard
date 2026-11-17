@@ -42,19 +42,19 @@
   }
   & .leaflet-control-attribution {
     background: rgba(5, 14, 30, 0.7);
-    color: var(--text-secondary);
+    color: var(--muted);
     font-size: var(--font-micro);
   }
   & .leaflet-control-attribution a {
-    color: var(--text-primary);
+    color: var(--fg);
   }
   & .leaflet-bar a {
     border-color: rgba(255, 255, 255, 0.12);
-    background: var(--surface-raised);
-    color: var(--text-primary);
+    background: var(--raised);
+    color: var(--fg);
   }
   & .leaflet-bar a:hover {
-    background: var(--surface-input);
+    background: var(--input);
   }
 }
 

@@ -94,7 +94,7 @@ function GuardCard({ apiBaseUrl, request, others }: { apiBaseUrl: string; reques
       role="alertdialog"
       className="fields flex flex-col gap-3"
     >
-      <p className="text-title leading-normal font-semibold wrap-anywhere untrim">{request.description}</p>
+      <p className="text-title leading-normal font-strong wrap-anywhere untrim">{request.description}</p>
       <Note>{t(approve ? "approveNote" : "confirmNote")}</Note>
       {approve && password !== null ? (
         <form className="flex flex-col gap-3" onSubmit={submitPassword}>

@@ -28,7 +28,7 @@ export function VoiceLauncher({ snapshot, personas, onListen }: VoiceLauncherPro
     <Button
       size="lg"
       icon="mic"
-      className="fixed bottom-8 left-11 layer-launcher ml-(--sidebar-width) font-normal tablet:top-4 tablet:right-4 tablet:bottom-auto tablet:left-auto tablet:ml-0"
+      className="fixed bottom-8 left-11 layer-launcher ml-(--home-dashboard-sidebar-width) font-normal tablet:top-4 tablet:right-4 tablet:bottom-auto tablet:left-auto tablet:ml-0"
       onClick={onListen}
       aria-label={persona ? t("talkTo", { name: persona.name }) : t("talkToAssistant")}
     >
