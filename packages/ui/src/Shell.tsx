@@ -108,7 +108,7 @@ export function SidebarHandle({ width, onResize }: { width: number; onResize: (w
     <div
       className={cx(
         "layer-handle relative flex cursor-col-resize touch-none items-center justify-center bg-transparent p-0 outline-0 phone:hidden",
-        "*:change *:bg-tint/60 hover:*:bg-tint hover:*:ring-4 hover:*:ring-accent-soft/20 focus-visible:*:bg-tint focus-visible:*:ring-4 focus-visible:*:ring-accent-soft/20",
+        "*:change *:bg-tint/60 hover:*:bg-tint hover:*:ring-4 hover:*:ring-focus/20 focus-visible:*:bg-tint focus-visible:*:ring-4 focus-visible:*:ring-focus/20",
       )}
       role="separator"
       aria-label={t("sidebarWidth")}

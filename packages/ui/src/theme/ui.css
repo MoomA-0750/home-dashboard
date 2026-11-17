@@ -134,7 +134,7 @@
 
 /* チャットの吹き出し。自分のものは、見分けやすいようガラスに薄い水色を重ね、右下の角を尖らせる */
 @utility bubble-mine {
-  border: 1px solid rgba(var(--accent-soft-rgb), 0.35);
+  border: 1px solid color-mix(in srgb, var(--link) 35%, transparent);
   border-bottom-right-radius: 0.3rem;
   background:
     var(--widget-sheen),

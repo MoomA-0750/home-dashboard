@@ -267,7 +267,7 @@ export function ExtensionSettings({ apiBaseUrl, extensions, isAdmin, link }: Ext
       {isAdmin && updateCount > 0 && (
         <Notice>
           {t("updatesNotice", { n: updateCount })}
-          <button type="button" className="ml-2 cursor-pointer text-accent-soft" onClick={() => setSourcesOpen(true)}>
+          <button type="button" className="ml-2 cursor-pointer text-link" onClick={() => setSourcesOpen(true)}>
             {t("view")}
           </button>
         </Notice>

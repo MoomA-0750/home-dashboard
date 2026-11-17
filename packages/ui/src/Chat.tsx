@@ -200,7 +200,7 @@ export function ChatBubble({ mine, children }: { mine?: boolean; children: React
   return (
     <div
       className={cx(
-        "max-w-17/20 rounded-inner px-3.5 py-2.5 text-body leading-normal whitespace-pre-line text-text text-shadow-none wrap-anywhere untrim",
+        "max-w-17/20 rounded-md px-3.5 py-2.5 text-body leading-normal whitespace-pre-line text-text text-shadow-none wrap-anywhere untrim",
         mine ? "bubble-mine self-end" : "glass bubble-theirs",
       )}
     >
@@ -229,7 +229,7 @@ export function ChatAttachments({ mine, children }: { mine?: boolean; children: 
 export function ChatImage({ src, alt }: { src: string; alt: string }) {
   return (
     <a
-      className="block max-w-80 overflow-hidden rounded-inner border border-glass-border"
+      className="block max-w-80 overflow-hidden rounded-md border border-glass-border"
       href={src}
       target="_blank"
       rel="noreferrer"

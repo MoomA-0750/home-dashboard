@@ -17,7 +17,7 @@ export function ToggleSwitch({
       aria-checked={checked}
       aria-label={label}
       disabled={disabled}
-      className="switch-track change relative shrink-0 cursor-pointer rounded-full bg-white/18 p-0 aria-checked:bg-ok focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-soft disabled:cursor-default disabled:opacity-50"
+      className="switch-track change relative shrink-0 cursor-pointer rounded-full bg-white/18 p-0 aria-checked:bg-ok focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-default disabled:opacity-50"
       onClick={(event) => {
         event.stopPropagation();
         onChange(!checked);

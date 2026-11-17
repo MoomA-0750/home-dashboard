@@ -208,7 +208,7 @@ export function Group({
 }) {
   if (collapsible && title)
     return (
-      <details className={cx("glass mb-3 rounded-group text-shadow-none", className)} open={open}>
+      <details className={cx("glass mb-3 rounded-k-card text-shadow-none", className)} open={open}>
         <summary className="press-wide tap-lg flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 text-body [&::-webkit-details-marker]:hidden">
           <span>{title}</span>
           {badge}
@@ -216,7 +216,7 @@ export function Group({
         <div className="px-4 pb-4">{children}</div>
       </details>
     );
-  return <section className={cx("glass mb-3 rounded-group p-4 text-shadow-none", className)}>{children}</section>;
+  return <section className={cx("glass mb-3 rounded-k-card p-4 text-shadow-none", className)}>{children}</section>;
 }
 
 /**
@@ -237,7 +237,7 @@ export function List({ children, label, boxed, nav }: { children: ReactNode; lab
       <ul
         className={cx(
           "mb-3 flex list-none flex-col gap-1.5 p-0",
-          boxed && "glass gap-0 divide-y divide-line overflow-hidden rounded-group text-shadow-none",
+          boxed && "glass gap-0 divide-y divide-line overflow-hidden rounded-k-card text-shadow-none",
           nav && "gap-0.5",
         )}
         aria-label={label}
@@ -318,7 +318,7 @@ export function ListItem({
               )
             : cx(
                 // 左のアイコンの丸と角丸をそろえるため、左と上下の余白を同じにする
-                "rounded-inner border border-transparent",
+                "rounded-md border border-transparent",
                 list.nav ? "p-(--nav-item-padding)" : "p-(--list-item-padding) pr-(--field-padding-x)",
                 onClick && "press-wide cursor-pointer",
                 selected
@@ -366,7 +366,7 @@ export function ListIcon({ icon, className }: { icon: IconName; className?: stri
   return (
     <span
       className={cx(
-        "grid size-rem-8 shrink-0 place-items-center rounded-nav bg-accent-soft/18",
+        "grid size-rem-8 shrink-0 place-items-center rounded-nav bg-link/18",
         className,
       )}
     >
@@ -377,7 +377,7 @@ export function ListIcon({ icon, className }: { icon: IconName; className?: stri
 
 /** Field の外に置く入力欄・選ぶ欄のクラス（Field の中と同じ見た目）。<input className={inputClass}> */
 export const inputClass =
-  "tap-lg w-full min-w-0 rounded-inner border border-glass-border bg-input px-(--field-padding-x) text-small text-text text-shadow-none placeholder:text-muted [&_option]:bg-raised";
+  "tap-lg w-full min-w-0 rounded-md border border-glass-border bg-input px-(--field-padding-x) text-small text-text text-shadow-none placeholder:text-muted [&_option]:bg-raised";
 
 /** 入力欄・選ぶ欄に名前と説明を付ける。children に <input>・<select>・<textarea> を1つ置く（見た目は Field が付ける） */
 export function Field({
@@ -433,7 +433,7 @@ export function Note({ children }: { children: ReactNode }) {
 /** 目立たせる知らせ（気をつけてほしいこと） */
 export function Notice({ children }: { children: ReactNode }) {
   return (
-    <p className="mb-2.5 animate-fade rounded-inner bg-warn/12 px-3.5 py-2.5 text-note leading-normal text-text untrim">
+    <p className="mb-2.5 animate-fade rounded-md bg-warn/12 px-3.5 py-2.5 text-note leading-normal text-text untrim">
       {children}
     </p>
   );
@@ -482,7 +482,7 @@ export function BackButton({ label, onClick }: { label: string; onClick: () => v
   return (
     <button
       type="button"
-      className="press -ml-1.5 mb-3 inline-flex cursor-pointer items-center gap-1 rounded-inner py-1.5 pr-2.5 pl-1 text-accent-soft hover:bg-tint/8"
+      className="press -ml-1.5 mb-3 inline-flex cursor-pointer items-center gap-1 rounded-md py-1.5 pr-2.5 pl-1 text-link hover:bg-tint/8"
       onClick={onClick}
     >
       <Icon name="chevron-left" />
@@ -494,7 +494,7 @@ export function BackButton({ label, onClick }: { label: string; onClick: () => v
 /** そのまま写して使う文字（コマンド・鍵など）。押すと全体を選ぶ */
 export function CodeBlock({ children }: { children: string }) {
   return (
-    <code className="block max-h-28 w-full overflow-auto rounded-inner border border-glass-border bg-input px-3.5 py-2.5 text-caption break-all select-all">
+    <code className="block max-h-28 w-full overflow-auto rounded-md border border-glass-border bg-input px-3.5 py-2.5 text-caption break-all select-all">
       {children}
     </code>
   );
@@ -687,7 +687,7 @@ export function StatGrid({ children }: { children: ReactNode }) {
 export function ScreenNotice({ tone, children }: { tone?: "error"; children: ReactNode }) {
   if (tone === "error")
     return (
-      <p className="mb-5 animate-fade rounded-inner bg-danger-strong/16 px-4 py-3 leading-normal text-danger untrim" role="alert">
+      <p className="mb-5 animate-fade rounded-md bg-danger-strong/16 px-4 py-3 leading-normal text-danger untrim" role="alert">
         {children}
       </p>
     );
@@ -757,7 +757,7 @@ export function Slider({
       ref={barRef}
       className={cx(
         "relative flex h-7 touch-none items-center rounded-full select-none",
-        "focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent-soft",
+        "focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-focus",
         usable ? "cursor-pointer" : "cursor-default",
         className,
       )}

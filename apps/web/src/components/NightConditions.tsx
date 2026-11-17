@@ -323,7 +323,7 @@ function AddCondition({ sources, onAdd }: { sources: ReadingSource[]; onAdd: (co
   );
 
   return (
-    <div className="flex flex-col gap-3 rounded-group bg-input p-4">
+    <div className="flex flex-col gap-3 rounded-k-card bg-input p-4">
       <Field label={t("target")} hint={picked ? t("now", { value: readingText(picked.reading, t) }) : undefined}>
         <select value={target} onChange={(event) => choose(event.target.value)}>
           <option value="">{t("choose")}</option>

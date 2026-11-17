@@ -14,7 +14,7 @@ import { Button, ButtonRow, cx, defineMessages, List, ListItem, Message, Note, S
 import { SLIDER_ROW, SLIDER_ROW_LABEL, STACK } from "./settingsStyles";
 
 /** 壁紙の見本（画面と同じく、縁の角を丸めた枠に敷き詰める） */
-const PREVIEW = "relative w-full rounded-inner border border-glass-border bg-cover bg-center";
+const PREVIEW = "relative w-full rounded-md border border-glass-border bg-cover bg-center";
 /** 場所の番号（見本の上と、下の一覧の行の頭で同じ形にして、対応させる） */
 const ZONE_NUMBER = "inline-grid size-6 place-items-center rounded-full bg-shade/70 text-caption font-semibold";
 

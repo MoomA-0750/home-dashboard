@@ -177,6 +177,8 @@
    * accent-soft は前の意味（リンク・フォーカスの明るい色 ＝ kasane の --link）のまま
    */
   --color-accent-soft: var(--link);
+  /* kasane の --accent-soft（淡い地。選んだ行の地など）。前の accent-soft と綴りを分けた */
+  --color-k-accent-soft: var(--accent-soft);
   --color-tint: rgb(var(--tint-rgb));
   --color-ink: var(--on-fill);
   --color-shade: rgb(var(--shade-rgb));
@@ -199,8 +201,15 @@
   --text-stat: clamp(32px, 2.6vw, 46px);
   --text-card: clamp(21px, 2vw, 31px);
 
-  /* 角丸（外の角丸 ＝ 中の角丸 ＋ 内側の余白）。rounded-card・rounded-inner・rounded-group・rounded-full（丸・ピル） */
+  /*
+   * 角丸（外の角丸 ＝ 中の角丸 ＋ 内側の余白）。kasane の名前: rounded-md（中の角丸 15px ＝ --radius）・rounded-k-card（入れ物 ＝
+   * kasane の --radius-card。15px ＋ 1rem）・rounded-k-inner（入れ物に書いた --nest-radius − --nest-pad）・rounded-full（丸・ピル）
+   * ウィジェットのカード（45px）は rounded-card のまま
+   */
+  --radius-md: var(--radius);
+  --radius-k-card: var(--radius-card);
   --radius-card: var(--card-radius);
+  /* 前の名前（互換の層。外で組まれた拡張機能が使っている）。rounded-inner は固定の 15px、rounded-group は入れ物（kasane の rounded-k-card と同じ） */
   --radius-inner: var(--inner-radius);
   --radius-group: var(--group-radius);
   --radius-nav: var(--nav-icon-radius);
@@ -237,6 +246,12 @@
 @utility size-rem-* {
   width: calc(--value(number) * 0.25rem);
   height: calc(--value(number) * 0.25rem);
+}
+
+/* 角丸を同心にする（kasane の rounded-inner・.k-inner と同じ。rounded-inner は前の意味のまま残すので綴りを分けた）。
+   入れ物に [--nest-radius:…] [--nest-pad:…] を書き、中に rounded-k-inner */
+@utility rounded-k-inner {
+  border-radius: max(var(--radius-min), calc(var(--nest-radius) - var(--nest-pad)));
 }
 
 /* ガラスの中のガラス・ほぼ不透明な塗りは、後ろをぼかさない（見た目はほぼ同じで、描く手間だけ減る） */

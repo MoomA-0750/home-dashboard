@@ -116,7 +116,7 @@ export function PersonaPreview({ persona, modelUrl }: PersonaPreviewProps) {
     <div aria-label={t("previewLabel", { name: persona.name })}>
       {/* 幅が足りなければ、アバターの下に操作を回す */}
       <div className="flex flex-wrap gap-5">
-        <div className="persona-stage relative w-75 max-w-full shrink-0 rounded-inner">
+        <div className="persona-stage relative w-75 max-w-full shrink-0 rounded-md">
           {error ? (
             <Message tone="error">{error}</Message>
           ) : (

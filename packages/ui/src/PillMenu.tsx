@@ -81,7 +81,7 @@ export function PillMenu({
       {menu.shown && (
         <ul
           className={cx(
-            "raised layer-popover absolute top-full right-0 mt-1.5 max-h-menu min-w-56 list-none overflow-y-auto rounded-inner p-1.5 text-shadow-none",
+            "raised layer-popover absolute top-full right-0 mt-1.5 max-h-menu min-w-56 list-none overflow-y-auto rounded-md p-1.5 text-shadow-none",
             // 上から落ちてくるように出し、閉じるときは上へ縮みながら薄くなる
             "origin-top-right animate-drop closing:pointer-events-none closing:animate-drop-out",
             menu.closing && "is-closing",
