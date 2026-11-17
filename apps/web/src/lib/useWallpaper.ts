@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import type { WidgetRuntimeContext } from "@home-dashboard/widget-sdk";
-import { applyShading, applyTheme, getAnalysis, measureDims, measureHue, setAnalysis } from "@home-dashboard/ui/wallpaper";
+import { applyShading, getAnalysis, startWallpaper } from "@home-dashboard/ui/wallpaper";
 
 /**
- * 壁紙（背景の写真）。設定画面で選んだ画像をサーバーから読み、styles/tokens.css の --dash-background-image を差し替える。
- * 選んでいなければ既定の写真（/background.jpg）のまま。ほかの端末で変えたら、知らせを受けてすぐ替える。
+ * 壁紙（背景の写真）。設定画面で選んだ画像をサーバーから読み、画面全体の枠（AppShell の .k-wallpaper）の背景にする。
+ * 選んでいなければ既定の写真（/background.jpg。無ければテーマの下地のグラデーション）。ほかの端末で変えたら、知らせを受けてすぐ替える。
  */
 
 export interface WallpaperInfo {
@@ -46,18 +46,11 @@ export function useWallpaper(ctx: WidgetRuntimeContext) {
     return () => socket.removeEventListener("message", onMessage);
   }, [ctx.socket]);
 
-  useEffect(() => {
-    const root = document.documentElement;
-    if (wallpaper?.custom) {
-      root.style.setProperty("--dash-background-image", `url("${wallpaperImageUrl(ctx.apiBaseUrl, wallpaper)}")`);
-    } else {
-      root.style.removeProperty("--dash-background-image");
-    }
-  }, [wallpaper, ctx.apiBaseUrl]);
-
   // 壁紙の明るい所に重なる文字が読めるよう、壁紙の明るさを測って暗さを足し（文字の影の濃さもそれに合わせる）、
-  // テーマの色を壁紙の色合いに合わせる（wallpaperTheme.ts）。画面の縦横比で見える範囲が変わるので、暗さは大きさが変わったら測り直す
-  const imageUrl = wallpaper ? wallpaperImageUrl(ctx.apiBaseUrl, wallpaper) : null;
+  // テーマの色を壁紙の色合いに合わせる（@home-dashboard/ui/wallpaper。中身は kasane の dashboard の壁紙の仕組み）。
+  // 画面の縦横比で見える範囲が変わるので、暗さは大きさが変わったら測り直す
+  // 設定を読む前も既定の写真を出す（読み終えて同じ写真なら測り直さない）
+  const imageUrl = wallpaper ? wallpaperImageUrl(ctx.apiBaseUrl, wallpaper) : "/background.jpg";
   const strength = wallpaper?.dimStrength ?? DEFAULT_DIM_STRENGTH;
   const strengthRef = useRef(strength);
   strengthRef.current = strength;
@@ -68,34 +61,7 @@ export function useWallpaper(ctx: WidgetRuntimeContext) {
     if (zones) applyShading(zones, strength);
   }, [strength]);
 
-  useEffect(() => {
-    if (imageUrl === null) return;
-    let cancelled = false;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const image = new Image();
-    const measure = () => {
-      if (cancelled || image.naturalWidth === 0) return;
-      const zones = measureDims(image, window.innerWidth, window.innerHeight);
-      setAnalysis(zones);
-      applyShading(zones, strengthRef.current);
-    };
-    image.onload = () => {
-      if (cancelled) return;
-      applyTheme(measureHue(image));
-      measure();
-    };
-    image.src = imageUrl;
-    const onResize = () => {
-      clearTimeout(timer);
-      timer = setTimeout(measure, 300);
-    };
-    window.addEventListener("resize", onResize);
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-      window.removeEventListener("resize", onResize);
-    };
-  }, [imageUrl]);
+  useEffect(() => startWallpaper(imageUrl, () => strengthRef.current), [imageUrl]);
 
   return [wallpaper, setWallpaper] as const;
 }

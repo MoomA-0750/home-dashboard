@@ -132,7 +132,7 @@ export function clampSidebarWidth(width: number): number {
 /**
  * 画面全体の枠。サイドバーと幅のつまみを置き、幅は storageKey の名前で端末に覚える。
  * children に、選んだ画面（ScreenFrame など）を入れる（サイドバー・つまみの右の列に入る。スマホではサイドバーが下のタブバーになる）。
- * 壁紙・壁紙を暗くする幕・夜の表示は、data-shell を目印に styles/base.css が付ける
+ * 壁紙・壁紙を暗くする幕・夜の表示は kasane の .k-wallpaper（値は @home-dashboard/ui/wallpaper の startWallpaper が書く）
  */
 export function AppShell({
   items,
@@ -168,7 +168,7 @@ export function AppShell({
     <div
       data-shell=""
       data-expanded={width > SIDEBAR_LABEL_THRESHOLD || undefined}
-      className="shell-grid grid h-svh grid-rows-1 overflow-hidden phone:grid-cols-1 phone:pb-tabbar"
+      className="k-wallpaper shell-grid grid h-svh grid-rows-1 overflow-hidden phone:grid-cols-1 phone:pb-tabbar"
       style={{ "--sidebar-width": `${width}px` } as CSSProperties}
     >
       <Sidebar items={items} active={active} onSelect={onSelect} />

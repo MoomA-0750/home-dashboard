@@ -1,0 +1,46 @@
+/* kasane 1.1.0  source 277e87166da5b1d4  写したもの。直すのは kasane（scripts/kasane-sync.mjs） */
+/*
+ * dashboard テーマの壁紙の重ね（フェーズ8。home-dashboard の base.css の [data-shell] と ::after から移した）。
+ * まだ約束の外: クラスの名前・中の名前・このファイルの場所は、ダッシュボードのアプリの移行が終わるまで変わりうる。
+ *
+ * 画面いっぱいの入れ物に .k-wallpaper を付ける。壁紙の写真（--_wallpaper-image）の下に、テーマの地（--bg・--bg-image）。
+ * 写真の上に、下から順に「上から下への暗さ」「主の色の光」「横の位置ごとの暗さ」を重ねる（::before。中身より下）。
+ * 値はどれも dashboard/wallpaper.js の applyWallpaper が、壁紙を測って data-theme="dashboard" の要素に書く。
+ * 測る前・壁紙が無いときの値は、ここに書いた既定（wallpaper.js の DEFAULT_DIMS・GLOW_ALPHA と同じ）。
+ */
+.k-wallpaper {
+  position: relative;
+  isolation: isolate;
+  background-color: var(--bg);
+  background-image: var(--_wallpaper-image, none), var(--bg-image, none);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: cover, cover;
+}
+
+.k-wallpaper::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      to right,
+      color-mix(in srgb, var(--_shade) calc(var(--_wallpaper-dim-1, 0.4) * 100%), transparent) 12%,
+      color-mix(in srgb, var(--_shade) calc(var(--_wallpaper-dim-2, 0) * 100%), transparent) 42%,
+      color-mix(in srgb, var(--_shade) calc(var(--_wallpaper-dim-3, 0) * 100%), transparent) 67%,
+      color-mix(in srgb, var(--_shade) calc(var(--_wallpaper-dim-4, 0) * 100%), transparent) 90%
+    ),
+    radial-gradient(circle at 74% 42%, color-mix(in srgb, var(--_accent) calc(var(--_wallpaper-glow, 0.13) * 100%), transparent), transparent 34%),
+    linear-gradient(180deg, color-mix(in srgb, var(--_shade) 18%, transparent), color-mix(in srgb, var(--_shade) 55%, transparent));
+}
+
+/* 夜の表示: 壁紙をほぼ黒まで沈める（画面全体の暗幕はアプリが持つ） */
+[data-night] .k-wallpaper,
+.k-wallpaper[data-night] {
+  background-image:
+    linear-gradient(rgb(0 0 0 / var(--_night-darkness, 0.85)), rgb(0 0 0 / var(--_night-darkness, 0.85))),
+    var(--_wallpaper-image, none),
+    var(--bg-image, none);
+}

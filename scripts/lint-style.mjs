@@ -34,9 +34,11 @@ const ALLOWED_CSS = new Set([
 ]);
 /** Tailwind のクラスで書けないもの（@utility・@keyframes）を置く所 */
 const ALLOWED_CSS_DIR = "packages/ui/src/theme/";
+/** kasane から写したもの（kasane-native.json。直すのは kasane） */
+const KASANE_DIR = "packages/ui/src/kasane/";
 
-/** Tailwind のクラスではないが使ってよいもの（JS が付け外しする印・外の部品が決めた名前・styles/components.css の面のクラス） */
-const ALLOWED_HOOKS = new Set(["is-closing", "is-scrolling", "fluent-icon", "glass", "raised"]);
+/** Tailwind のクラスではないが使ってよいもの（JS が付け外しする印・外の部品が決めた名前・styles/components.css の面のクラス・kasane の壁紙の重ね） */
+const ALLOWED_HOOKS = new Set(["is-closing", "is-scrolling", "fluent-icon", "glass", "raised", "k-wallpaper"]);
 const ALLOWED_PREFIXES = ["react-grid-", "react-resizable", "leaflet-"];
 
 /** 調べるファイル（画面側のソース） */
@@ -175,7 +177,7 @@ function isUtility(token) {
 
 for (const file of files) {
   if (file.endsWith(".css")) {
-    if (!ALLOWED_CSS.has(file) && !file.startsWith(ALLOWED_CSS_DIR))
+    if (!ALLOWED_CSS.has(file) && !file.startsWith(ALLOWED_CSS_DIR) && !file.startsWith(KASANE_DIR))
       report(file, 1, "css-file", "CSS のファイルは足さない（Tailwind のクラスで書く。値が要るならテーマに足す）");
     continue;
   }

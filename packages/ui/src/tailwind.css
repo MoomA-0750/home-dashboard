@@ -11,7 +11,11 @@
 @import "tailwindcss/preflight.css" layer(base);
 @import "tailwindcss/utilities.css" layer(utilities);
 @import "./tailwind-theme.css";
+/* kasane（kasane-sync で写したもの）の段と dashboard テーマ、壁紙の重ね。<html data-theme="dashboard"> で効く */
+@import "./kasane/tokens.css" layer(base);
+@import "./kasane/themes/dashboard.css" layer(base);
 @import "./styles/tokens.css" layer(base);
+@import "./kasane/dashboard/wallpaper.css" layer(base);
 @import "./styles/base.css" layer(base);
 @import "./styles/components.css" layer(components);
 

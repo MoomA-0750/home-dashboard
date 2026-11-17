@@ -1,0 +1,4 @@
+# kasane の検査（node <kasane>/scripts/lint.mjs packages/ui/src apps/web --app home-dashboard）で許すもの。
+# 1行に1つ: <規則の名前 か *>  <ファイルのパターン>  [見つかった文字列に含まれる文字]  # 理由
+
+*  packages/ui/src/kasane/*  # kasane から写したもの（kasane-sync。直すのは kasane）

@@ -1,0 +1,84 @@
+/* kasane 1.1.0  source b83a7f19a7944d42  写したもの。直すのは kasane（scripts/kasane-sync.mjs） */
+/*
+ * dashboard — 壁紙の上に置くダッシュボードの見た目を、共通の名前に写した型。
+ * 壁紙（ここでは既定の青のグラデーション）の上に、暗く透けるガラスの面を置く。暗い表示だけ。
+ * 壁紙に合わせて差し替わる5色は、中の名前（--_accent・--_link・--_tint・--_ink・--_shade）で受ける。
+ * dashboard/wallpaper.js の applyWallpaper が、壁紙を測って計算済みの色をこの要素に書く（式は colorsFor の1か所。
+ * 明るさは oklch の L で決め、壁紙からは色相とあざやかさだけを取る）。ここに書いた値は既定の青（colorsFor(199, 1)）。
+ * アプリは中の名前を書かない・読まない（約束の外）。壁紙の重ねは dashboard/wallpaper.css（.k-wallpaper）。
+ * 字体の Murecho はアプリ側で読み込む（home-dashboard の @home-dashboard/ui が持っている）。
+ */
+[data-theme="dashboard"] {
+  color-scheme: dark;
+
+  /* 壁紙に合わせて差し替わる色（wallpaper.js の colorsFor。既定の青） */
+  --_accent: #49c6ff;
+  --_link: #b6ebff;
+  --_tint: #e0f7ff;
+  --_ink: #07203b;
+  --_shade: #010712;
+
+  --bg: #0a1730;
+  --bg-image: linear-gradient(120deg, #0a1730 0%, #12356b 45%, #1f6fb2 100%);
+  /* ガラス。壁紙の明るい所（暗さを足した後の上位1割、明るさ 0.12 まで）の上でも、薄い字が 4.5 に届く濃さ */
+  --surface: rgb(0 0 0 / 0.3);
+  --surface-image: linear-gradient(120deg, rgb(255 255 255 / 0.1), transparent 33%);
+  --surface-filter: blur(5px);
+  /* 沈んだ面はガラスより暗く（白を重ねると、薄い字が届かない） */
+  --surface-2: rgb(0 0 0 / 0.16);
+  --raised: rgb(10, 23, 48);
+  --input: rgba(5, 14, 30, 0.5);
+
+  --fg: #f7fbff;
+  /* 薄い字。壁紙にじかに置いても（明るさ 0.12 の地で）4.5 */
+  --muted: #d3e0ec;
+  --faint: rgb(211 224 236 / 0.62);
+
+  --line: rgb(255 255 255 / 0.14);
+  /* 入力欄・ボタンの縁（3:1）。ガラスの縁の飾りは --line */
+  --line-strong: color-mix(in srgb, var(--_tint) 66%, transparent);
+  --hover: rgb(255 255 255 / 0.06);
+  --active: rgb(255 255 255 / 0.14);
+
+  --accent: var(--_accent);
+  --accent-strong: var(--_link);
+  --accent-soft: color-mix(in srgb, var(--_accent) 10%, transparent);
+  --on-accent: var(--_ink);
+  --link: var(--_link);
+  --focus: var(--_link);
+  /* いちばん押すボタン・選んでいる項目は、主の色ではなく明るい塗り */
+  --fill: color-mix(in srgb, var(--_tint) 94%, transparent);
+  --on-fill: var(--_ink);
+
+  --danger: #ff9a9a;
+  --danger-soft: rgb(248 113 113 / 0.16);
+  --danger-fill: #f87171;
+  --on-danger: #3b0a0a;
+  --warn: #fbbf24;
+  --warn-soft: rgb(251 191 36 / 0.16);
+  --success: #a0f0c8;
+  --success-soft: rgb(74 222 128 / 0.16);
+
+  --code-bg: rgba(5, 14, 30, 0.5);
+  --code-fg: #f7fbff;
+  --backdrop: color-mix(in srgb, var(--_shade) 55%, transparent);
+
+  --family-sans: Murecho, "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
+
+  /* 角丸は「外 ＝ 中 ＋ 内側の余白」。中（入力欄・カードの中）15px、入れ物 31px、ボタンはピル */
+  --radius-sm: 12px;
+  --radius: 15px;
+  --radius-lg: 31px;
+  --radius-control: var(--radius-full);
+
+  --shadow-sm: 0 6px 16px -10px rgb(0 6 20 / 0.3);
+  --shadow: 0 14px 32px -16px rgb(0 6 20 / 0.28);
+  --shadow-lg: 0 18px 48px -12px rgb(0 6 20 / 0.55);
+}
+
+/* 軽い表示（弱い端末。applyWallpaper の lite が data-lite を付ける）。ガラスのぼかしを切り、後ろが透けない濃い板にする */
+[data-theme="dashboard"][data-lite] {
+  --surface: color-mix(in srgb, var(--_shade) 57%, transparent);
+  --surface-filter: none;
+  --backdrop: color-mix(in srgb, var(--_shade) 78%, transparent);
+}

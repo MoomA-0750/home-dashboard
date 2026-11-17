@@ -1,0 +1,10 @@
+{
+  "$schema": "kasane-native/1",
+  "files": [
+    { "from": "web/tokens.css", "to": "packages/ui/src/kasane/tokens.css" },
+    { "from": "web/components.css", "to": "packages/ui/src/kasane/components.css" },
+    { "from": "web/tailwind.css", "to": "packages/ui/src/kasane/tailwind.css" },
+    { "from": "web/themes/dashboard.css", "to": "packages/ui/src/kasane/themes/dashboard.css" },
+    { "from": "web/dashboard", "to": "packages/ui/src/kasane/dashboard" }
+  ]
+}
