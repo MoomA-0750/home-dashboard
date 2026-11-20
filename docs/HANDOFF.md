@@ -19,7 +19,7 @@ Web UI のリロードを速くする（静的ファイルのキャッシュと�
 - 試験: `apps/server/src/staticFiles.test.ts`（8件）。全体の試験 202件・typecheck・lint:style・kasane の検査・kasane-sync --check は通った
 - 測った値は `docs/decisions.md` の「静的ファイルのキャッシュと圧縮」
 
-- 2026-11-20 に push し、本番へ反映した（`docker compose up -d --build home-dashboard`）。8787 と tailscale serve（:10448）の両方で、
+- 2026-11-20 に push し、本番へ反映した（`docker compose up -d --build home-dashboard`）。8787・tailscale serve（:10448）・LAN の https（https://<ホストの LAN の IP>/）で、
   HTML は no-cache＋br で 304 が返り、/assets/ は immutable＋br であることを確かめた
 
 ## 残り
@@ -28,18 +28,20 @@ Web UI のリロードを速くする（静的ファイルのキャッシュと�
 
 ## 次のセッションが最初にやること
 
-- 特になし。LAN の https の入口（Caddy）は、ホストの IP が 192.168.0.98 に変わっていて 192.168.1.10:443 に届かない（この直しとは別の、前からの事柄。確認一覧に記録）
+- 特になし
 
 ## 本人の判断待ち
 
-- LAN の https の入口を、今の IP に合わせて直すか（`DASHBOARD_HTTPS_BIND` と証明書の取り直し）
+- なし
 
 ## 注意
 
 - 反映の直後、すでに開いている端末は前の HTML を持っているので、一度だけ全部を読み直す（次からは JS・CSS・字体を問い合わせない）
 - `/assets/` には印の無いファイルを置かない（1年覚えさせるため）。Vite の既定の名前（`[name]-[hash]`）のままにする
 - アイコン（`/icons/*.svg`）は実行時に名前から URL を作るので印が付けられず、no-cache のまま（リロードで小さな 304 が出る）
-- LAN の https の入口（Caddy）は `encode zstd gzip` を持つが、アプリがすでに縮めた返事はそのまま通す
+- LAN の https の入口（Caddy）の待ち受けの IP は、リポジトリの直下の `.env`（Git に入れない）の `DASHBOARD_HTTPS_BIND`・`DASHBOARD_ACME_DIRECTORY` で決める。
+  無いと docker-compose.yml の既定（例の 192.168.1.10）になるので、Caddy を作り直す前に `docker compose config | grep HTTPS_BIND` で確かめる
+- Caddy は `encode zstd gzip` を持つが、アプリがすでに縮めた返事はそのまま通す
 
 ## 詳しい資料
 
