@@ -19,18 +19,20 @@ Web UI のリロードを速くする（静的ファイルのキャッシュと�
 - 試験: `apps/server/src/staticFiles.test.ts`（8件）。全体の試験 202件・typecheck・lint:style・kasane の検査・kasane-sync --check は通った
 - 測った値は `docs/decisions.md` の「静的ファイルのキャッシュと圧縮」
 
+- 2026-11-20 に push し、本番へ反映した（`docker compose up -d --build home-dashboard`）。8787 と tailscale serve（:10448）の両方で、
+  HTML は no-cache＋br で 304 が返り、/assets/ は immutable＋br であることを確かめた
+
 ## 残り
 
-- 本番への反映（push とコンテナの作り直し）。本人の確認待ち
+- この依頼の分は無い
 
 ## 次のセッションが最初にやること
 
-- 本人が反映を了承したら: `git push`、それから `docker compose up -d --build home-dashboard`。反映の後に
-  `curl -sI -H 'Accept-Encoding: br' http://127.0.0.1:8787/` などで `Cache-Control: no-cache`・`content-encoding: br` を確かめる
+- 特になし。LAN の https の入口（Caddy）は、ホストの IP が 192.168.0.98 に変わっていて 192.168.1.10:443 に届かない（この直しとは別の、前からの事柄。確認一覧に記録）
 
 ## 本人の判断待ち
 
-- push と本番への反映をしてよいか（phase-board の確認一覧にも記録）
+- LAN の https の入口を、今の IP に合わせて直すか（`DASHBOARD_HTTPS_BIND` と証明書の取り直し）
 
 ## 注意
 
