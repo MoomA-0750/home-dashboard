@@ -2,13 +2,15 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { uiAssets } from "@home-dashboard/ui/vite";
+import { precompress } from "./precompress.mjs";
 
 // 開発時にAPIをプロキシする先。8787でDocker版が動いているホストでは別ポートの開発サーバーに向ける
 const apiTarget = process.env.API_PROXY_TARGET ?? "http://localhost:8787";
 
 export default defineConfig({
   // アイコンと字体は @home-dashboard/ui の public/ にある（/icons/・/fonts/ に出す）
-  plugins: [react(), tailwindcss(), uiAssets()],
+  // precompress は出来上がりの文字のファイルに .br・.gz を添える（サーバーがそれを返す）
+  plugins: [react(), tailwindcss(), uiAssets(), precompress()],
   build: {
     target: "es2018",
     outDir: "dist",

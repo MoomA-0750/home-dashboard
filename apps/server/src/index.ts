@@ -1,6 +1,5 @@
 import { existsSync } from "node:fs";
 import Fastify from "fastify";
-import fastifyStatic from "@fastify/static";
 import fastifyWebsocket from "@fastify/websocket";
 // config は自身の先頭で .env を読み込む。ここで読み込んでも import 評価順の都合で間に合わない
 import { config } from "./config.js";
@@ -11,6 +10,7 @@ import { registerVoiceGuardRoutes } from "./routes/voiceGuard.js";
 import { registerConnectionSettingsRoutes } from "./routes/connectionSettings.js";
 import { loadConnectionSettings } from "./connectionSettings.js";
 import { registerWebSocket } from "./ws.js";
+import { registerStaticFiles } from "./staticFiles.js";
 import { registerAuth } from "./routes/auth.js";
 import { registerExtensionRoutes } from "./routes/extensions.js";
 import { registerWallpaperRoutes } from "./routes/wallpaper.js";
@@ -51,9 +51,8 @@ await registerWallpaperRoutes(app);
 await registerNightRoutes(app);
 
 if (existsSync(config.webDistDir)) {
-  await app.register(fastifyStatic, {
-    root: config.webDistDir,
-  });
+  // 印の付いた /assets/ は1年、ほかは no-cache（304）。文字のファイルは組み立てで作った .br・.gz を返す
+  await registerStaticFiles(app, config.webDistDir);
   app.setNotFoundHandler((request, reply) => {
     if (request.raw.method === "GET" && !request.url.startsWith("/api")) {
       return reply.sendFile("index.html");

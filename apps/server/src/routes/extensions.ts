@@ -1,4 +1,3 @@
-import { createReadStream } from "node:fs";
 import { extname } from "node:path";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import {
@@ -23,6 +22,7 @@ import {
 import { ServiceError } from "../serviceError.js";
 import { requireAdmin } from "./auth.js";
 import { requestLocale } from "../locale.js";
+import { sendLocalFile } from "../staticFiles.js";
 
 const CONTENT_TYPES: Record<string, string> = {
   ".js": "text/javascript; charset=utf-8",
@@ -193,7 +193,8 @@ export async function registerExtensionRoutes(app: FastifyInstance): Promise<voi
       "Cache-Control",
       request.query && "v" in (request.query as object) ? "private, max-age=31536000, immutable" : "no-cache",
     );
-    return reply.type(type).send(createReadStream(path));
+    // ETag で 304 を返せるようにし、文字のファイルは縮めて返す
+    return sendLocalFile(request, reply, path, type);
   });
 
   for (const method of METHODS) {
